@@ -1156,7 +1156,7 @@ in {
     ".config/hypr/hyprpaper.conf".source = link "${dots}/.config/hypr/hyprpaper.conf";
     ".config/hypr/keybinds.conf".source = link "${dots}/.config/hypr/keybinds.conf";
     ".config/hypr/monitors.conf".source = link "${dots}/.config/hypr/monitors.conf";
-    ".config/hypr/pyprland.toml".source = link "${dots}/.config/hypr/pyprland.toml";
+    ".config/pypr/config.toml".source = link "${dots}/.config/pypr/config.toml";
     ".config/hypr/workspaces.conf".source = link "${dots}/.config/hypr/workspaces.conf";
     ".config/foot/foot.ini".source = link "${dots}/.config/foot/foot.ini";
     ".config/tofi/config".source = link "${dots}/.config/tofi/config";

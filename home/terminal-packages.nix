@@ -1,5 +1,9 @@
 # Shared cli only package list for both home-manager and nix-on-droid
-{pkgs}:
+{
+  config,
+  pkgs,
+  pkgsStable ? pkgs,
+}:
 with pkgs; [
   # aider-chat
   # helix
@@ -129,8 +133,24 @@ with pkgs; [
   passff-host
   patchutils
   pfetch
-  pi-coding-agent
+  (pkgs.symlinkJoin {
+    # then install the following:
+    # pi install npm:@mjakl/pi-kagi-search
+    name = "pi-coding-agent";
+    buildInputs = [pkgs.makeWrapper];
+    paths = [pkgs.pi-coding-agent];
+    postBuild = ''
+      wrapProgram $out/bin/pi \
+        --set NPM_CONFIG_PREFIX ${config.home.homeDirectory}/.pi/npm/ \
+        --prefix PATH : ${
+        pkgs.lib.makeBinPath [
+          pkgs.nodejs_latest
+        ]
+      }
+    '';
+  })
   # pi-undo-redo
+  cliflux
   playerctl
   poppler-utils
   prefetch-npm-deps
@@ -154,7 +174,7 @@ with pkgs; [
   sendme
   shellcheck
   shfmt
-  slsk-batchdl
+  pkgsStable.slsk-batchdl
   slskd
   socat
   solargraph

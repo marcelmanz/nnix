@@ -14,6 +14,7 @@
     nur.url = "github:nix-community/NUR";
     rust-overlay.url = "github:oxalica/rust-overlay";
     nvim.url = "github:themarcel/nvim-lua";
+    cliflux.url = "git+https://codeberg.org/themarcel/cliflux?ref=personal";
     dots = {
       url = "github:themarcel/dots";
       flake = false;
@@ -115,6 +116,7 @@
         # (final: prev: { foot = inputs.foot-fork.packages.${system}.default; })
         (final: prev: {zuban = inputs.zuban.packages.${system}.default;})
         # (final: prev: {pi-undo-redo = inputs.pi-undo-redo.packages.${pkgs.system}.default;})
+        (final: prev: {cliflux = inputs.cliflux.packages.${pkgs.system}.default;})
         (final: prev: {"ki-editor" = inputs.ki-editor.packages.${system}.default;})
         (final: prev: {
           protonmail-desktop = inputs.my-nixpkgs.legacyPackages.${system}.protonmail-desktop;
