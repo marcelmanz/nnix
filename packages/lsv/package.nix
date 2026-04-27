@@ -1,4 +1,7 @@
-{craneLib, pkgs}:
+{
+  craneLib,
+  pkgs,
+}:
 craneLib.buildPackage {
   pname = "lsv";
   version = "0.1.11";

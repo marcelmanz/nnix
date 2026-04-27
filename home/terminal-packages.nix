@@ -11,10 +11,11 @@ with pkgs; [
   # libreoffice
   # libreoffice
   # lsv
+  # pi-undo-redo
   # rff
+  # zuban
   (pkgs.google-cloud-sdk.withExtraComponents (with pkgs.google-cloud-sdk.components; [gke-gcloud-auth-plugin]))
   appimage-run
-  timer
   astro-language-server
   atool
   atuin
@@ -34,8 +35,8 @@ with pkgs; [
   cbfmt
   chafa
   charm-freeze
-  claude-code
   clang-tools
+  claude-code
   click
   codex
   cowsay
@@ -192,6 +193,7 @@ with pkgs; [
   taskwarrior-tui
   taskwarrior3
   tig
+  timer
   tldr
   tmux
   traceroute
@@ -213,6 +215,7 @@ with pkgs; [
   vscode-langservers-extracted
   vtsls
   w3m
+  watchexec
   wireguard-tools
   wlr-layout-ui
   wlr-randr
@@ -226,5 +229,4 @@ with pkgs; [
   zk
   zoxide
   zsh
-  # zuban
 ]

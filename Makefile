@@ -32,3 +32,9 @@ droid:
 	nix copy --to "ssh://nix-on-droid@droid?remote-program=/data/data/com.termux.nix/files/home/.nix-profile/bin/nix-store" ./result
 	rsync -avz --delete --exclude='.git' --rsync-path="/data/data/com.termux.nix/files/home/.nix-profile/bin/rsync" ./ droid:~/.config/nix-on-droid/
 	ssh droid "/data/data/com.termux.nix/files/home/.nix-profile/bin/bash -l -c 'nix-on-droid switch --flake ~/.config/nix-on-droid#default'"
+
+sops:
+	@selected=$$(ls secrets/ | fzf); \
+	if [ -n "$$selected" ]; then \
+		sops secrets/$$selected; \
+	fi

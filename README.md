@@ -2,6 +2,7 @@ This is my Nix setup managing multiple configurations with a modular structure:
 - **nixos**: Full desktop setup with GUI applications
 - **work**: Also full desktop setup but for a secondary work host
 - **android**: Terminal-only setup for nix-on-droid
+- **mlab**: Homelab config
 
 The configurations use a layered approach:
 - `terminal-packages.nix`: Shared CLI package list function
@@ -34,22 +35,39 @@ nix-on-droid switch --flake ~/.config/nix#default
 ├── flake.lock
 ├── flake.nix
 ├── home
-│   ├── gui.nix              # GUI apps + imports terminal.nix
-│   ├── terminal.nix         # Home-manager CLI module + configs
+│   ├── gui.nix               # GUI apps + imports terminal.nix
+│   ├── terminal.nix          # Home-manager CLI module + configs
 │   └── terminal-packages.nix # Shared CLI package list
 ├── hosts
-│   ├── android
-│   │   └── default.nix      # imports terminal-packages.nix directly
-│   ├── home
-│   │   └── default.nix      # imports gui.nix
-│   └── work
-│       └── default.nix      # imports terminal.nix
+│   ├── android
+│   │   ├── bootstrap.nix
+│   │   ├── default.nix
+│   │   ├── GUIDE.md
+│   │   └── ssh.pub
+│   ├── home
+│   │   └── default.nix       # imports gui.nix
+│   └── work
+│       └── default.nix       # imports terminal.nix
+│   ├── infected-vps
+│   │   └── default.nix
+│   ├── mlab                  # homelab config
+│   │   ├── arr
+│   │   │   ├── bazarr.nix
+│   │   │   └── etc...
+│   │   ├── attic.nix
+│   │   ├── audiobookshelf.nix
+│   │   ├── authelia.nix
+│   │   ├── etc...
+│   ├── vps                   # external vps, for quick deploys
+│   │   ├── default.nix
+│   │   ├── disk-config.nix
+│   │   └── hardware-configuration.nix
 ├── nixos
 │   ├── configuration.nix
 │   └── hardware-configuration.nix
 └── README.md
 ```
 
-@## Todo
+## Todo
 
-- [] Finish android host 
+- [x] Finish android host 

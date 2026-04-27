@@ -1,4 +1,7 @@
-{craneLib, pkgs}:
+{
+  craneLib,
+  pkgs,
+}:
 craneLib.buildPackage {
   pname = "pulseaudio-next-output";
   version = "unstable-2025-09-04";

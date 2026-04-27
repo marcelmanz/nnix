@@ -1,6 +1,5 @@
 {config, ...}: {
-  programs.ssh.knownHosts."eu.nixbuild.net".publicKey =
-    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIElijTSFa+a3l0oMnGMSPQQsFJp/MYdtTBEeheQjJ0vY";
+  programs.ssh.knownHosts."eu.nixbuild.net".publicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIElijTSFa+a3l0oMnGMSPQQsFJp/MYdtTBEeheQjJ0vY";
 
   nix = {
     distributedBuilds = true;

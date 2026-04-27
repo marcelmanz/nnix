@@ -3,8 +3,7 @@
   pkgs,
   services,
   ...
-}:
-{
+}: {
   services.grafana = {
     enable = true;
     settings = {
@@ -31,7 +30,7 @@
       dashboards.settings.providers = [
         {
           name = "Local Dashboards";
-          options.path = pkgs.runCommand "grafana-dashboards" { } ''
+          options.path = pkgs.runCommand "grafana-dashboards" {} ''
             mkdir -p $out
             cp ${
               pkgs.fetchurl {
@@ -52,7 +51,7 @@
     exporters = {
       node = {
         enable = true;
-        enabledCollectors = [ "systemd" ];
+        enabledCollectors = ["systemd"];
         port = 9100;
       };
     };
@@ -62,7 +61,7 @@
         job_name = "mlab_system";
         static_configs = [
           {
-            targets = [ "127.0.0.1:${toString config.services.prometheus.exporters.node.port}" ];
+            targets = ["127.0.0.1:${toString config.services.prometheus.exporters.node.port}"];
           }
         ];
       }

@@ -1,4 +1,7 @@
-{craneLib, pkgs}:
+{
+  craneLib,
+  pkgs,
+}:
 craneLib.buildPackage {
   pname = "rff";
   version = "unstable-2025-11-03";

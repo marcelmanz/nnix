@@ -295,6 +295,13 @@
             };
           }
           {
+            Invidious = {
+              icon = "invidious";
+              href = services.youtube.href;
+              description = "Invidious Tube";
+            };
+          }
+          {
             Miniflux = {
               icon = "miniflux";
               href = services.miniflux.href;

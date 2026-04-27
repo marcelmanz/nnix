@@ -308,6 +308,10 @@
     enable = true;
     enableSSHSupport = true;
     pinentryPackage = pkgs.pinentry-curses;
+    settings = {
+      default-cache-ttl = 28800;
+      max-cache-ttl = 86400;
+    };
   };
 
   environment.systemPackages = with pkgs; [
@@ -330,6 +334,7 @@
     sbc
     chromium
     localsend
+    proton-authenticator
     (pkgs.writeTextDir "share/sddm/themes/breeze/theme.conf.user" ''
       [General]
       background=/etc/sddm/black.png
