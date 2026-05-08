@@ -121,7 +121,7 @@
           }
           {
             Calibre = {
-              icon = "book";
+              icon = "calibre";
               href = services.calibre.href;
               description = "E-Book Library";
             };

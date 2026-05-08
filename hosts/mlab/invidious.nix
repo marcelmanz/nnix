@@ -8,7 +8,7 @@
 in {
   services.invidious = {
     enable = true;
-    domain = services.youtube.href;
+    domain = builtins.replaceStrings ["https://" "http://"] ["" ""] services.youtube.href;
     port = services.youtube.port;
     nginx.enable = false;
     database.createLocally = true;
@@ -22,6 +22,8 @@ in {
       unauthenticated_search_query_limit = 0;
       captcha_enabled = false;
       pwned_check = false;
+      channel_threads = 0;  # disable InnerTube scraping (blocked by YouTube)
+      feed_threads = 1;    # use RSS feeds instead (works reliably)
       invidious_companion = [
         {
           private_url = "http://127.0.0.1:${toString companionPort}/companion";

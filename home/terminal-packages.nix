@@ -229,4 +229,5 @@ with pkgs; [
   zk
   zoxide
   zsh
+  svelte-language-server
 ]

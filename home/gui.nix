@@ -1003,10 +1003,10 @@ in {
       "application/vnd.oasis.opendocument.text" = ["nvim.desktop"];
 
       # Web browser scheme handlers
-      "x-scheme-handler/http" = ["firefox.desktop"];
-      "x-scheme-handler/https" = ["firefox.desktop"];
-      "x-scheme-handler/about" = ["firefox.desktop"];
-      "x-scheme-handler/unknown" = ["firefox.desktop"];
+      "x-scheme-handler/http" = ["brave-origin.desktop"];
+      "x-scheme-handler/https" = ["brave-origin.desktop"];
+      "x-scheme-handler/about" = ["brave-origin.desktop"];
+      "x-scheme-handler/unknown" = ["brave-origin.desktop"];
 
       "image/png" = ["imv.desktop"];
       "image/jpeg" = ["imv.desktop"];

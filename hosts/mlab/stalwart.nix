@@ -82,5 +82,5 @@
     BindReadOnlyPaths = ["/run/postgresql"];
     RestrictAddressFamilies = lib.mkAfter ["AF_UNIX"];
   };
-  environment.systemPackages = [pkgs.stalwart-mail];
+  environment.systemPackages = [pkgs.stalwart];
 }
