@@ -50,7 +50,7 @@
 
   services.tailscale.enable = true;
 
-  networking.firewall.trustedInterfaces = ["tailscale0"];
+  networking.firewall.trustedInterfaces = ["tailscale0" "waydroid0"];
   networking.firewall.allowedUDPPorts = [config.services.tailscale.port];
 
   services.protonmail-bridge = {
@@ -103,6 +103,10 @@
   };
   services.mullvad-vpn.enable = true;
   services.flatpak.enable = true;
+
+  virtualisation.waydroid = {
+    enable = true;
+  };
 
   virtualisation.docker = {
     enable = true;
@@ -417,7 +421,8 @@
     };
   };
 
-  networking.firewall.enable = false;
+  networking.firewall.enable = true;
+  networking.nftables.enable = false;
   networking.networkmanager.wifi.powersave = false;
 
   users.users.marcel.openssh.authorizedKeys.keys = [
