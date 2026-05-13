@@ -1170,6 +1170,8 @@ in {
     ".config/pypr/config.toml".source = link "${dots}/.config/pypr/config.toml";
     ".config/hypr/workspaces.conf".source = link "${dots}/.config/hypr/workspaces.conf";
     ".config/foot/foot.ini".source = link "${dots}/.config/foot/foot.ini";
+    ".config/foot/color-dark.ini".source = link "${dots}/.config/foot/color-dark.ini";
+    ".config/foot/colors-light.ini".source = link "${dots}/.config/foot/colors-light.ini";
     ".config/tofi/config".source = link "${dots}/.config/tofi/config";
     # ".config/mako/config".source = link "${dots}/.config/mako/config";
     ".config/ironbar/config.toml".source = link "${dots}/.config/ironbar/config.toml";
