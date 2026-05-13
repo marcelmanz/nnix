@@ -19,6 +19,8 @@ in {
 
   home.packages = with pkgs; [
     audio-select
+    gimagereader
+    tesseract
     grayjay
     orion
     brave
