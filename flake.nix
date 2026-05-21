@@ -118,7 +118,7 @@
         # (final: prev: { foot = inputs.foot-fork.packages.${system}.default; })
         (final: prev: {zuban = inputs.zuban.packages.${system}.default;})
         # (final: prev: {pi-undo-redo = inputs.pi-undo-redo.packages.${pkgs.system}.default;})
-        (final: prev: {cliflux = inputs.cliflux.packages.${pkgs.system}.default;})
+        (final: prev: {cliflux = inputs.cliflux.packages.${system}.default;})
         (final: prev: {"ki-editor" = inputs.ki-editor.packages.${system}.default;})
         (final: prev: {
           protonmail-desktop = inputs.my-nixpkgs.legacyPackages.${system}.protonmail-desktop;

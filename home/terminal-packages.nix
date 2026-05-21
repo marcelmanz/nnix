@@ -12,14 +12,15 @@ with pkgs; [
   # libreoffice
   # lsv
   # pi-undo-redo
+  # pi-undo-redo
   # rff
   # zuban
-  (pkgs.google-cloud-sdk.withExtraComponents (with pkgs.google-cloud-sdk.components; [gke-gcloud-auth-plugin]))
   appimage-run
   astro-language-server
   atool
   atuin
   bacon
+  basedpyright
   bash
   bash-language-server
   bash-preexec
@@ -27,7 +28,6 @@ with pkgs; [
   beets
   bind
   biome
-  black
   bottom
   btop
   carapace
@@ -38,6 +38,7 @@ with pkgs; [
   clang-tools
   claude-code
   click
+  cliflux
   codex
   cowsay
   cowsay
@@ -134,24 +135,7 @@ with pkgs; [
   passff-host
   patchutils
   pfetch
-  (pkgs.symlinkJoin {
-    # then install the following:
-    # pi install npm:@mjakl/pi-kagi-search
-    name = "pi-coding-agent";
-    buildInputs = [pkgs.makeWrapper];
-    paths = [pkgs.pi-coding-agent];
-    postBuild = ''
-      wrapProgram $out/bin/pi \
-        --set NPM_CONFIG_PREFIX ${config.home.homeDirectory}/.pi/npm/ \
-        --prefix PATH : ${
-        pkgs.lib.makeBinPath [
-          pkgs.nodejs_latest
-        ]
-      }
-    '';
-  })
-  # pi-undo-redo
-  cliflux
+  pkgsStable.slsk-batchdl
   playerctl
   poppler-utils
   prefetch-npm-deps
@@ -162,8 +146,6 @@ with pkgs; [
   pulseaudio-next-output
   pulseaudioFull
   pwgen
-  python314Packages.huggingface-hub
-  python3Packages.python-lsp-server
   rabbitmqadmin-ng
   rclone
   repgrep
@@ -175,7 +157,6 @@ with pkgs; [
   sendme
   shellcheck
   shfmt
-  pkgsStable.slsk-batchdl
   slskd
   socat
   solargraph
@@ -187,6 +168,7 @@ with pkgs; [
   sshfs
   starship
   stylua
+  svelte-language-server
   sysz
   tailwindcss-language-server
   taplo
@@ -229,5 +211,32 @@ with pkgs; [
   zk
   zoxide
   zsh
-  svelte-language-server
+  (pkgs.symlinkJoin {
+    # then install the following:
+    # pi install npm:@mjakl/pi-kagi-search
+    name = "pi-coding-agent";
+    buildInputs = [pkgs.makeWrapper];
+    paths = [pkgs.pi-coding-agent];
+    postBuild = ''
+      wrapProgram $out/bin/pi \
+        --set NPM_CONFIG_PREFIX ${config.home.homeDirectory}/.pi/npm/ \
+        --prefix PATH : ${
+        pkgs.lib.makeBinPath [
+          pkgs.nodejs_latest
+        ]
+      }
+    '';
+  })
+  (pkgs.python3.withPackages (ps:
+    with ps; [
+      python-lsp-server
+      pylsp-rope
+      pyflakes
+      jedi
+      mccabe
+      pycodestyle
+      black
+      isort
+    ]))
+  (pkgs.google-cloud-sdk.withExtraComponents (with pkgs.google-cloud-sdk.components; [gke-gcloud-auth-plugin]))
 ]
