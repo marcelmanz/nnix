@@ -128,6 +128,7 @@ in {
     ".inputrc".source = link "${dots}/.inputrc";
     ".taskrc".source = link "${dots}/.taskrc";
     ".config/direnv/direnv.toml".source = link "${dots}/.config/direnv/direnv.toml";
+    ".config/clangd/config.yaml".source = link "${dots}/.config/clangd/config.yaml";
     ".claude/settings.json".source = link "${dots}/.claude/settings.json";
     ".config/btop/btop.conf".source = link "${dots}/.config/btop/btop.conf";
 

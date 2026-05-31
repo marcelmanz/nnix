@@ -45,6 +45,7 @@ with pkgs; [
   csvlens
   csvlens
   delta
+  discogs2xlsx
   deno
   difftastic
   direnv
@@ -69,6 +70,7 @@ with pkgs; [
   fzy
   gcalcli
   gcc
+  gcovr
   gdrive
   gh
   git-cliff
@@ -99,6 +101,7 @@ with pkgs; [
   libnotify
   librespeed-cli
   libwebp
+  log4cxx
   lsr
   luau
   markdown-oxide
@@ -157,6 +160,7 @@ with pkgs; [
   sendme
   shellcheck
   shfmt
+  sdbus-cpp_2
   slskd
   socat
   solargraph
@@ -198,6 +202,7 @@ with pkgs; [
   vtsls
   w3m
   watchexec
+  xlsx2csv
   wireguard-tools
   wlr-layout-ui
   wlr-randr
@@ -237,6 +242,9 @@ with pkgs; [
       pycodestyle
       black
       isort
+      netifaces
+      pytest
+      sdbus
     ]))
   (pkgs.google-cloud-sdk.withExtraComponents (with pkgs.google-cloud-sdk.components; [gke-gcloud-auth-plugin]))
 ]
