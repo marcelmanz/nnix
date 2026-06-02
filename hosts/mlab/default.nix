@@ -36,6 +36,7 @@
     ./soulbeet.nix
     ./stalwart.nix
     ./uptime-kuma.nix
+    ./zulip.nix
     # ./piped.nix
     # ./hyperpipe.nix
   ];

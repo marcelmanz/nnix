@@ -20,6 +20,7 @@ in {
   home.packages = with pkgs; [
     flat-remix-icon-theme
     audio-select
+    bitwig-studio
     gimagereader
     tesseract
     grayjay

@@ -126,6 +126,10 @@
       port = 9800;
       href = "https://yt.marcel.cool";
     };
+    zulip = {
+      port = 8088;
+      href = "https://chat.marcel.cool";
+    };
     stalwartadmin = {
       port = 8087;
       href = "https://jmap-admin.marcel.cool";
