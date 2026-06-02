@@ -115,6 +115,7 @@
         })
         (final: prev: {"git-commit-search" = import ./packages/git-commit-search/package.nix {inherit (rust) craneLib pkgs;};})
         (final: prev: {haralyzer = import ./packages/haralyzer/package.nix {inherit pkgs;};})
+        (final: prev: {discogs2xlsx = import ./packages/discogs2xlsx/package.nix {inherit pkgs;};})
         # (final: prev: { foot = inputs.foot-fork.packages.${system}.default; })
         (final: prev: {zuban = inputs.zuban.packages.${system}.default;})
         # (final: prev: {pi-undo-redo = inputs.pi-undo-redo.packages.${pkgs.system}.default;})

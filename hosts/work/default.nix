@@ -10,6 +10,18 @@ in {
     package = config.lib.nixGL.wrap pkgs.firefox;
   };
 
+  programs.gpg = {
+    enable = true;
+    package = pkgs.gnupg;
+  };
+
+  services.gpg-agent = {
+    enable = true;
+    pinentry.package = pkgs.pinentry-curses;
+    defaultCacheTtl = 3600;
+    maxCacheTtl = 28800;
+  };
+
   home.packages = with pkgs; [
     _1password-cli
     pnpm
