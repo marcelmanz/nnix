@@ -52,7 +52,7 @@
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    brave-origin-pr.url = "github:NixOS/nixpkgs?ref=refs/pull/511131/head";
+    brave-origin-pr.url = "github:NixOS/nixpkgs?ref=refs/pull/513143/head";
     # pi-undo-redo.url = "path:/home/mmanzanares/clones/forks/pi-undo-redo";
     # hyprland = {
     #   url = "github:hyprwm/Hyprland";
@@ -129,7 +129,7 @@
             (import brave-origin-pr {
               inherit system;
               config.allowUnfree = true;
-            })."brave-origin";
+            })."brave-origin-nightly";
         })
         #  force audio & bluetooth to use the stable channel
         # (final: prev: {

@@ -2,16 +2,16 @@
   "nodes": {
     "brave-origin-pr": {
       "locked": {
-        "lastModified": 1777970999,
-        "narHash": "sha256-iDEf31KByjim3u+WuViRKZKG9GoR+KZX3sq2ootvZ8c=",
+        "lastModified": 1780508615,
+        "narHash": "sha256-nXZMmy/k5R5ttWhslaRIjSpfP3egoZtIgO4Pd8P/Wng=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "a34abd26ee4a2a26e7978f956f901d84acf0012d",
+        "rev": "1bc3cf1e2cfdd867e15965aa63d783b095ef23e4",
         "type": "github"
       },
       "original": {
         "owner": "NixOS",
-        "ref": "refs/pull/511131/head",
+        "ref": "refs/pull/513143/head",
         "repo": "nixpkgs",
         "type": "github"
       }
