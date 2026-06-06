@@ -1179,7 +1179,11 @@ in {
     };
     ".config/foot/color-dark.ini".source = link "${dots}/.config/foot/color-dark.ini";
     ".config/foot/colors-light.ini".source = link "${dots}/.config/foot/colors-light.ini";
+    ".config/foot/font.d/laptop.ini".source = link "${dots}/.config/foot/font.d/laptop.ini";
+    ".config/foot/font.d/screen.ini".source = link "${dots}/.config/foot/font.d/screen.ini";
+    ".config/foot/set-font".source = link "${dots}/.config/foot/set-font";
     ".config/tofi/config".source = link "${dots}/.config/tofi/config";
+    ".config/swappy/config".source = link "${dots}/.config/swappy/config";
     # ".config/mako/config".source = link "${dots}/.config/mako/config";
     ".config/ironbar/config.toml".source = link "${dots}/.config/ironbar/config.toml";
 
