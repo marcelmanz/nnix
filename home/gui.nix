@@ -1014,6 +1014,12 @@ in {
       "x-scheme-handler/about" = ["brave-origin-nightly.desktop"];
       "x-scheme-handler/unknown" = ["brave-origin-nightly.desktop"];
 
+      # Brave-Origin per-container scheme handlers (registerProtocolHandler).
+      # force-managed mimeapps.list wipes Brave's runtime registration, so map
+      # each container UUID back to Brave here. Add a line per new container.
+      "x-scheme-handler/containers+2d38aa54-e617-4f06-b29a-7cae91955def" = ["brave-origin-nightly.desktop"];
+      "x-scheme-handler/containers+e5a2523b-61db-4b2a-bf6f-f339add7e24d" = ["brave-origin-nightly.desktop"];
+
       "image/png" = ["imv.desktop"];
       "image/jpeg" = ["imv.desktop"];
       "image/jpg" = ["imv.desktop"];

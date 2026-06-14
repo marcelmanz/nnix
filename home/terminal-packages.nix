@@ -93,6 +93,7 @@ with pkgs; [
   java-language-server
   jq
   jujutsu
+  rumdl
   just
   killall
   kubectl
@@ -247,4 +248,7 @@ with pkgs; [
       sdbus
     ]))
   (pkgs.google-cloud-sdk.withExtraComponents (with pkgs.google-cloud-sdk.components; [gke-gcloud-auth-plugin]))
+  (pkgs.writeShellScriptBin "codelldb" ''
+    exec ${pkgs.vscode-extensions.vadimcn.vscode-lldb}/share/vscode/extensions/vadimcn.vscode-lldb/adapter/codelldb "$@"
+  '')
 ]
