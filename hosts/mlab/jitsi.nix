@@ -1,7 +1,4 @@
-{
-  lib,
-  ...
-}: let
+{lib, ...}: let
   hostName = "jitsi.marcel.cool";
 in {
   services.jitsi-meet = {
