@@ -1015,6 +1015,12 @@ in {
       "x-scheme-handler/about" = ["brave-origin-nightly.desktop"];
       "x-scheme-handler/unknown" = ["brave-origin-nightly.desktop"];
 
+      # Brave-Origin per-container scheme handlers (registerProtocolHandler).
+      # force-managed mimeapps.list wipes Brave's runtime registration, so map
+      # each container UUID back to Brave here. Add a line per new container.
+      "x-scheme-handler/containers+2d38aa54-e617-4f06-b29a-7cae91955def" = ["brave-origin-nightly.desktop"];
+      "x-scheme-handler/containers+e5a2523b-61db-4b2a-bf6f-f339add7e24d" = ["brave-origin-nightly.desktop"];
+
       "image/png" = ["imv.desktop"];
       "image/jpeg" = ["imv.desktop"];
       "image/jpg" = ["imv.desktop"];
@@ -1180,7 +1186,11 @@ in {
     };
     ".config/foot/color-dark.ini".source = link "${dots}/.config/foot/color-dark.ini";
     ".config/foot/colors-light.ini".source = link "${dots}/.config/foot/colors-light.ini";
+    ".config/foot/font.d/laptop.ini".source = link "${dots}/.config/foot/font.d/laptop.ini";
+    ".config/foot/font.d/screen.ini".source = link "${dots}/.config/foot/font.d/screen.ini";
+    ".config/foot/set-font".source = link "${dots}/.config/foot/set-font";
     ".config/tofi/config".source = link "${dots}/.config/tofi/config";
+    ".config/swappy/config".source = link "${dots}/.config/swappy/config";
     # ".config/mako/config".source = link "${dots}/.config/mako/config";
     ".config/ironbar/config.toml".source = link "${dots}/.config/ironbar/config.toml";
 
