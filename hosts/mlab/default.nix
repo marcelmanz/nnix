@@ -20,6 +20,7 @@
     ./immich.nix
     ./invidious.nix
     ./jellyfin.nix
+    ./jitsi.nix
     ./miniflux.nix
     ./navidrome.nix
     ./ollama.nix
