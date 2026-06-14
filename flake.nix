@@ -98,6 +98,7 @@
         allowUnfree = true;
         permittedInsecurePackages = [
           "qtwebengine-5.15.19"
+          "jitsi-meet-1.0.8792"
         ];
       };
       overlays = [
