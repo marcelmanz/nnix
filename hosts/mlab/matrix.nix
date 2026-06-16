@@ -5,148 +5,113 @@
   ...
 }: let
   domain = "matrix.marcel.cool";
-  serverName = "marcel.cool";
-  synapsePort = 8088;
-  baseUrl = "https://${domain}/";
   callDomain = "call.matrix.marcel.cool";
 
-  # Element config for the web client
+  elementCallPackage = pkgs.element-call;
+
   clientConfig = {
-    "m.server_name" = serverName;
     "m.homeserver" = {
-      base_url = baseUrl;
-      server_name = serverName;
+      "base_url" = "https://${domain}/";
+      "server_name" = "marcel.cool";
     };
     "m.identityserver" = {
-      base_url = "https://vector.im";
+      "base_url" = "https://vector.im";
     };
-    # Widget settings for Element Call
+    "m.server_name" = "marcel.cool";
     "widget_url" = "https://${callDomain}/";
   };
-in {
-  # SOPS secrets for Matrix
-  sops.secrets."matrix_registration_token" = {
-    owner = "matrix-synapse";
-  };
 
-  # SOPS template for registration token config file
-  sops.templates."matrix-registration-token" = {
-    content = "registration_shared_secret: ${config.sops.placeholder.matrix_registration_token}";
-    owner = "matrix-synapse";
-  };
-
-  # PostgreSQL database for Matrix
-  services.postgresql = {
-    enable = true;
-    ensureDatabases = ["matrix"];
-    ensureUsers = [
-      {
-        name = "matrix";
-        ensureDBOwnership = true;
+  elementCallConfig = pkgs.writeText "element-call-config.json" ''
+    {
+      "default_server_config": {
+        "m.homeserver": {
+          "base_url": "https://${domain}/",
+          "server_name": "marcel.cool"
+        }
+      },
+      "features": {
+        "feature_use_device_session_member_events": true
+      },
+      "livekit": {
+        "livekit_service_url": "https://livekit.element.io"
+      },
+      "matrix_rtc_session": {
+        "wait_for_key_rotation_ms": 5000,
+        "membership_event_expiry_ms": 7200000,
+        "delayed_leave_event_delay_ms": 90000,
+        "delayed_leave_event_restart_ms": 4000,
+        "delayed_leave_event_restart_local_timeout_ms": 10000,
+        "network_error_retry_ms": 100
       }
-    ];
-    # Force trust authentication for matrix user to avoid peer auth issues
-    authentication = lib.mkForce ''
-      local   all             all                                     trust
-      host    all             all             127.0.0.1/32            trust
-      host    all             all             ::1/128                 trust
-      local   replication     all                                     trust
-      host    replication     all             127.0.0.1/32            trust
-      host    replication     all             ::1/128                 trust
-    '';
+    }
+  '';
+
+  wellKnownConfig = lib.toJSON {
+    "m.homeserver" = {
+      "base_url" = "https://${domain}/";
+    };
+    "m.identity_server" = {
+      "base_url" = "https://vector.im/";
+    };
+    "org.matrix.msc2965.authentication" = {
+      "oidc_discovery_uri" = "https://auth.marcel.cool/.well-known/openid-configuration";
+    };
+    "org.matrix.msc4171.element_call" = {
+      "url" = "https://${callDomain}/";
+    };
   };
 
+  matrixApiProxyConfig = "proxy_set_header Host $host; proxy_set_header X-Real-IP $remote_addr; proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; proxy_set_header X-Forwarded-Proto https; proxy_set_header X-Forwarded-Host $host; proxy_connect_timeout 3s; proxy_send_timeout 15m; proxy_read_timeout 15m; error_page 502 503 504 = @maintenance;";
+
+  elementCallProxyConfig = "proxy_set_header Host $host; proxy_set_header X-Real-IP $remote_addr; proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; proxy_set_header X-Forwarded-Proto https;";
+in {
   # Matrix Synapse server
   services.matrix-synapse = {
     enable = true;
 
-    # Server identification
     settings = {
-      server_name = serverName;
-      public_baseurl = baseUrl;
-
-      # Database configuration (use socket for trust auth)
-      database = {
-        name = "psycopg2";
-        args = {
-          user = "matrix";
-          database = "matrix";
-          host = "/run/postgresql";
-          cp_min = 5;
-          cp_max = 10;
-        };
-      };
-
-      # Media storage
-      media_store_path = "/var/lib/matrix-synapse/media";
-
-      # Registration - disabled for security
       enable_registration = false;
-
-      # Guest access and federation
-      allow_guest_access = true;
-      enable_federation = true;
-
-      # Reporting
-      report_stats = false;
-
-      # HTTP listener on localhost
+      server_name = "marcel.cool";
       listeners = [
         {
-          port = synapsePort;
+          port = 8088;
           bind_addresses = ["127.0.0.1"];
           type = "http";
           tls = false;
-          x_forwarded = true;
           resources = [
             {
-              names = ["client" "federation"];
+              names = ["client"];
               compress = true;
+            }
+            {
+              names = ["federation"];
+              compress = false;
             }
           ];
         }
       ];
+      use_appservice_welcome_email = false;
 
-      # Log configuration
-      log_config = "/var/lib/matrix-synapse/log.yaml";
+      # MatrixRTC with LiveKit
+      matrix_rtc_session = {
+        livekit_service_url = "http://localhost:8081";
+      };
     };
 
-    # Extra config files for secrets
+    # PostgreSQL database
+    settings.database = {
+      name = "psycopg2";
+      args = {
+        database = "matrix";
+        user = "matrix";
+        host = "/run/postgresql";
+      };
+    };
     extraConfigFiles = [
-      # Registration token from SOPS
-      (config.sops.templates."matrix-registration-token".path)
+      (pkgs.writeText "synapse-log-config.yaml" ''
+        root: /var/log/synapse
+      '')
     ];
-
-    # Generate log config
-    log = {
-      version = 1;
-      formatters.journal_fmt.format = "%(name)s: [%(request)s] %(message)s";
-      handlers.journal = {
-        class = "systemd.journal.JournalHandler";
-        formatter = "journal_fmt";
-      };
-      root = {
-        level = "INFO";
-        handlers = ["journal"];
-      };
-      disable_existing_loggers = false;
-    };
-  };
-
-  # Ensure matrix-synapse starts after PostgreSQL
-  # Also fix database collation if needed
-  systemd.services.matrix-synapse = {
-    after = ["postgresql.service"];
-    requires = ["postgresql.service"];
-    # Fix database collation before starting
-    preStart = ''
-      # Check if database has wrong collation and recreate if needed
-      if ${pkgs.postgresql}/bin/psql -U matrix -d matrix -c "SHOW lc_collate" | grep -q "en_US"; then
-        echo "Recreating matrix database with correct collation..."
-        ${pkgs.postgresql}/bin/psql -U postgres -c "DROP DATABASE matrix;"
-        ${pkgs.postgresql}/bin/psql -U postgres -c "CREATE DATABASE matrix WITH OWNER matrix TEMPLATE template0 LC_COLLATE = 'C' LC_CTYPE = 'C';"
-      fi
-    '';
   };
 
   # nginx configuration for Matrix
@@ -158,52 +123,49 @@ in {
     locations."/" = {
       root = pkgs.element-web;
       index = "index.html";
-      extraConfig = ''
-        try_files $uri $uri/ /index.html =404;
-      '';
+      extraConfig = "try_files $uri $uri/ /index.html =404;";
     };
 
     # Custom Element config.json
     locations."/config.json" = {
-      extraConfig = ''
-        return 200 '${lib.toJSON {
-          default_server_config = clientConfig;
-        }}';
-      '';
+      extraConfig = "add_header Content-Type application/json; return 200 '${lib.toJSON {default_server_config = clientConfig;}}';";
     };
 
-    # Proxy Matrix API to Synapse (use regex to match all /_matrix/* paths)
+    # .well-known/matrix/client for client discovery
+    locations."/.well-known/matrix/client" = {
+      extraConfig = "add_header Content-Type application/json; add_header Access-Control-Allow-Origin *; return 200 '${wellKnownConfig}';";
+    };
+
+    # Proxy Matrix API to Synapse
     locations."~ ^/_matrix/" = {
-      proxyPass = "http://127.0.0.1:${toString synapsePort}";
+      proxyPass = "http://127.0.0.1:8088";
       proxyWebsockets = true;
-      extraConfig = ''
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
-      '';
+      extraConfig = matrixApiProxyConfig;
     };
 
     # Proxy Synapse client endpoints
     locations."/_synapse/client" = {
-      proxyPass = "http://127.0.0.1:${toString synapsePort}";
-      extraConfig = ''
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
-      '';
+      proxyPass = "http://127.0.0.1:8088";
+      extraConfig = elementCallProxyConfig;
     };
   };
 
   # coturn TURN server for 1:1 calls
   services.coturn = {
     enable = true;
+    listening-ips = ["0.0.0.0" "::"];
     listening-port = 3478;
     min-port = 49152;
     max-port = 49200;
-    # Generate a secret: openssl rand -base64 32
     static-auth-secret = "coturn-secret-change-me-in-production";
+  };
+
+  # lk-jwt-service for MatrixRTC (Element Call)
+  services.lk-jwt-service = {
+    enable = true;
+    livekitUrl = "wss://livekit.element.io";
+    keyFile = config.sops.templates."livekit-secrets".path;
+    port = 8090;
   };
 
   # Add coturn TURN config to Synapse
@@ -215,32 +177,17 @@ in {
     }
   ];
 
-  # Element Call - deployed as OCI container
-  virtualisation.oci-containers.containers."element-call" = {
-    image = "docker.io/element-hq/element-call:latest";
-    autoStart = true;
-    environment = {
-      BASE_URL = "https://${callDomain}/";
-      MATRIX_SERVER = "https://${domain}/";
-    };
-    ports = [
-      "127.0.0.1:3000:8080"  # Map container port 8080 to localhost:3000
-    ];
-  };
-
   # nginx for Element Call
   services.nginx.virtualHosts.${callDomain} = {
     forceSSL = true;
     useACMEHost = "matrix.marcel.cool";
     locations."/" = {
-      proxyPass = "http://127.0.0.1:3000";
-      proxyWebsockets = true;
-      extraConfig = ''
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
-      '';
+      root = elementCallPackage;
+      extraConfig = "try_files $uri $uri/ /index.html =404; ${elementCallProxyConfig};";
+    };
+    locations."/config.json" = {
+      root = "/etc/element-call";
+      extraConfig = "add_header Content-Type application/json;";
     };
   };
 
@@ -253,5 +200,7 @@ in {
       to = 49200;
     }
   ];
-}
 
+  # Deploy Element Call config file
+  environment.etc."element-call/config.json".source = elementCallConfig;
+}

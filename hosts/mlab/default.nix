@@ -66,6 +66,7 @@
         owner = "dev";
         mode = "0600";
       };
+      "livekit_api_secret" = {};
     };
 
     templates."cloudflare-acme.env" = {
@@ -85,6 +86,14 @@
         SERVER_SECRET_KEY=${config.sops.placeholder.invidious_companion_key}
       '';
       mode = "0444";
+    };
+
+    templates."livekit-secrets" = {
+      content = ''
+        lk-jwt-service: ${config.sops.placeholder.livekit_api_secret}
+      '';
+      owner = "root";
+      mode = "0600";
     };
   };
 
@@ -109,7 +118,7 @@
     enable = true;
     authentication = lib.mkForce ''
       # TYPE  DATABASE        USER            ADDRESS                 METHOD
-      local   all             all                                     ident
+      local   all             all                                     trust
       host    all             all             127.0.0.1/32            scram-sha-256
       host    all             all             ::1/128                 scram-sha-256
     '';
@@ -125,6 +134,10 @@
       }
       {
         name = "stalwart";
+        ensureDBOwnership = true;
+      }
+      {
+        name = "matrix";
         ensureDBOwnership = true;
       }
     ];

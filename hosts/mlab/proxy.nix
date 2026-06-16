@@ -184,7 +184,7 @@
     };
     extraConfig = ''
       location @maintenance {
-        return 307 https://maintenance.marcel.cool?from=${lib.removePrefix "https://" service.href};
+        rewrite ^ https://maintenance.marcel.cool?from=${lib.removePrefix "https://" service.href} permanent;
       }
 
       ${lib.optionalString (service.protected or false) ''
