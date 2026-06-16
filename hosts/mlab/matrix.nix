@@ -8,6 +8,7 @@
   serverName = "marcel.cool";
   synapsePort = 8088;
   baseUrl = "https://${domain}/";
+  callDomain = "call.matrix.marcel.cool";
 
   # Element config for the web client
   clientConfig = {
@@ -19,6 +20,8 @@
     "m.identityserver" = {
       base_url = "https://vector.im";
     };
+    # Widget settings for Element Call
+    "widget_url" = "https://${callDomain}/";
   };
 in {
   # SOPS secrets for Matrix
@@ -193,7 +196,62 @@ in {
     };
   };
 
-  # Firewall - only allow HTTP/HTTPS
-  networking.firewall.allowedTCPPorts = [80 443];
+  # coturn TURN server for 1:1 calls
+  services.coturn = {
+    enable = true;
+    listening-port = 3478;
+    min-port = 49152;
+    max-port = 49200;
+    # Generate a secret: openssl rand -base64 32
+    static-auth-secret = "coturn-secret-change-me-in-production";
+  };
+
+  # Add coturn TURN config to Synapse
+  services.matrix-synapse.settings.turn_servers = [
+    {
+      urls = ["turn:${domain}:3478" "turn:${domain}:3478?transport=udp"];
+      username = "turn_user";
+      credential = "coturn-secret-change-me-in-production";
+    }
+  ];
+
+  # Element Call - deployed as OCI container
+  virtualisation.oci-containers.containers."element-call" = {
+    image = "docker.io/element-hq/element-call:latest";
+    autoStart = true;
+    environment = {
+      BASE_URL = "https://${callDomain}/";
+      MATRIX_SERVER = "https://${domain}/";
+    };
+    ports = [
+      "127.0.0.1:3000:8080"  # Map container port 8080 to localhost:3000
+    ];
+  };
+
+  # nginx for Element Call
+  services.nginx.virtualHosts.${callDomain} = {
+    forceSSL = true;
+    useACMEHost = "matrix.marcel.cool";
+    locations."/" = {
+      proxyPass = "http://127.0.0.1:3000";
+      proxyWebsockets = true;
+      extraConfig = ''
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+      '';
+    };
+  };
+
+  # Firewall - allow coturn ports
+  networking.firewall.allowedTCPPorts = [80 443 3478];
+  networking.firewall.allowedUDPPorts = [3478];
+  networking.firewall.allowedUDPPortRanges = [
+    {
+      from = 49152;
+      to = 49200;
+    }
+  ];
 }
 

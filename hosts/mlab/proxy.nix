@@ -221,6 +221,12 @@ in {
       environmentFile = config.sops.templates."cloudflare-acme.env".path;
       dnsPropagationCheck = true;
     };
+    certs."matrix.marcel.cool" = {
+      domain = "*.matrix.marcel.cool";
+      dnsProvider = "cloudflare";
+      environmentFile = config.sops.templates."cloudflare-acme.env".path;
+      dnsPropagationCheck = true;
+    };
   };
 
   services.nginx = {
