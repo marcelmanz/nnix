@@ -77,9 +77,8 @@ in {
       # Media storage
       media_store_path = "/var/lib/matrix-synapse/media";
 
-      # Registration
-      enable_registration = true;
-      enable_registration_without_verification = true;
+      # Registration - disabled for security
+      enable_registration = false;
 
       # Guest access and federation
       allow_guest_access = true;
