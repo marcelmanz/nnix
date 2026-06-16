@@ -36,38 +36,38 @@ in {
   systemd.services.matrix-synapse = {
     after = ["postgresql.service"];
     requires = ["postgresql.service"];
-    
+
     # Override the service to generate config with secrets
     serviceConfig = {
       ExecStartPre = let
-        generateConfig = pkgs.writeScript "matrix-generate-config" ''#!/bin/sh
-set -e
-PASSWORD=$(cat /run/secrets/matrix_postgres_password)
-TOKEN=$(cat /run/secrets/matrix_registration_token)
-CONFIG=/var/lib/matrix-synapse/homeserver.yaml
+        generateConfig = pkgs.writeScript "matrix-generate-config" ''          #!/bin/sh
+          set -e
+          PASSWORD=$(cat /run/secrets/matrix_postgres_password)
+          TOKEN=$(cat /run/secrets/matrix_registration_token)
+          CONFIG=/var/lib/matrix-synapse/homeserver.yaml
 
-cat > "$CONFIG" <<EOF
-server_name: ${serverName}
-public_baseurl: https://${domain}/
-listen_port: ${toString synapsePort}
+          cat > "$CONFIG" <<EOF
+          server_name: ${serverName}
+          public_baseurl: https://${domain}/
+          listen_port: ${toString synapsePort}
 
-database:
-  name: psycopg2
-  args:
-    dsn: "postgresql://matrix:$PASSWORD@127.0.0.1:5432/matrix"
-    cp_min: 5
-    cp_max: 10
+          database:
+            name: psycopg2
+            args:
+              dsn: "postgresql://matrix:$PASSWORD@127.0.0.1:5432/matrix"
+              cp_min: 5
+              cp_max: 10
 
-media_store_path: /var/lib/matrix/media
-registration_shared_secret: $TOKEN
-allow_guest_access: true
-enable_federation: true
-report_stats: false
-log_config: /etc/matrix-synapse/log.yaml
-EOF
+          media_store_path: /var/lib/matrix/media
+          registration_shared_secret: $TOKEN
+          allow_guest_access: true
+          enable_federation: true
+          report_stats: false
+          log_config: /etc/matrix-synapse/log.yaml
+          EOF
         '';
-      in [ generateConfig ];
-      
+      in [generateConfig];
+
       # Override ExecStart to use our generated config
       ExecStart = lib.mkForce "${pkgs.matrix-synapse}/bin/synapse_homeserver --config-path /var/lib/matrix-synapse/homeserver.yaml --keys-directory /var/lib/matrix-synapse";
     };

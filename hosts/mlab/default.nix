@@ -20,7 +20,7 @@
     ./immich.nix
     ./invidious.nix
     ./jellyfin.nix
-    ./jitsi.nix
+    # ./jitsi.nix
     ./miniflux.nix
     ./navidrome.nix
     ./ollama.nix
@@ -38,7 +38,7 @@
     ./stalwart.nix
     ./uptime-kuma.nix
     # ./zulip.nix
-    ./matrix.nix
+    # ./matrix.nix
     # ./piped.nix
     # ./hyperpipe.nix
   ];
