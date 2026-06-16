@@ -37,8 +37,8 @@
     ./soulbeet.nix
     ./stalwart.nix
     ./uptime-kuma.nix
+    ./matrix.nix
     # ./zulip.nix
-    # ./matrix.nix
     # ./piped.nix
     # ./hyperpipe.nix
   ];
