@@ -56,6 +56,7 @@ in {
     settings = {
       enable_registration = false;
       server_name = serverName;
+      experimental_features.mrtc = true;
       listeners = [{
         port = 8088;
         bind_addresses = ["127.0.0.1"];
@@ -94,6 +95,9 @@ in {
     locations."/" = {
       extraConfig = "return 301 https://followthetrace.com$request_uri;";
     };
+    locations."/.well-known/matrix/client" = {
+      extraConfig = ''add_header Content-Type application/json; return 200 '${lib.toJSON clientConfig}';'';
+    };
     locations."/.well-known/matrix/server" = {
       extraConfig = "add_header Content-Type application/json; return 200 '{\"m.server\": \"marcel.cool:443\"}';";
     };
@@ -120,7 +124,7 @@ in {
       extraConfig = "try_files $uri $uri/ /index.html =404;";
     };
     locations."/config.json" = {
-      extraConfig = "add_header Content-Type application/json; return 200 '{\"default_server_config\": ${lib.toJSON clientConfig}}';";
+      extraConfig = "add_header Content-Type application/json; return 200 '${builtins.readFile elementCallConfig}';";
     };
   };
 
