@@ -193,7 +193,6 @@
     git
     vim
     tree
-    git
     duf
     jq
     ripgrep

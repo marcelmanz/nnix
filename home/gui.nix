@@ -7,7 +7,6 @@
 }: let
   homeDir = config.home.homeDirectory;
   clonesOwn = "${homeDir}/clones/own";
-  pstore = "${clonesOwn}/password-store";
 in {
   home.stateVersion = "26.05";
   programs.home-manager.enable = true;
@@ -30,7 +29,6 @@ in {
     jellyfin-desktop
     obsidian
     blesh
-    # winetricks  # disabled: openal-soft/pipewire linking failure in current nixpkgs
     font-awesome
     abiword
     kdePackages.ark
@@ -41,7 +39,6 @@ in {
     dmenu-wayland
     eww
     fira-sans
-    font-awesome
     foot
     jitsi
     gimp3
@@ -65,7 +62,6 @@ in {
     roboto
     roboto-mono
     roboto-serif
-    # rustdesk
     satty
     swayimg
     mqttx
@@ -91,22 +87,17 @@ in {
     flameshot
     swappy
     wlprop
-    # rustdesk
     quickshell
     wob
-    # ironbar # currently returns an error releated to libedev
     distrobox
     garamond-libre
     kdePackages.qtdeclarative
     guvcview
     thunderbird
-    wlprop
-    # wine  # disabled: openal-soft/pipewire linking failure in current nixpkgs
     vvvvvv
     pinentry-all
     mullvad-browser
     signal-desktop
-    # open-webui
     socat
     jq
     llama-cpp
@@ -148,20 +139,7 @@ in {
 
       script-fail-notify = true;
 
-      scripts = {
-        example-script = {
-          exec = "echo 'Do something...'";
-          urgency = "Normal";
-        };
-      };
-
-      notification-visibility = {
-        example-name = {
-          state = "muted";
-          urgency = "Low";
-          app-name = "Spotify";
-        };
-      };
+      notification-visibility = {};
 
       widgets = [
         "label"
@@ -986,14 +964,7 @@ in {
     };
   };
 
-  home.sessionVariables = {
-    EDITOR = "nvim";
-    VISUAL = "nvim";
-    PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
-    OPENSSL_DIR = "${pkgs.openssl.out}";
-    OPENSSL_LIB_DIR = "${pkgs.openssl.out}/lib";
-    OPENSSL_INCLUDE_DIR = "${pkgs.openssl.dev}/include";
-  };
+
 
   xdg.configFile."mimeapps.list".force = true;
   xdg.configFile."swaync/style.css".force = true;
