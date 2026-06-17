@@ -114,7 +114,7 @@ in {
 
   services.nginx.virtualHosts.${callDomain} = {
     forceSSL = true;
-    useACMEHost = "marcel.cool";
+    useACMEHost = "matrix.marcel.cool";
     locations."/" = {
       root = pkgs.element-call;
       extraConfig = "try_files $uri $uri/ /index.html =404;";
