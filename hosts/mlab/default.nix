@@ -21,6 +21,7 @@
     ./invidious.nix
     ./jellyfin.nix
     # ./jitsi.nix
+    ./livekit.nix
     ./miniflux.nix
     ./navidrome.nix
     ./ollama.nix
@@ -67,6 +68,7 @@
         mode = "0600";
       };
       "livekit_api_secret" = {};
+      "livekit_api_key" = {};
     };
 
     templates."cloudflare-acme.env" = {
@@ -90,7 +92,7 @@
 
     templates."livekit-secrets" = {
       content = ''
-        lk-jwt-service: ${config.sops.placeholder.livekit_api_secret}
+        LIVEKIT_KEYS=${config.sops.placeholder.livekit_api_key}:${config.sops.placeholder.livekit_api_secret}
       '';
       owner = "root";
       mode = "0600";
@@ -197,6 +199,9 @@
       "1.1.1.1"
       "8.8.8.8"
     ];
+    hosts = {
+      "127.0.0.1" = [ "marcel.cool" ];
+    };
     tempAddresses = "enabled";
     firewall = {
       enable = true;

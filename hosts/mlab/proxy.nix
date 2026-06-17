@@ -216,7 +216,8 @@ in {
     acceptTerms = true;
     defaults.email = "admin@marcel.cool";
     certs."marcel.cool" = {
-      domain = "*.marcel.cool";
+      domain = "marcel.cool";
+      extraDomainNames = ["*.marcel.cool"];
       dnsProvider = "cloudflare";
       environmentFile = config.sops.templates."cloudflare-acme.env".path;
       dnsPropagationCheck = true;
