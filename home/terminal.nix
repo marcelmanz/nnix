@@ -45,64 +45,47 @@ in {
   programs.ssh = {
     enable = true;
     enableDefaultConfig = false;
-    matchBlocks = {
+    settings = {
       "github.com" = {
-        hostname = "github.com";
         user = "git";
         identityFile = "~/.ssh/github_ed25519";
-        extraOptions = {
-          IdentitiesOnly = "yes";
-        };
+        identitiesOnly = true;
       };
       "bitbucket.org" = {
-        hostname = "bitbucket.org";
         user = "git";
         identityFile = "~/.ssh/id_rsa_bitbucket";
-        extraOptions = {
-          LogLevel = "ERROR";
-        };
+        logLevel = "ERROR";
       };
       "codeberg.org" = {
-        hostname = "codeberg.org";
         user = "git";
         identityFile = "~/.ssh/id_ed25519_codeberg";
-        extraOptions = {
-          IdentitiesOnly = "yes";
-        };
+        identitiesOnly = true;
       };
       "vps" = {
         hostname = "204.168.128.208";
         user = "git";
         identityFile = "~/.ssh/hetzner_ai";
-        extraOptions = {
-          IdentitiesOnly = "yes";
-        };
+        identitiesOnly = true;
       };
       "mlab" = {
         hostname = "ssh.marcel.cool";
         user = "root";
         identityFile = "~/.ssh/mlab_key";
-        extraOptions = {
-          IdentitiesOnly = "yes";
-        };
+        identitiesOnly = true;
       };
       "mlab-local" = {
         hostname = "192.168.1.140";
         user = "root";
         identityFile = "~/.ssh/mlab_key";
-        extraOptions = {
-          IdentitiesOnly = "yes";
-        };
+        identitiesOnly = true;
       };
       "droid" = {
         hostname = "100.112.164.46";
         user = "nix-on-droid";
         port = 8022;
         identityFile = "~/.ssh/id_ed25519";
-        extraOptions = {
-          IdentitiesOnly = "yes";
-          ServerAliveInterval = "60";
-        };
+        identitiesOnly = true;
+        serverAliveInterval = 60;
       };
     };
   };
@@ -130,7 +113,10 @@ in {
     ".config/direnv/direnv.toml".source = link "${dots}/.config/direnv/direnv.toml";
     ".config/clangd/config.yaml".source = link "${dots}/.config/clangd/config.yaml";
     ".claude/settings.json".source = link "${dots}/.claude/settings.json";
-    ".agents/skills/".source = link "${dots}/.agents/skills";
+    ".agents/skills/" = {
+      source = link "${dots}/.agents/skills";
+      force = true;
+    };
     ".config/btop/btop.conf".source = link "${dots}/.config/btop/btop.conf";
 
     # codex
