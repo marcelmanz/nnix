@@ -20,6 +20,7 @@
     };
     "m.server_name" = serverName;
     "widget_url" = "https://${callDomain}/";
+    "org.matrix.msc4143.rtc_foci" = ["https://${domain}/livekit/jwt"];
   };
 
   elementCallConfig = pkgs.writeText "element-call-config.json" ''
@@ -50,12 +51,16 @@
       }
     }
   '';
+
 in {
+  sops.secrets."coturn_secret" = {};
+
   services.matrix-synapse = {
     enable = true;
     settings = {
       enable_registration = false;
       server_name = serverName;
+      experimental_features.msc4143_enabled = true;
       listeners = [{
         port = 8088;
         bind_addresses = ["127.0.0.1"];
@@ -64,7 +69,12 @@ in {
         resources = [{ names = ["client" "federation"]; compress = true; }];
       }];
       use_appservice_welcome_email = false;
-      matrix_rtc_session = { livekit_service_url = "http://localhost:8090"; };
+      matrix_rtc = {
+        transports = [{
+          type = "livekit";
+          livekit_service_url = "http://localhost:8090";
+        }];
+      };
       database = { name = "psycopg2"; args = { database = "matrix"; user = "matrix"; host = "/run/postgresql"; }; };
     };
   };
@@ -72,14 +82,28 @@ in {
   services.nginx.virtualHosts.${domain} = {
     forceSSL = true;
     useACMEHost = "marcel.cool";
+    locations."/_matrix/client/versions" = {
+      proxyPass = "http://127.0.0.1:8088";
+      extraConfig = ''
+        # ponytail: sub_filter module unavailable, Synapse doesn't advertise mRtc natively
+        # Element Call discovers transport via .well-known/matrix/client org.matrix.msc4143.rtc_foci
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_connect_timeout 3s;
+        proxy_send_timeout 15m;
+        proxy_read_timeout 15m;
+      '';
+    };
     locations."~ ^/_matrix/" = {
       proxyPass = "http://127.0.0.1:8088";
       proxyWebsockets = true;
       extraConfig = "proxy_set_header Host $host; proxy_set_header X-Real-IP $remote_addr; proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; proxy_set_header X-Forwarded-Proto https; proxy_connect_timeout 3s; proxy_send_timeout 15m; proxy_read_timeout 15m;";
     };
     locations."/livekit/jwt/" = {
-      proxyPass = "http://127.0.0.1:8090/";
-      extraConfig = "proxy_set_header Host $host; proxy_set_header X-Real-IP $remote_addr; proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; proxy_set_header X-Forwarded-Proto https;";
+      proxyPass = "http://127.0.0.1:8090";
+      extraConfig = "proxy_set_header Host $host; proxy_set_header X-Real-IP $remote_addr; proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; proxy_set_header X-Forwarded-Proto https; proxy_http_version 1.1; proxy_set_header Connection \"\";";
     };
     locations."/" = {
       root = elementCallPackage;
@@ -93,6 +117,9 @@ in {
     useACMEHost = "marcel.cool";
     locations."/" = {
       extraConfig = "return 301 https://followthetrace.com$request_uri;";
+    };
+    locations."/.well-known/matrix/client" = {
+      extraConfig = ''add_header Content-Type application/json; return 200 '${lib.toJSON clientConfig}';'';
     };
     locations."/.well-known/matrix/server" = {
       extraConfig = "add_header Content-Type application/json; return 200 '{\"m.server\": \"marcel.cool:443\"}';";
@@ -114,13 +141,13 @@ in {
 
   services.nginx.virtualHosts.${callDomain} = {
     forceSSL = true;
-    useACMEHost = "marcel.cool";
+    useACMEHost = "matrix.marcel.cool";
     locations."/" = {
       root = pkgs.element-call;
       extraConfig = "try_files $uri $uri/ /index.html =404;";
     };
     locations."/config.json" = {
-      extraConfig = "add_header Content-Type application/json; return 200 '{\"default_server_config\": ${lib.toJSON clientConfig}}';";
+      extraConfig = "add_header Content-Type application/json; add_header Access-Control-Allow-Origin *; return 200 '${builtins.readFile elementCallConfig}';";
     };
   };
 
@@ -130,7 +157,7 @@ in {
     listening-port = 3478;
     min-port = 49152;
     max-port = 49200;
-    static-auth-secret = "coturn-secret-change-me-in-production";
+    static-auth-secret = config.sops.placeholder.coturn_secret;
   };
 
   services.lk-jwt-service = {
@@ -143,7 +170,7 @@ in {
   services.matrix-synapse.settings.turn_servers = [{
     urls = ["turn:${domain}:3478" "turn:${domain}:3478?transport=udp"];
     username = "turn_user";
-    credential = "coturn-secret-change-me-in-production";
+    credential = config.sops.placeholder.coturn_secret;
   }];
 
   networking.firewall.allowedTCPPorts = [80 443 3478];

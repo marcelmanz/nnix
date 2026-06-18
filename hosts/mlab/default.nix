@@ -20,7 +20,6 @@
     ./immich.nix
     ./invidious.nix
     ./jellyfin.nix
-    # ./jitsi.nix
     ./livekit.nix
     ./miniflux.nix
     ./navidrome.nix
@@ -39,9 +38,6 @@
     ./stalwart.nix
     ./uptime-kuma.nix
     ./matrix.nix
-    # ./zulip.nix
-    # ./piped.nix
-    # ./hyperpipe.nix
   ];
 
   time.timeZone = "Europe/Madrid";
@@ -271,7 +267,6 @@
     vim
     lsof
     tree
-    git
     duf
     jq
     ripgrep

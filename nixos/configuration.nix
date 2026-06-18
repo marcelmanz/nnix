@@ -40,7 +40,7 @@ loader = {
 
     substituters = [
       "https://cache.nixos.org"
-      "https://cache.marcel.cool/system"
+
     ];
     trusted-public-keys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
@@ -248,16 +248,12 @@ loader = {
   musnix.enable = false;
 
   security = {
-    # if enabled, pam_wallet will attempt to automatically unlock the user's default kde wallet upon login.
-    # if the user has no wallet named "kdewallet", or the login password does not match their wallet password,
-    # KDE will prompt separately after login.
     pam = {
       services = {
-        # unlock kwallet on sddm login so Brave/Chromium don't prompt for keyring password
-        sddm.kwallet = {
-          enable = true;
-          package = pkgs.kdePackages.kwallet-pam;
-        };
+        # KWallet is disabled - using GNOME Keyring instead (better for Hyprland)
+        # login.kwallet = {
+        #   enable = false;
+        # };
       };
     };
   };
@@ -277,7 +273,7 @@ loader = {
   };
 
   services.dbus.enable = true;
-  services.gnome.gnome-keyring.enable = false;
+  services.gnome.gnome-keyring.enable = true;
 
   services.displayManager = {
     sddm = {

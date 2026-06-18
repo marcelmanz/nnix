@@ -193,7 +193,6 @@
     git
     vim
     tree
-    git
     duf
     jq
     ripgrep
@@ -239,11 +238,6 @@
       createHome = true;
     };
     groups.slskd = {};
-
-    users.immich.extraGroups = [
-      "render"
-      "video"
-    ];
 
     users.navidrome = {
       isSystemUser = true;

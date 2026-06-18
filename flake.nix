@@ -3,7 +3,6 @@
 
   inputs = {
     crane.url = "github:ipetkov/crane";
-    mq.url = "github:themarcel/mq";
     musnix.url = "github:musnix/musnix";
     neovim-nightly-overlay.url = "github:nix-community/neovim-nightly-overlay";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -22,10 +21,6 @@
     xelabash = {
       url = "github:themarcel/xelabash";
       flake = false;
-    };
-    foot-fork = {
-      url = "git+https://codeberg.org/themarcel/foot?ref=regex-scrollback-search";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
     zuban.url = "github:themarcel/zuban";
     nix-on-droid = {
@@ -53,16 +48,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     brave-origin-pr.url = "github:NixOS/nixpkgs?ref=refs/pull/513143/head";
-    # pi-undo-redo.url = "path:/home/mmanzanares/clones/forks/pi-undo-redo";
-    # hyprland = {
-    #   url = "github:hyprwm/Hyprland";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    # };
-    # hyprland-plugins = {
-    #   url = "github:hyprwm/hyprland-plugins";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    #   inputs.hyprland.follows = "hyprland";
-    # };
   };
 
   outputs = {
@@ -84,8 +69,6 @@
     brave-origin-pr,
     ...
   } @ inputs: let
-    # hyprlandInputs = inputs.hyprland;
-    # hyprlandPlugins = inputs."hyprland-plugins";
     system = "x86_64-linux";
     androidSystem = "aarch64-linux";
     username = "marcel";
@@ -98,12 +81,9 @@
         allowUnfree = true;
         permittedInsecurePackages = [
           "qtwebengine-5.15.19"
-          "jitsi-meet-1.0.8792"
         ];
       };
       overlays = [
-        # hyprlandInputs.overlays.default
-        # hyprlandPlugins.overlays.default
         nur.overlays.default
         (import ./overlays/neovim-nightly.nix {inherit inputs;})
         (final: prev: {tmex = tmexPkg;})
@@ -117,11 +97,8 @@
         (final: prev: {"git-commit-search" = import ./packages/git-commit-search/package.nix {inherit (rust) craneLib pkgs;};})
         (final: prev: {haralyzer = import ./packages/haralyzer/package.nix {inherit pkgs;};})
         (final: prev: {discogs2xlsx = import ./packages/discogs2xlsx/package.nix {inherit pkgs;};})
-        # (final: prev: { foot = inputs.foot-fork.packages.${system}.default; })
         (final: prev: {zuban = inputs.zuban.packages.${system}.default;})
-        # (final: prev: {pi-undo-redo = inputs.pi-undo-redo.packages.${pkgs.system}.default;})
         (final: prev: {cliflux = inputs.cliflux.packages.${system}.default;})
-        (final: prev: {"ki-editor" = inputs.ki-editor.packages.${system}.default;})
         (final: prev: {
           protonmail-desktop = inputs.my-nixpkgs.legacyPackages.${system}.protonmail-desktop;
         })
@@ -132,12 +109,6 @@
               config.allowUnfree = true;
             })."brave-origin-nightly";
         })
-        #  force audio & bluetooth to use the stable channel
-        # (final: prev: {
-        #   pipewire = pkgsStable.pipewire;
-        #   wireplumber = pkgsStable.wireplumber;
-        #   bluez = pkgsStable.bluez;
-        # })
       ];
     };
     pkgsAndroid = import nixpkgs2405 {

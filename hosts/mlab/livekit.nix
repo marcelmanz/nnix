@@ -6,6 +6,8 @@
 }: let
   livekitDomain = "livekit.marcel.cool";
 in {
+  sops.secrets."coturn_secret" = {};
+
   services.livekit = {
     enable = true;
     keyFile = "/etc/livekit/secrets.env";
@@ -41,7 +43,7 @@ in {
             port = 3478;
             protocol = "udp";
             # Shared secret for TURN server authentication
-            secret = "coturn-secret-change-me-in-production";
+            secret = config.sops.placeholder.coturn_secret;
           }
         ];
       };
