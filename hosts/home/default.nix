@@ -20,6 +20,7 @@ in {
   # };
 
   home.packages = with pkgs; [
+    element-desktop
     (config.lib.nixGL.wrap mixxx)
     # ungoogled-chromium
     # zeroad

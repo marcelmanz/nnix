@@ -13,7 +13,7 @@
   boot = {
     kernelPackages = pkgs.linuxPackages;
     binfmt.emulatedSystems = ["aarch64-linux"];
-    loader = {
+loader = {
       systemd-boot.enable = true;
       efi.canTouchEfiVariables = true;
     };

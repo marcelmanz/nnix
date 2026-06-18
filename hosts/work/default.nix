@@ -23,6 +23,7 @@ in {
   };
 
   home.packages = with pkgs; [
+    (element-desktop.override {commandLineArgs = "--password-store=gnome-libsecret";})
     _1password-cli
     pnpm
     attic-client
