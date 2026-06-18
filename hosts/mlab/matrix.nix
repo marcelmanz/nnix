@@ -20,7 +20,10 @@
     };
     "m.server_name" = serverName;
     "widget_url" = "https://${callDomain}/";
-    "org.matrix.msc4143.rtc_foci" = ["https://${domain}/livekit/jwt"];
+    "org.matrix.msc4143.rtc_foci" = [{
+      type = "livekit";
+      livekit_service_url = "https://${domain}/livekit/jwt";
+    }];
   };
 
   elementCallConfig = pkgs.writeText "element-call-config.json" ''
@@ -72,7 +75,7 @@ in {
       matrix_rtc = {
         transports = [{
           type = "livekit";
-          livekit_service_url = "http://localhost:8090";
+          livekit_service_url = "https://${domain}/livekit/jwt";
         }];
       };
       database = { name = "psycopg2"; args = { database = "matrix"; user = "matrix"; host = "/run/postgresql"; }; };
@@ -102,7 +105,7 @@ in {
       extraConfig = "proxy_set_header Host $host; proxy_set_header X-Real-IP $remote_addr; proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; proxy_set_header X-Forwarded-Proto https; proxy_connect_timeout 3s; proxy_send_timeout 15m; proxy_read_timeout 15m;";
     };
     locations."/livekit/jwt/" = {
-      proxyPass = "http://127.0.0.1:8090";
+      proxyPass = "http://127.0.0.1:8090/";
       extraConfig = "proxy_set_header Host $host; proxy_set_header X-Real-IP $remote_addr; proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; proxy_set_header X-Forwarded-Proto https; proxy_http_version 1.1; proxy_set_header Connection \"\";";
     };
     locations."/" = {
