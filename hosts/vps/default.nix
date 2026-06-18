@@ -239,11 +239,6 @@
     };
     groups.slskd = {};
 
-    users.immich.extraGroups = [
-      "render"
-      "video"
-    ];
-
     users.navidrome = {
       isSystemUser = true;
       group = "navidrome";

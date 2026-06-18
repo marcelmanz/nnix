@@ -13,8 +13,11 @@ in {
 
   programs.browserpass = {
     enable = true;
-    browsers = ["brave"];
+    browsers = ["brave" "firefox" "chromium" "vivaldi"];
   };
+
+  # Ensure GNOME Keyring starts with the session
+  services.gnome-keyring.enable = true;
 
   home.packages = with pkgs; [
     flat-remix-icon-theme
@@ -103,6 +106,8 @@ in {
     llama-cpp
     songrec
     picard
+    passff-host
+    browserpass
   ];
 
   services.swaync = {
@@ -1206,7 +1211,7 @@ in {
 
     # ".config/swaync/config.json".source = link "${dots}/.config/swaync/config.json";
 
-    ".config/BraveSoftware/Brave-Origin-Beta/NativeMessagingHosts/com.github.browserpass.native.json".source = "${pkgs.browserpass}/lib/browserpass/hosts/chromium/com.github.browserpass.native.json";
+        ".config/BraveSoftware/Brave-Origin-Beta/NativeMessagingHosts/com.github.browserpass.native.json".source = "${pkgs.browserpass}/lib/browserpass/hosts/chromium/com.github.browserpass.native.json";
 
     ".config/BraveSoftware/Brave-Origin-Nightly/NativeMessagingHosts/com.github.browserpass.native.json".source = "${pkgs.browserpass}/lib/browserpass/hosts/chromium/com.github.browserpass.native.json";
 

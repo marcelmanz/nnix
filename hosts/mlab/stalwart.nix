@@ -8,6 +8,9 @@
   sops.secrets."stalwart_admin_pass" = {
     owner = "stalwart";
   };
+  sops.secrets."stalwart_db_password" = {
+    owner = "stalwart";
+  };
   users.users.stalwart.extraGroups = ["postgres"];
   services.stalwart = {
     enable = true;
@@ -51,7 +54,7 @@
         port = 5432;
         database = "stalwart";
         user = "stalwart";
-        password = "dummy_password";
+        password = "%{file:${config.sops.secrets.stalwart_db_password.path}}%";
         tls.enable = false;
       };
 
