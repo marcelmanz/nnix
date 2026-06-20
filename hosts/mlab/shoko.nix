@@ -3,7 +3,28 @@
   pkgs,
   lib,
   ...
-}: {
+}: let
+  # Shoko's AVDumpHelper (v5.3.1, AVDumpHelper.cs) looks for
+  # `<SHOKO_HOME>/AVDump/AVDump3CL.dll` and on Linux execs `dotnet <that dll>`.
+  # It has no bundled download URL, so it throws "Unable to install AVDump3
+  # automatically" unless the dll is already there. The nix `avdump3` package
+  # ships the full flat distribution in share/avdump3/.
+  #
+  # AVDumpHelper.PrepareAVDump also calls ReplaceNet6(), which rewrites
+  # AVDump3CL.runtimeconfig.json 6.0->8.0 when it `Contains("6.0")`. A store
+  # path is read-only, so that write throws UnauthorizedAccessException and
+  # fires the "AVDump failed to install" event (even though the dump still
+  # runs). Pre-patch the runtimeconfig to 8.0 at build time so the Contains
+  # check is false and Shoko never tries to write -> symlink is safe.
+  # ponytail: net6.0 tfm + rollForward:major runs fine under dotnet 8.0; the
+  # patch is exactly what Shoko itself does at runtime.
+  avdump3-net8 = pkgs.runCommand "avdump3-net8" {} ''
+    mkdir -p $out/share
+    cp -r ${pkgs.avdump3}/share/avdump3 $out/share/avdump3
+    chmod -R u+w $out
+    sed -i 's/6\.0/8.0/g' $out/share/avdump3/AVDump3CL.runtimeconfig.json
+  '';
+in {
   services.shoko = {
     enable = true;
     openFirewall = true;
@@ -14,20 +35,13 @@
     "d /var/lib/media/downloads/anime 2775 root media -"
   ];
 
-  environment.systemPackages = with pkgs; [
-    avdump3
-    dotnet-sdk_11
-  ];
-
-  # Shoko hardcodes `<SHOKO_HOME>/AVDump3/AVDump3` and ignores AVDUMP_PATH,
-  # so its auto-updater tries to download a non-FHS binary that can't run on
-  # NixOS. Symlink the nix avdump3 into the hardcoded path before start.
-  # ponytail: shoko module sets StateDirectory=shoko (=/var/lib/shoko, writable
-  # by the shoko user); preStart runs as that user, so mkdir+ln succeed.
+  # ponytail: path option merges with enableDefaultPath (mkAfter), so coreutils
+  # etc. stay on PATH; no regression.
   systemd.services.shoko = {
+    path = [pkgs.dotnet-runtime];
     preStart = ''
-      mkdir -p /var/lib/shoko/AVDump3
-      ln -sf ${pkgs.avdump3}/bin/avdump3 /var/lib/shoko/AVDump3/AVDump3
+      rm -rf /var/lib/shoko/AVDump
+      ln -sfn ${avdump3-net8}/share/avdump3 /var/lib/shoko/AVDump
     '';
 
     serviceConfig = {
