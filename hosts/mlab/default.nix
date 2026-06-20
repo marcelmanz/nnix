@@ -15,6 +15,7 @@
     ./authelia.nix
     ./calibre.nix
     ./ddclient.nix
+    ./dropbox.nix
     ./graphana.nix
     ./homepage.nix
     ./immich.nix
