@@ -52,7 +52,7 @@ With your temporary HTTPS tunnel active, initialize the Android app.
 Remember to activate wakelock in the nix-on-droid notification snack:
 
 ```bash
-nix-on-droid switch --flake github:themarcel/nnix#android
+nix-on-droid switch --flake github:marcelmanz/nnix#android
 ```
 
 ## Phase 4: Finalize & Connect

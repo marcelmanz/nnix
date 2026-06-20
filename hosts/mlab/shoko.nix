@@ -19,14 +19,21 @@
     dotnet-sdk_11
   ];
 
-  systemd.services.shoko.serviceConfig.Environment = [
-    "AVDUMP_PATH=${pkgs.avdump3}/bin/avdump3"
-  ];
+  # Shoko hardcodes `<SHOKO_HOME>/AVDump3/AVDump3` and ignores AVDUMP_PATH,
+  # so its auto-updater tries to download a non-FHS binary that can't run on
+  # NixOS. Symlink the nix avdump3 into the hardcoded path before start.
+  # ponytail: shoko module sets StateDirectory=shoko (=/var/lib/shoko, writable
+  # by the shoko user); preStart runs as that user, so mkdir+ln succeed.
+  systemd.services.shoko = {
+    preStart = ''
+      mkdir -p /var/lib/shoko/AVDump3
+      ln -sf ${pkgs.avdump3}/bin/avdump3 /var/lib/shoko/AVDump3/AVDump3
+    '';
 
-  # inject 'media' group access directly into the systemd service
-  systemd.services.shoko.serviceConfig = {
-    SupplementaryGroups = ["media"];
-    ReadWritePaths = ["/var/lib/media"];
-    UMask = lib.mkForce "0002";
+    serviceConfig = {
+      SupplementaryGroups = ["media"];
+      ReadWritePaths = ["/var/lib/media"];
+      UMask = lib.mkForce "0002";
+    };
   };
 }

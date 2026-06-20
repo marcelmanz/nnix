@@ -6,23 +6,23 @@
     musnix.url = "github:musnix/musnix";
     neovim-nightly-overlay.url = "github:nix-community/neovim-nightly-overlay";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    my-nixpkgs.url = "github:themarcel/nixpkgs";
+    my-nixpkgs.url = "github:marcelmanz/nixpkgs";
     nixpkgsStable.url = "github:NixOS/nixpkgs/nixos-25.11";
     nixpkgs2405.url = "github:NixOS/nixpkgs/nixos-24.05";
-    nu-alias-converter.url = "github:themarcel/nu-alias-converter";
+    nu-alias-converter.url = "github:marcelmanz/nu-alias-converter";
     nur.url = "github:nix-community/NUR";
     rust-overlay.url = "github:oxalica/rust-overlay";
-    nvim.url = "github:themarcel/nvim-lua";
-    cliflux.url = "git+https://codeberg.org/themarcel/cliflux?ref=personal";
+    nvim.url = "github:marcelmanz/nvim-lua";
+    cliflux.url = "git+https://codeberg.org/marcelmanz/cliflux?ref=personal";
     dots = {
-      url = "github:themarcel/dots";
+      url = "github:marcelmanz/dots";
       flake = false;
     };
     xelabash = {
-      url = "github:themarcel/xelabash";
+      url = "github:marcelmanz/xelabash";
       flake = false;
     };
-    zuban.url = "github:themarcel/zuban";
+    zuban.url = "github:marcelmanz/zuban";
     nix-on-droid = {
       url = "github:nix-community/nix-on-droid/master";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -40,7 +40,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     tmex = {
-      url = "github:themarcel/tmex";
+      url = "github:marcelmanz/tmex";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     disko = {

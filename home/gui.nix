@@ -1160,7 +1160,7 @@ in {
       source = link "${dots}/.config/foot/foot.ini";
       force = true;
     };
-    ".config/foot/color-dark.ini".source = link "${dots}/.config/foot/color-dark.ini";
+    ".config/foot/colors-dark.ini".source = link "${dots}/.config/foot/colors-dark.ini";
     ".config/foot/colors-light.ini".source = link "${dots}/.config/foot/colors-light.ini";
     ".config/foot/font.d/laptop.ini".source = link "${dots}/.config/foot/font.d/laptop.ini";
     ".config/foot/font.d/screen.ini".source = link "${dots}/.config/foot/font.d/screen.ini";
