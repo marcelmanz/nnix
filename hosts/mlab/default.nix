@@ -27,6 +27,7 @@
     ./ollama.nix
     ./open-webui.nix
     ./paperless.nix
+    ./pinchflat.nix
     ./proxy.nix
     ./qbittorrent.nix
     ./sabnzbd.nix
@@ -256,12 +257,19 @@
       KbdInteractiveAuthentication = false;
       AllowAgentForwarding = true;
     };
+
     # Add specific ssh rules for user X
     # extraConfig = ''
     #   Match User X
     #     PasswordAuthentication yes
     #     KbdInteractiveAuthentication yes
     # '';
+
+    # Log file ops for sftp (and scp, which uses the sftp protocol on OpenSSH 9+).
+    # Lets you see exactly what share_guest pulls: journalctl -u sshd | grep sftp.
+    extraConfig = ''
+      Subsystem sftp internal-sftp -l INFO
+    '';
   };
 
   environment.systemPackages = with pkgs; [

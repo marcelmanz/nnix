@@ -245,6 +245,13 @@
               description = "P2P Music";
             };
           }
+          {
+            Pinchflat = {
+              icon = "pinchflat";
+              href = services.pinchflat.href;
+              description = "YouTube Downloader";
+            };
+          }
         ];
       }
       {
