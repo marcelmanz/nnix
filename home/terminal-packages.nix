@@ -137,6 +137,7 @@ with pkgs; [
   pamixer
   parted
   pass-wayland
+  waypipe
   passff-host
   patchutils
   pfetch

@@ -306,7 +306,9 @@
     tmux
     tree
     vim
+    waypipe
     zoxide
+    thunar
   ];
 
   environment.sessionVariables.NVIM_PROFILE = "minimal";
