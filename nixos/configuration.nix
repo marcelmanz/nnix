@@ -13,7 +13,7 @@
   boot = {
     kernelPackages = pkgs.linuxPackages;
     binfmt.emulatedSystems = ["aarch64-linux"];
-loader = {
+    loader = {
       systemd-boot.enable = true;
       efi.canTouchEfiVariables = true;
     };
@@ -40,7 +40,6 @@ loader = {
 
     substituters = [
       "https://cache.nixos.org"
-
     ];
     trusted-public-keys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
@@ -49,6 +48,7 @@ loader = {
   };
 
   services.tailscale.enable = true;
+  services.tailscale.extraSetFlags = ["--accept-dns=false"];
 
   networking.firewall.trustedInterfaces = ["tailscale0" "waydroid0"];
   networking.firewall.allowedUDPPorts = [config.services.tailscale.port];
@@ -101,7 +101,7 @@ loader = {
       };
     };
   };
-  services.mullvad-vpn.enable = true;
+  services.mullvad-vpn.enable = false;
   services.flatpak.enable = true;
 
   virtualisation.waydroid = {
@@ -122,6 +122,7 @@ loader = {
     networkmanager = {
       enable = true;
       plugins = with pkgs; [networkmanager-openvpn];
+      insertNameservers = ["1.1.1.1" "8.8.8.8"];
     };
   };
   services.openssh = {

@@ -22,6 +22,8 @@ in {
     maxCacheTtl = 28800;
   };
 
+  services.gnome-keyring.enable = true;
+
   home.packages = with pkgs; [
     (element-desktop.override {commandLineArgs = "--password-store=gnome-libsecret";})
     _1password-cli

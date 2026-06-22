@@ -16,9 +16,6 @@ in {
     browsers = ["brave" "firefox" "chromium" "vivaldi"];
   };
 
-  # Ensure GNOME Keyring starts with the session
-  services.gnome-keyring.enable = true;
-
   home.packages = with pkgs; [
     flat-remix-icon-theme
     audio-select
@@ -28,7 +25,7 @@ in {
     grayjay
     orion
     brave
-    librewolf
+    # librewolf # no active commiter in nixpkgs
     jellyfin-desktop
     obsidian
     blesh
