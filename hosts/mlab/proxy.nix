@@ -73,6 +73,11 @@
       port = 7878;
       href = "https://radarr.marcel.cool";
     };
+    pinchflat = {
+      port = 8945;
+      href = "https://pinchflat.marcel.cool";
+      protected = true;
+    };
     paperless = {
       port = 28981;
       href = "https://paperless.marcel.cool";

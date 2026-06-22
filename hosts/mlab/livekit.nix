@@ -10,7 +10,7 @@ in {
 
   services.livekit = {
     enable = true;
-    keyFile = "/etc/livekit/secrets.env";
+    keyFile = config.sops.templates."livekit-secrets".path;
     redis = {
       createLocally = true;
       host = "127.0.0.1";
@@ -89,13 +89,5 @@ in {
   #   enable = true;
   #   port = 9000;
   # };
-
-  environment.etc."livekit/secrets.env" = {
-    text = ''
-      ${config.sops.placeholder.livekit_api_key}: ${config.sops.placeholder.livekit_api_secret}
-    '';
-    mode = "0600";
-    user = "root";
-  };
 }
 

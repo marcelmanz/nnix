@@ -15,6 +15,7 @@
     ./authelia.nix
     ./calibre.nix
     ./ddclient.nix
+    ./dropbox.nix
     ./graphana.nix
     ./homepage.nix
     ./immich.nix
@@ -26,6 +27,7 @@
     ./ollama.nix
     ./open-webui.nix
     ./paperless.nix
+    ./pinchflat.nix
     ./proxy.nix
     ./qbittorrent.nix
     ./sabnzbd.nix
@@ -86,10 +88,13 @@
       mode = "0444";
     };
 
+    # ponytail: shared rendered secret, format "KEY: SECRET" (space after colon).
+    # lk-jwt LIVEKIT_KEY_FILE splits on ":" then trims ws; livekit-server --key-file
+    # YAML-unmarshals into map[string]string (needs the space to be a map, not a
+    # scalar). The old LIVEKIT_KEYS= prefix leaked into lk-jwt's parsed key and
+    # livekit's separate /etc file had unrendered sops placeholders.
     templates."livekit-secrets" = {
-      content = ''
-        LIVEKIT_KEYS=${config.sops.placeholder.livekit_api_key}:${config.sops.placeholder.livekit_api_secret}
-      '';
+      content = "${config.sops.placeholder.livekit_api_key}: ${config.sops.placeholder.livekit_api_secret}";
       owner = "root";
       mode = "0600";
     };
@@ -252,12 +257,19 @@
       KbdInteractiveAuthentication = false;
       AllowAgentForwarding = true;
     };
+
     # Add specific ssh rules for user X
     # extraConfig = ''
     #   Match User X
     #     PasswordAuthentication yes
     #     KbdInteractiveAuthentication yes
     # '';
+
+    # Log file ops for sftp (and scp, which uses the sftp protocol on OpenSSH 9+).
+    # Lets you see exactly what share_guest pulls: journalctl -u sshd | grep sftp.
+    extraConfig = ''
+      Subsystem sftp internal-sftp -l INFO
+    '';
   };
 
   environment.systemPackages = with pkgs; [
