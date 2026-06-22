@@ -36,6 +36,7 @@
     ./seerr.nix
     ./shoko.nix
     ./slskd.nix
+    ./sway.nix
     ./soulbeet.nix
     ./stalwart.nix
     ./uptime-kuma.nix
@@ -201,7 +202,7 @@
       "8.8.8.8"
     ];
     hosts = {
-      "127.0.0.1" = [ "marcel.cool" ];
+      "127.0.0.1" = ["marcel.cool"];
     };
     tempAddresses = "enabled";
     firewall = {
@@ -274,34 +275,34 @@
 
   environment.systemPackages = with pkgs; [
     attic-client
-    erdtree
-    git
-    vim
-    lsof
-    tree
-    duf
-    jq
-    ripgrep
-    tmux
-    neovim
-    eza
-    zoxide
-    fd
-    fzf
+    atuin
     bat
     bottom
-    starship
-    direnv
-    sysz
     btop
+    carapace
+    direnv
+    duf
+    erdtree
     ethtool
+    eza
+    fd
+    ffmpeg_7
+    fzf
+    git
+    gnupg
+    jq
     librespeed-cli
     libreswan
-    ffmpeg_7
-    atuin
-    gnupg
-    carapace
+    lsof
     mysql84
+    neovim
+    ripgrep
+    starship
+    sysz
+    tmux
+    tree
+    vim
+    zoxide
   ];
 
   environment.sessionVariables.NVIM_PROFILE = "minimal";
