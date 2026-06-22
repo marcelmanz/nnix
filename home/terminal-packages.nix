@@ -28,6 +28,7 @@ with pkgs; [
   beets
   bind
   biome
+  bluetuith
   bottom
   btop
   carapace
