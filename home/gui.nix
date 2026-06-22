@@ -24,7 +24,7 @@ in {
     tesseract
     grayjay
     orion
-    brave
+    (brave.override {commandLineArgs = "--password-store=gnome-libsecret";})
     # librewolf # no active commiter in nixpkgs
     jellyfin-desktop
     obsidian
@@ -966,8 +966,6 @@ in {
     };
   };
 
-
-
   xdg.configFile."mimeapps.list".force = true;
   xdg.configFile."swaync/style.css".force = true;
   xdg.configFile."swaync/config.json".force = true;
@@ -1208,7 +1206,7 @@ in {
 
     # ".config/swaync/config.json".source = link "${dots}/.config/swaync/config.json";
 
-        ".config/BraveSoftware/Brave-Origin-Beta/NativeMessagingHosts/com.github.browserpass.native.json".source = "${pkgs.browserpass}/lib/browserpass/hosts/chromium/com.github.browserpass.native.json";
+    ".config/BraveSoftware/Brave-Origin-Beta/NativeMessagingHosts/com.github.browserpass.native.json".source = "${pkgs.browserpass}/lib/browserpass/hosts/chromium/com.github.browserpass.native.json";
 
     ".config/BraveSoftware/Brave-Origin-Nightly/NativeMessagingHosts/com.github.browserpass.native.json".source = "${pkgs.browserpass}/lib/browserpass/hosts/chromium/com.github.browserpass.native.json";
 
