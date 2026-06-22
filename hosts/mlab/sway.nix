@@ -48,6 +48,10 @@ in {
         modifier = "Mod1";
         terminal = "foot";
         menu = "tofi-run | xargs -r swaymsg exec --";
+        # No title bars (pixel borders, like hyprland border_size=1) and no
+        # default swaybar — minimal.
+        window.titlebar = false;
+        bars = [];
         output."HDMI-A-1" = {
           resolution = "3840x2160@60Hz";
           scale = "1.67";
@@ -69,6 +73,19 @@ in {
           "Mod1+Shift+l" = "move right";
         };
       };
+      # Light theme + layout matching hyprland: 5px gaps, 1px borders,
+      # teal (#007f86) active / gray (#64666c) inactive — same palette as
+      # foot's colors-light.ini. urgent = purple (regular4).
+      extraConfig = ''
+        gaps inner 5
+        gaps outer 5
+        default_border pixel 1
+        default_floating_border pixel 1
+        client.focused          #007f86 #007f86 #e0e4de #007f86
+        client.focused_inactive #64666c #64666c #e0e4de #64666c
+        client.unfocused        #64666c #e0e4de #2c2e33 #64666c
+        client.urgent           #350775 #350775 #e0e4de #350775
+      '';
     };
 
     home.packages = with pkgs; [

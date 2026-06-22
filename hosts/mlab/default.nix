@@ -68,6 +68,10 @@
       };
       "livekit_api_secret" = {};
       "livekit_api_key" = {};
+      "synthetic_api_key" = {
+        owner = "dev";
+        mode = "0400";
+      };
     };
 
     templates."cloudflare-acme.env" = {
@@ -436,11 +440,32 @@
         file.".config/foot/colors-light.ini".source = "${inputs.dots}/.config/foot/colors-light.ini";
         file.".config/foot/colors-dark.ini".source = "${inputs.dots}/.config/foot/colors-dark.ini";
         file.".config/foot/font-active.ini".text = "font=Myna:size=10";
+        file.".pi/agent/settings.json" = {
+          source = "${inputs.dots}/.pi/agent/settings.json";
+          force = true;
+        };
+        file.".pi/agent/models.json" = {
+          source = "${inputs.dots}/.pi/agent/models.json";
+          force = true;
+        };
+        file.".pi/agent/mcp.json" = {
+          source = "${inputs.dots}/.pi/agent/mcp.json";
+          force = true;
+        };
+        file.".agents/skills/" = {
+          source = "${inputs.dots}/.agents/skills";
+          force = true;
+        };
+
+        # bashrc deps
+        file.".bash-preexec.sh".source = "${inputs.dots}/.bash-preexec.sh";
+        file.".inputrc".source = "${inputs.dots}/.inputrc";
       };
       programs.bash = {
         enable = true;
         initExtra = ''
           source ${inputs.dots}/.bashrc
+          export SYNTHETIC_API_KEY="$(cat /run/secrets/synthetic_api_key 2>/dev/null)"
         '';
       };
       imports = [inputs.nvim.homeManagerModules.default];
