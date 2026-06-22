@@ -432,6 +432,10 @@
         file.".config/git".source = "${inputs.dots}/.config/git";
         file.".config/zoxide".source = "${inputs.dots}/.config/zoxide";
         file.".config/btop".source = "${inputs.dots}/.config/btop";
+        file.".config/foot/foot.ini".source = "${inputs.dots}/.config/foot/foot.ini";
+        file.".config/foot/colors-light.ini".source = "${inputs.dots}/.config/foot/colors-light.ini";
+        file.".config/foot/colors-dark.ini".source = "${inputs.dots}/.config/foot/colors-dark.ini";
+        file.".config/foot/font-active.ini".text = "font=Myna:size=10";
       };
       programs.bash = {
         enable = true;
