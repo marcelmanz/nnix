@@ -16,7 +16,8 @@
     zone = "marcel.cool";
     username = "token";
     passwordFile = config.sops.secrets.cloudflare_ddclient_token.path;
-    domains = ["ssh.marcel.cool"];
+    # single source of truth = ssh.marcel.cool (A+AAAA)
+    domains = ["ssh.marcel.cool" "marcel.cool"];
     usev4 = "webv4, webv4=ifconfig.me";
     usev6 = "webv6, webv6=api6.ipify.org";
     ssl = true;
