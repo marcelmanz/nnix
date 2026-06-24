@@ -8,8 +8,6 @@
   callDomain = "call.matrix.marcel.cool";
   serverName = "marcel.cool";
 
-  elementCallPackage = pkgs.element-web;
-
   clientConfig = {
     "m.homeserver" = {
       "base_url" = "https://${domain}/";
@@ -26,36 +24,12 @@
     }];
   };
 
-  elementCallConfig = pkgs.writeText "element-call-config.json" ''
-    {
-      "default_server_config": {
-        "m.homeserver": {
-          "base_url": "https://${domain}/",
-          "server_name": "${serverName}"
-        }
-      },
-      "features": {
-        "feature_use_device_session_member_events": true
-      },
-      "livekit": {
-        "livekit_service_url": "https://${domain}/livekit/jwt"
-      },
-      "matrix_rtc_session": {
-        "wait_for_key_rotation_ms": 5000,
-        "membership_event_expiry_ms": 7200000,
-        "delayed_leave_event_delay_ms": 90000,
-        "delayed_leave_event_restart_ms": 4000,
-        "delayed_leave_event_restart_local_timeout_ms": 10000,
-        "network_error_retry_ms": 100
-      },
-      "matrix_rtc_transport": {
-        "type": "livekit",
-        "livekit_service_url": "https://${domain}/livekit/jwt"
-      }
-    }
-  '';
-
 in {
+  imports = [
+    ./cinny.nix
+    # ./element.nix
+  ];
+
   sops.secrets."coturn_secret" = {};
 
   services.matrix-synapse = {
@@ -108,10 +82,11 @@ in {
       proxyPass = "http://127.0.0.1:8090/";
       extraConfig = "proxy_set_header Host $host; proxy_set_header X-Real-IP $remote_addr; proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; proxy_set_header X-Forwarded-Proto https; proxy_http_version 1.1; proxy_set_header Connection \"\";";
     };
-    locations."/" = {
-      root = elementCallPackage;
-      index = "index.html";
-      extraConfig = "try_files $uri $uri/ /index.html =404;";
+    # ponytail: serve here too so in-browser clients (Cinny) doing discovery on the
+    # homeserver host don't fall through the SPA catch-all to index.html (200 HTML)
+    # and abort with 'configuration appears unusable'. Same-origin, no CORS needed.
+    locations."/.well-known/matrix/client" = {
+      extraConfig = ''add_header Content-Type application/json; return 200 '${lib.toJSON clientConfig}';'';
     };
   };
 
@@ -142,18 +117,6 @@ in {
     };
   };
 
-  services.nginx.virtualHosts.${callDomain} = {
-    forceSSL = true;
-    useACMEHost = "matrix.marcel.cool";
-    locations."/" = {
-      root = pkgs.element-call;
-      extraConfig = "try_files $uri $uri/ /index.html =404;";
-    };
-    locations."/config.json" = {
-      extraConfig = "add_header Content-Type application/json; add_header Access-Control-Allow-Origin *; return 200 '${builtins.readFile elementCallConfig}';";
-    };
-  };
-
   services.coturn = {
     enable = true;
     listening-ips = ["0.0.0.0" "::"];
@@ -179,6 +142,4 @@ in {
   networking.firewall.allowedTCPPorts = [80 443 3478];
   networking.firewall.allowedUDPPorts = [3478];
   networking.firewall.allowedUDPPortRanges = [{ from = 49152; to = 49200; }];
-
-  environment.etc."element-call/config.json".source = elementCallConfig;
 }
