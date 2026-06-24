@@ -41,6 +41,7 @@
     ./stalwart.nix
     ./uptime-kuma.nix
     ./matrix.nix
+    ./vaultwarden.nix
   ];
 
   time.timeZone = "Europe/Madrid";
