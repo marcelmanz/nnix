@@ -310,6 +310,7 @@
     waypipe
     zoxide
     thunar
+    sqlite
   ];
 
   environment.sessionVariables.NVIM_PROFILE = "minimal";

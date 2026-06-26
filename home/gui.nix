@@ -1221,5 +1221,12 @@ in {
       Categories=Utility;Viewer;
       NoDisplay=false
     '';
+
+    # jellyfin-desktop is Qt6 Wayland-native; global QT_SCALE_FACTOR=2 is meant for XWayland Qt under force_zero_scaling and makes Wayland-native Qt render ~2x too big. 
+    # Override to 1 here so the compositor scale alone sizes it. force=true tolerates the live symlink until next switch.
+    ".local/share/applications/org.jellyfin.JellyfinDesktop.desktop" = {
+      source = link "${dots}/.local/share/applications/org.jellyfin.JellyfinDesktop.desktop";
+      force = true;
+    };
   };
 }
