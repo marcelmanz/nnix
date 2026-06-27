@@ -202,10 +202,18 @@
         noipv4
       '';
     };
+    # Ignore ISP DNS from WiFi DHCP and use our own
+    networkmanager = {
+      enable = true;
+      dhcpcd = false;
+      dns = "none";
+    };
     nameservers = [
       "1.1.1.1"
       "8.8.8.8"
     ];
+    # Use dnsmasq as a DNS forwarder to bypass ISP DNS that DHCP may return
+    resolveFqdn = true;
     hosts = {
       "127.0.0.1" = ["marcel.cool"];
     };
@@ -235,6 +243,8 @@
       trustedInterfaces = ["podman0"];
     };
   };
+  services.dnsmasq.enable = true;
+  services.dnsmasq.extraConfig = "conf-dir=/etc/dnsmasq.d";
 
   boot = {
     loader = {

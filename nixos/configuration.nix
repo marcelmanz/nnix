@@ -123,6 +123,10 @@
     networkmanager = {
       enable = true;
       plugins = with pkgs; [networkmanager-openvpn];
+      # ponytail: router on "w-plus" pushes dead DHCP DNS (100.100.1.1/100.90.1.1) that
+      # time out and make hostname resolution take ~13s -> breaks fast.com/browser.
+      # Prepend working resolvers so glibc never tries the dead ones.
+      insertNameservers = ["1.1.1.1" "8.8.8.8"];
     };
   };
   services.openssh = {

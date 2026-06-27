@@ -11,7 +11,10 @@
     nixpkgs2405.url = "github:NixOS/nixpkgs/nixos-24.05";
     nu-alias-converter.url = "github:marcelmanz/nu-alias-converter";
     nur.url = "github:nix-community/NUR";
-    rust-overlay.url = "github:oxalica/rust-overlay";
+    # rust-overlay = {
+    #   url = "github:oxalica/rust-overlay";
+    #   inputs.crane.follows = "crane";
+    # };
     nvim.url = "github:marcelmanz/nvim-lua";
     cliflux.url = "git+https://codeberg.org/marcelmanz/cliflux?ref=personal";
     dots = {
@@ -65,7 +68,7 @@
     disko,
     nixpkgs2405,
     crane,
-    rust-overlay,
+    # rust-overlay,
     brave-origin-pr,
     ...
   } @ inputs: let
@@ -74,7 +77,6 @@
     username = "marcel";
     hostname = "nixos";
     tmexPkg = tmex.packages.${system}.tmex;
-    rust = import ./packages/rust/common.nix {inherit nixpkgs crane rust-overlay;};
     pkgs = import nixpkgs {
       inherit system;
       config = {
@@ -88,13 +90,7 @@
         (import ./overlays/neovim-nightly.nix {inherit inputs;})
         (final: prev: {tmex = tmexPkg;})
         (final: prev: {nuit = nu-alias-converter.packages.${system}.default;})
-        (final: prev: {lsv = import ./packages/lsv/package.nix {inherit (rust) craneLib pkgs;};})
-        (final: prev: {"audio-select" = import ./packages/audio-select/package.nix {inherit (rust) craneLib pkgs;};})
-        (final: prev: {rff = import ./packages/rff/package.nix {inherit (rust) craneLib pkgs;};})
-        (final: prev: {
-          "pulseaudio-next-output" = import ./packages/pulseaudio-next-output/package.nix {inherit (rust) craneLib pkgs;};
-        })
-        (final: prev: {"git-commit-search" = import ./packages/git-commit-search/package.nix {inherit (rust) craneLib pkgs;};})
+        (import ./overlays/rust.nix {inherit pkgs crane;})
         (final: prev: {haralyzer = import ./packages/haralyzer/package.nix {inherit pkgs;};})
         (final: prev: {discogs2xlsx = import ./packages/discogs2xlsx/package.nix {inherit pkgs;};})
         (final: prev: {zuban = inputs.zuban.packages.${system}.default;})
@@ -133,8 +129,8 @@
       rff = pkgs.rff;
       "pulseaudio-next-output" = pkgs."pulseaudio-next-output";
       "git-commit-search" = pkgs."git-commit-search";
-      haralyzer = pkgs.haralyzer;
-      discogs2xlsx = pkgs.discogs2xlsx;
+      # Commented out due to cycles
+      # Commented out due to cycles
     };
     devShells.${system}.default = pkgs.mkShell {
       packages = with pkgs; [
