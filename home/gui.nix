@@ -598,15 +598,6 @@ in {
         "sidebar.new-sidebar.has-used" = true;
         "sidebar.old-sidebar.has-used" = true;
         "sidebar.verticalTabs.dragToPinPromo.dismissed" = true;
-
-        # UI Customization State (Vertical Tabs Layout)
-        # This captures your current layout with tabs on the side
-        "browser.uiCustomization.state" = ''{"placements":{"widget-overflow-fixed-list":[],"unified-extensions-area":["search_kagi_com-browser-action"],"nav-bar":["sidebar-button","back-button","forward-button","stop-reload-button","vertical-spacer","urlbar-container","downloads-button","fxa-toolbar-menu-button","unified-extensions-button","ublock0_raymondhill_net-browser-action","vimmatic_i-beam_org-browser-action","passff_invicem_pro-browser-action","languagetool-webextension_languagetool_org-browser-action","redirector_einaregilsson_com-browser-action","harper_writewithharper_com-browser-action"],"toolbar-menubar":["menubar-items"],"TabsToolbar":[],"vertical-tabs":["tabbrowser-tabs"],"PersonalToolbar":["import-button","personal-bookmarks"]},"seen":["developer-button","screenshot-button","vimmatic_i-beam_org-browser-action","search_kagi_com-browser-action","ublock0_raymondhill_net-browser-action","passff_invicem_pro-browser-action","languagetool-webextension_languagetool_org-browser-action","redirector_einaregilsson_com-browser-action","harper_writewithharper_com-browser-action"],"dirtyAreaCache":["nav-bar","vertical-tabs","toolbar-menubar","TabsToolbar","PersonalToolbar","unified-extensions-area","widget-overflow-fixed-list"],"currentVersion":23,"newElementCount":8}'';
-
-        # Backup of horizontal tabs layout (in case you want to switch back)
-        "browser.uiCustomization.horizontalTabsBackup" = ''{"placements":{"widget-overflow-fixed-list":[],"unified-extensions-area":["vimmatic_i-beam_org-browser-action","search_kagi_com-browser-action"],"nav-bar":["sidebar-button","back-button","forward-button","stop-reload-button","customizableui-special-spring1","vertical-spacer","urlbar-container","customizableui-special-spring2","downloads-button","fxa-toolbar-menu-button","unified-extensions-button","ublock0_raymondhill_net-browser-action"],"toolbar-menubar":["menubar-items"],"TabsToolbar":["firefox-view-button","tabbrowser-tabs","new-tab-button","alltabs-button"],"vertical-tabs":[],"PersonalToolbar":["import-button","personal-bookmarks"]},"seen":["developer-button","screenshot-button","vimmatic_i-beam_org-browser-action","search_kagi_com-browser-action","ublock0_raymondhill_net-browser-action"],"dirtyAreaCache":["nav-bar","vertical-tabs","toolbar-menubar","TabsToolbar","PersonalToolbar","unified-extensions-area"],"currentVersion":23,"newElementCount":2}'';
-
-        "browser.uiCustomization.navBarWhenVerticalTabs" = ''["sidebar-button","back-button","forward-button","stop-reload-button","customizableui-special-spring1","vertical-spacer","urlbar-container","customizableui-special-spring2","downloads-button","fxa-toolbar-menu-button","unified-extensions-button","ublock0_raymondhill_net-browser-action","vimmatic_i-beam_org-browser-action"]'';
       };
 
       #       userChrome = ''
@@ -966,7 +957,7 @@ in {
     .power-buttons>button:hover{
       background: @noti-bg-hover;
     }
-  ''
+  '';
   xdg.configFile."swaync/config.json".force = true;
   xdg.mimeApps = {
     enable = true;

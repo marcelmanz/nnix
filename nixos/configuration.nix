@@ -119,10 +119,10 @@
 
   networking = {
     # enableIPv6 = false;
+    nameservers = ["1.1.1.1" "8.8.8.8"];
     networkmanager = {
       enable = true;
       plugins = with pkgs; [networkmanager-openvpn];
-      insertNameservers = ["1.1.1.1" "8.8.8.8"];
     };
   };
   services.openssh = {

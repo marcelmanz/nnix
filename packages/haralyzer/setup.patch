@@ -1,0 +1,9 @@
+--- a/setup.py
++++ b/setup.py
+@@ -3,4 +3,4 @@ from setuptools import setup
+ 
+-install_reqs = open("requirements.txt").readlines()
+-test_reqs = open("requirements-dev.txt").readlines()
++install_reqs = []
++test_reqs = []
+ 

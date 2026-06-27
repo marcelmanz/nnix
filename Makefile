@@ -1,3 +1,5 @@
+.PHONY: format nixos nixos-nixbuild vps mlab nixos-nixbuild-mlab droid sops
+
 format:
 	alejandra .
 
