@@ -959,8 +959,7 @@ in {
     }
   '';
   xdg.configFile."swaync/config.json".force = true;
-  xdg.mimeApps = {
-    enable = true;
+  xdg.mimeApps = let
     defaultApplications = {
       "text/plain" = ["nvim.desktop"];
       "text/markdown" = ["nvim.desktop"];
@@ -1045,70 +1044,15 @@ in {
       "application/x-bittorrent" = ["org.qbittorrent.qBittorrent.desktop"];
       "inode/directory" = ["kitty-open.desktop"];
     };
+  in {
+    enable = true;
+    inherit defaultApplications;
     associations = {
-      added = {
-        "text/plain" = ["nvim.desktop"];
-        "text/markdown" = ["nvim.desktop"];
-        "text/json" = ["nvim.desktop"];
-        "application/json" = ["nvim.desktop"];
-        "text/csv" = ["csvlens.desktop"];
-        "text/comma-separated-values" = ["csvlens.desktop"];
-        "application/vnd.oasis.opendocument.text" = ["nvim.desktop"];
-
-        "image/png" = ["imv.desktop"];
-        "image/jpeg" = ["imv.desktop"];
-        "image/jpg" = ["imv.desktop"];
-        "image/gif" = ["imv.desktop"];
-        "image/webp" = ["imv.desktop"];
-        "image/tiff" = ["imv.desktop"];
-        "image/bmp" = ["imv.desktop"];
-        "image/svg+xml" = ["imv.desktop"];
-        "image/avif" = ["imv.desktop"];
-        "image/heif" = ["imv.desktop"];
-        "image/heic" = ["imv.desktop"];
-
-        "application/pdf" = ["org.pwmt.zathura-pdf-mupdf.desktop"];
-
-        "video/mp4" = ["mpv.desktop"];
-        "video/x-matroska" = ["mpv.desktop"];
-        "video/webm" = ["mpv.desktop"];
-        "video/x-msvideo" = ["mpv.desktop"];
-        "video/quicktime" = ["mpv.desktop"];
-
-        "audio/mpeg" = ["mpv.desktop"];
-        "audio/flac" = ["mpv.desktop"];
-        "audio/ogg" = ["mpv.desktop"];
-        "audio/wav" = ["mpv.desktop"];
-        "audio/x-wav" = ["mpv.desktop"];
-        "audio/aac" = ["mpv.desktop"];
-
-        "text/x-python" = ["nvim.desktop"];
-        "text/x-shellscript" = ["nvim.desktop"];
-        "text/x-yaml" = ["nvim.desktop"];
-        "application/x-yaml" = ["nvim.desktop"];
-        "text/x-toml" = ["nvim.desktop"];
-        "application/toml" = ["nvim.desktop"];
-        "text/javascript" = ["nvim.desktop"];
-        "application/javascript" = ["nvim.desktop"];
-        "application/typescript" = ["nvim.desktop"];
-        "text/x-rust" = ["nvim.desktop"];
-        "text/x-c" = ["nvim.desktop"];
-        "text/x-c++" = ["nvim.desktop"];
-        "text/x-go" = ["nvim.desktop"];
-        "application/xml" = ["nvim.desktop"];
-        "text/xml" = ["nvim.desktop"];
-
-        "application/zip" = ["org.kde.ark.desktop"];
-        "application/x-tar" = ["org.kde.ark.desktop"];
-        "application/x-bzip" = ["org.kde.ark.desktop"];
-        "application/x-xz" = ["org.kde.ark.desktop"];
-        "application/gzip" = ["org.kde.ark.desktop"];
-        "application/x-7z-compressed" = ["org.kde.ark.desktop"];
-        "application/x-compressed-tar" = ["org.kde.ark.desktop"];
-
-        "application/epub+zip" = ["org.pwmt.zathura-pdf-mupdf.desktop"];
-        "application/x-bittorrent" = ["org.qbittorrent.qBittorrent.desktop"];
-      };
+      added =
+        defaultApplications
+        // {
+          "text/json" = ["nvim.desktop"];
+        };
       removed = {
         "image/png" = [
           "gimp.desktop"
@@ -1212,7 +1156,7 @@ in {
       NoDisplay=false
     '';
 
-    # jellyfin-desktop is Qt6 Wayland-native; global QT_SCALE_FACTOR=2 is meant for XWayland Qt under force_zero_scaling and makes Wayland-native Qt render ~2x too big. 
+    # jellyfin-desktop is Qt6 Wayland-native; global QT_SCALE_FACTOR=2 is meant for XWayland Qt under force_zero_scaling and makes Wayland-native Qt render ~2x too big.
     # Override to 1 here so the compositor scale alone sizes it. force=true tolerates the live symlink until next switch.
     ".local/share/applications/org.jellyfin.JellyfinDesktop.desktop" = {
       source = link "${dots}/.local/share/applications/org.jellyfin.JellyfinDesktop.desktop";

@@ -220,13 +220,14 @@
       enable = true;
       allowedTCPPorts =
         [
+          53 # DNS (dnsmasq) so router/LAN clients can redirect here
           80 # nginx catch-all / http to https redirects
           443 # Nginx HTTPS
           23951 # Qbitorrent
           50300 # Soulseek
         ]
         ++ builtins.map (v: v.port) (builtins.attrValues services);
-      allowedUDPPorts = [23951];
+      allowedUDPPorts = [53 23951];
       allowedUDPPortRanges = [
         {
           from = 60000;
