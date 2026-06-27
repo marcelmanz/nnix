@@ -11,7 +11,6 @@
   ];
 
   boot = {
-    kernelPackages = pkgs.linuxPackages;
     binfmt.emulatedSystems = ["aarch64-linux"];
     loader = {
       systemd-boot.enable = true;
@@ -101,7 +100,6 @@
       };
     };
   };
-  services.mullvad-vpn.enable = false;
   services.flatpak.enable = true;
 
   virtualisation.waydroid = {
@@ -155,7 +153,6 @@
   # kde
   services.desktopManager.plasma6.enable = true;
   xdg.portal.enable = true;
-  xdg.portal.extraPortals = [];
 
   # Configure keymap in X11
   services.xserver.xkb = {
@@ -216,16 +213,6 @@
     OLLAMA_KEEP_ALIVE = "24h";
   };
 
-  # deprecated in favor of ai.marcel.cool
-  # services.open-webui = {
-  #   enable = true;
-  #   port = 8080;
-  #   environment = {
-  #     OLLAMA_API_BASE_URL = "http://127.0.0.1:11434";
-  #     WEBUI_AUTH = "False";
-  #   };
-  # };
-
   # Enable CUPS to print documents.
   services.printing.enable = true;
 
@@ -239,29 +226,10 @@
     pulse.enable = true;
     wireplumber = {
       enable = true;
-      # extraConfig = {
-      #   "bluetooth" = {
-      #     "monitor.bluez.properties" = {
-      #       # this allows high-fidelity audio but explicitly omits "ldac"
-      #       "bluez5.codecs" = ["sbc" "sbc_xq" "aac" "aptx" "aptx_hd"];
-      #     };
-      #   };
-      # };
     };
   };
 
   musnix.enable = false;
-
-  security = {
-    pam = {
-      services = {
-        # KWallet is disabled - using GNOME Keyring instead (better for Hyprland)
-        # login.kwallet = {
-        #   enable = false;
-        # };
-      };
-    };
-  };
 
   users.users.marcel = {
     isNormalUser = true;
@@ -291,10 +259,6 @@
       pkgs.niri
     ];
     defaultSession = "hyprland";
-    autoLogin = {
-      enable = false;
-      user = "marcel";
-    };
   };
 
   programs.seahorse.enable = true;

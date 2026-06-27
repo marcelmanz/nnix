@@ -42,8 +42,6 @@ with pkgs; [
   cliflux
   codex
   cowsay
-  cowsay
-  csvlens
   csvlens
   delta
   discogs2xlsx
@@ -78,7 +76,6 @@ with pkgs; [
   git-commit-search
   gitFull
   glirc
-  glirc
   glow
   gnumake
   gping
@@ -109,7 +106,6 @@ with pkgs; [
   markdown-oxide
   marksman
   mdformat
-  mdwatch
   mdwatch
   mdx-language-server
   mediainfo
@@ -147,8 +143,6 @@ with pkgs; [
   prefetch-npm-deps
   prettier
   prettierd
-  prettierd
-  pulseaudio-next-output
   pulseaudio-next-output
   pulseaudioFull
   pwgen
@@ -189,15 +183,12 @@ with pkgs; [
   tree
   trippy
   typos
-  typos
-  typos-lsp
   typos-lsp
   typst
   unrar
   unzip
   util-linux
   uv
-  v4l-utils
   v4l-utils
   vale
   vale-ls

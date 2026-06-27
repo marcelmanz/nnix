@@ -140,23 +140,6 @@
       port = 8222;
       href = "https://vault.marcel.cool";
     };
-    # zulip = {
-    #   port = 8088;
-    #   href = "https://chat.marcel.cool";
-    # };
-    # ytmusic = {
-    #   port = 9801;
-    #   href = "https://ytmusic.marcel.cool";
-    #   protected = true;
-    # };
-    # pipedapi = {
-    #   port = 9802;
-    #   href = "https://pipedapi.marcel.cool";
-    # };
-    # pipedproxy = {
-    #   port = 9803;
-    #   href = "https://pipedproxy.marcel.cool";
-    # };
   };
 
   mkProxyHost = name: service: {

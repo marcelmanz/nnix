@@ -65,20 +65,6 @@
       '';
     };
     virtualHosts = {
-      # "photos.marcel.cool" = {
-      #   extraConfig = ''
-      #     @api path /api/*
-      #     reverse_proxy @api 127.0.0.1:2283
-      #     reverse_proxy 127.0.0.1:3001
-      #   '';
-      # };
-      # "photos-server.marcel.cool" = {
-      #   extraConfig = ''
-      #     @api path /api/*
-      #     reverse_proxy @api 127.0.0.1:2283
-      #     reverse_proxy 127.0.0.1:3001
-      #   '';
-      # };
       "slskd.marcel.cool" = {
         extraConfig = ''
           reverse_proxy 127.0.0.1:5030
