@@ -120,12 +120,21 @@
       config.allowUnfree = true;
     };
   in {
-    # custom android bootstrap zipball generator
-    packages.${system}.android-bootstrap = import ./hosts/android/bootstrap.nix {
-      inherit pkgs nix-on-droid system;
-      targetSystem = "aarch64-linux";
-      sshKeyPath = ./hosts/android/ssh.pub;
-      flakeSource = ./.;
+    packages.${system} = {
+      # custom android bootstrap zipball generator
+      android-bootstrap = import ./hosts/android/bootstrap.nix {
+        inherit pkgs nix-on-droid system;
+        targetSystem = "aarch64-linux";
+        sshKeyPath = ./hosts/android/ssh.pub;
+        flakeSource = ./.;
+      };
+      lsv = pkgs.lsv;
+      "audio-select" = pkgs."audio-select";
+      rff = pkgs.rff;
+      "pulseaudio-next-output" = pkgs."pulseaudio-next-output";
+      "git-commit-search" = pkgs."git-commit-search";
+      haralyzer = pkgs.haralyzer;
+      discogs2xlsx = pkgs.discogs2xlsx;
     };
     devShells.${system}.default = pkgs.mkShell {
       packages = with pkgs; [
