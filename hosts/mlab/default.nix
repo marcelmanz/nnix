@@ -205,7 +205,6 @@
     # Ignore ISP DNS from WiFi DHCP and use our own
     networkmanager = {
       enable = true;
-      dhcpcd = false;
       dns = "none";
     };
     nameservers = [
@@ -213,7 +212,6 @@
       "8.8.8.8"
     ];
     # Use dnsmasq as a DNS forwarder to bypass ISP DNS that DHCP may return
-    resolveFqdn = true;
     hosts = {
       "127.0.0.1" = ["marcel.cool"];
     };
@@ -244,7 +242,12 @@
     };
   };
   services.dnsmasq.enable = true;
-  services.dnsmasq.extraConfig = "conf-dir=/etc/dnsmasq.d";
+  # ponytail: bind only the LAN NIC so dnsmasq (port 53) doesn't collide with
+  # podman's aardvark-dns on 10.89.0.1:53. Router redirects LAN clients here.
+  services.dnsmasq.settings = {
+    interface = "enp87s0";
+    bind-interfaces = true;
+  };
 
   boot = {
     loader = {
