@@ -361,27 +361,11 @@
           options = ["NOPASSWD"];
         }
         {
-          command = "/run/current-system/sw/bin/systemctl --system show *";
+          command = "/run/current-system/sw/bin/systemctl reload *";
           options = ["NOPASSWD"];
         }
         {
-          command = "/run/current-system/sw/bin/systemctl --system status *";
-          options = ["NOPASSWD"];
-        }
-        {
-          command = "/run/current-system/sw/bin/systemctl --system cat *";
-          options = ["NOPASSWD"];
-        }
-        {
-          command = "/run/current-system/sw/bin/systemctl --system list-units *";
-          options = ["NOPASSWD"];
-        }
-        {
-          command = "/run/current-system/sw/bin/systemctl --system list-unit-files *";
-          options = ["NOPASSWD"];
-        }
-        {
-          command = "/run/current-system/sw/bin/journalctl *";
+          command = "/run/current-system/sw/bin/nix-collect-garbage -d";
           options = ["NOPASSWD"];
         }
       ];
