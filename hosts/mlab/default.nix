@@ -73,6 +73,8 @@
         owner = "dev";
         mode = "0400";
       };
+      "ms01_admin_password" = {neededForUsers = true;};
+      "ms01_dev_password" = {neededForUsers = true;};
     };
 
     templates."cloudflare-acme.env" = {
@@ -277,18 +279,15 @@
       KbdInteractiveAuthentication = false;
       AllowAgentForwarding = true;
     };
-
-    # Add specific ssh rules for user X
-    # extraConfig = ''
-    #   Match User X
-    #     PasswordAuthentication yes
-    #     KbdInteractiveAuthentication yes
-    # '';
-
-    # Log file ops for sftp (and scp, which uses the sftp protocol on OpenSSH 9+).
-    # Lets you see exactly what share_guest pulls: journalctl -u sshd | grep sftp.
     extraConfig = ''
       Subsystem sftp internal-sftp -l INFO
+
+      # admin is local console only
+      DenyUsers admin
+
+      Match User dev
+        PasswordAuthentication yes
+        KbdInteractiveAuthentication yes
     '';
   };
 
@@ -392,13 +391,21 @@
   users = {
     groups.dev-team = {};
 
+    # dev: ssh key + password over ssh + local console. Same perms as before (limited sudo via dev-team).
     users.dev = {
       isNormalUser = true;
+      hashedPasswordFile = config.sops.secrets."ms01_dev_password".path;
       extraGroups = ["dev-team" "systemd-journal"];
       openssh.authorizedKeys.keys = [
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN7c4J3kFLiJYHqUh9zkybQu0pjOu8tyofUnsd67se9m mlab server key"
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIvff/camqPCFP3s0xfpjyMcw3y3V3/lEbh9Y1Q3Nj0M nix-on-droid@localhost"
       ];
+    };
+
+    users.admin = {
+      isNormalUser = true;
+      hashedPasswordFile = config.sops.secrets."ms01_admin_password".path;
+      extraGroups = ["wheel"];
     };
     users.root = {
       openssh.authorizedKeys.keys = [
