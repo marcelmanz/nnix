@@ -373,6 +373,7 @@
   ];
 
   users = {
+    mutableUsers = false; # nix overrides the user password specified in the sops hashes
     groups.dev-team = {};
 
     # dev: ssh key + password over ssh + local console. Same perms as before (limited sudo via dev-team).
