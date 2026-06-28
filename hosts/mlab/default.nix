@@ -325,7 +325,6 @@
     zoxide
     thunar
     sqlite
-
   ];
 
   environment.sessionVariables.NVIM_PROFILE = "minimal";
@@ -446,6 +445,7 @@
           pi-coding-agent
           opencode
           gh
+          fastfetch
         ];
         file.".bash_aliases".source = "${inputs.dots}/.bash_aliases";
         file."clones/forks/xelabash".source = inputs.xelabash;
