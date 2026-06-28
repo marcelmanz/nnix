@@ -73,8 +73,8 @@
         owner = "dev";
         mode = "0400";
       };
-      "ms01_admin_password" = {neededForUsers = true;};
-      "ms01_dev_password" = {neededForUsers = true;};
+      "ms01_admin_hash" = {neededForUsers = true;};
+      "ms01_dev_hash" = {neededForUsers = true;};
     };
 
     templates."cloudflare-acme.env" = {
@@ -378,7 +378,7 @@
     # dev: ssh key + password over ssh + local console. Same perms as before (limited sudo via dev-team).
     users.dev = {
       isNormalUser = true;
-      hashedPasswordFile = config.sops.secrets."ms01_dev_password".path;
+      hashedPasswordFile = config.sops.secrets."ms01_dev_hash".path;
       extraGroups = ["dev-team" "systemd-journal"];
       openssh.authorizedKeys.keys = [
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN7c4J3kFLiJYHqUh9zkybQu0pjOu8tyofUnsd67se9m mlab server key"
@@ -388,7 +388,7 @@
 
     users.admin = {
       isNormalUser = true;
-      hashedPasswordFile = config.sops.secrets."ms01_admin_password".path;
+      hashedPasswordFile = config.sops.secrets."ms01_admin_hash".path;
       extraGroups = ["wheel"];
     };
     users.root = {
