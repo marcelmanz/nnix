@@ -15,7 +15,7 @@
       WebUI\LocalHostAuthentication=false
       WebUI\AuthSubnetWhitelist=127.0.0.1/32,192.168.1.0/24
       Connection\AddressFamily=Both
-      Connection\Interface=enp87s0
+      Connection\Interface=enp1s0
       Downloads\SavePath=/var/lib/media/downloads/
       Session\DefaultSavePath=/var/lib/media/downloads/
       Session\TempPath=/var/lib/media/downloads/incomplete/

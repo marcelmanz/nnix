@@ -181,7 +181,7 @@
     defaultGateway = "192.168.1.1";
 
     interfaces = {
-      enp87s0 = {
+      enp1s0 = {
         useDHCP = true;
         ipv4.addresses = [
           {
@@ -190,17 +190,17 @@
           }
         ];
       };
-      enp2s0f0np0 = {
+      enp3s0f0np0 = {
         useDHCP = true;
       };
-      enp2s0f1np1 = {
+      enp3s0f1np1 = {
         useDHCP = true;
       };
     };
     dhcpcd = {
       extraConfig = ''
         slaac private
-        interface enp87s0
+        interface enp1s0
         noipv4
       '';
     };
@@ -248,7 +248,7 @@
   # ponytail: bind only the LAN NIC so dnsmasq (port 53) doesn't collide with
   # podman's aardvark-dns on 10.89.0.1:53. Router redirects LAN clients here.
   services.dnsmasq.settings = {
-    interface = "enp87s0";
+    interface = "enp1s0";
     bind-interfaces = true;
   };
 
