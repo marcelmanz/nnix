@@ -12,6 +12,7 @@ in {
   imports = [
     ../../home/terminal.nix
     ../../home/gui.nix
+    ../../home/i3.nix
   ];
 
   # nixGL = {

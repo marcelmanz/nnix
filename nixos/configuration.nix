@@ -248,6 +248,17 @@
   services.dbus.enable = true;
   services.gnome.gnome-keyring.enable = true;
 
+  services.xserver = {
+    enable = true;
+    windowManager.i3 = {
+      enable = true;
+      extraPackages = with pkgs; [dmenu];
+    };
+  };
+
+  # plasma6 and seahorse both mkDefault this; pick plasma's ksshaskpass
+  programs.ssh.askPassword = lib.mkForce "${pkgs.kdePackages.ksshaskpass.out}/bin/ksshaskpass";
+
   services.displayManager = {
     sddm = {
       enable = true;
