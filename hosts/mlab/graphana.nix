@@ -38,6 +38,7 @@
                 hash = "sha256-1DE1aaanRHHeCOMWDGdOS1wBXxOF84UXAjJzT5Ek6mM=";
               }
             } $out/node-exporter-full.json
+            cp ${./dir-sizes.json} $out/dir-sizes.json
           '';
         }
       ];
