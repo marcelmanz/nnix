@@ -21,6 +21,10 @@ mlab:
 	else \
 		nixos-rebuild switch  --flake .#mlab --target-host root@mlab; \
 	fi
+	@# pin the mlab closure as a local GC root. 
+	@# reuses the toplevel just built above (instant), just adds the root.
+	@mkdir -p $(HOME)/.cache/nix-roots
+	@nix build .#nixosConfigurations.mlab.config.system.build.toplevel --out-link $(HOME)/.cache/nix-roots/mlab
 
 nixos-nixbuild-mlab:
 	sudo nixos-rebuild switch --flake .#mlab --target-host root@mlab-local; \

@@ -320,6 +320,7 @@
     fd
     ffmpeg_7
     fzf
+    gdu
     git
     gnupg
     jq

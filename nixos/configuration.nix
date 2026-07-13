@@ -38,6 +38,7 @@
     experimental-features = ["nix-command" "flakes"];
 
     substituters = [
+      "https://cache.marcel.cool/system"
       "https://cache.nixos.org"
     ];
     trusted-public-keys = [
