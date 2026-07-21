@@ -70,20 +70,32 @@
     ];
   };
 
+  # ponytail: two du passes → per-service bytes in Grafana. /var/lib depth 1
+  # for services, /var/lib/media depth 2 for the library tree. --block-size=1 =
+  # allocated blocks (matches df, honest on sparse podman layers & VM disks);
+  # -b/--apparent-size would lie and overcount. Stale-free vs a hardcoded list.
+  # Ceiling: stats every file under /var/lib + media hourly; switch to an
+  # explicit list or shallower depth if that scan ever stings.
   systemd.tmpfiles.rules = [
     "d /var/lib/prometheus-node-exporter-text-files 0755 root root -"
   ];
   systemd.services.directory-size-exporter = {
-    description = "Export /var/lib subdir sizes for Prometheus textfile collector";
+    description = "Export /var/lib + media subdir sizes for Prometheus textfile collector";
     serviceConfig.Type = "oneshot";
     script = ''
       DIR=/var/lib/prometheus-node-exporter-text-files
       mkdir -p "$DIR"
       TMP=$(mktemp -p "$DIR")
-      du --max-depth=1 -b /var/lib 2>/dev/null | while IFS=$'\t' read -r size path; do
-        [ "$path" = "/var/lib" ] && continue
-        printf 'node_directory_size_bytes{directory="%s"} %s\n' "$path" "$size"
-      done > "$TMP"
+      {
+        du --max-depth=1 --block-size=1 /var/lib 2>/dev/null | while IFS=$'\t' read -r size path; do
+          [ "$path" = "/var/lib" ] && continue
+          printf 'node_directory_size_bytes{directory="%s"} %s\n' "$path" "$size"
+        done
+        du --max-depth=2 --block-size=1 /var/lib/media 2>/dev/null | while IFS=$'\t' read -r size path; do
+          [ "$path" = "/var/lib/media" ] && continue
+          printf 'node_directory_size_bytes{directory="%s"} %s\n' "$path" "$size"
+        done
+      } > "$TMP"
       chmod 0644 "$TMP"
       mv "$TMP" "$DIR/dir_sizes.prom"
     '';

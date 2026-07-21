@@ -22,6 +22,25 @@
 
   programs.nix-ld.enable = true;
 
+  nix.distributedBuilds = true;
+  nix.buildMachines = [
+    {
+      hostName = "ssh.marcel.cool";
+      system = "x86_64-linux";
+      protocol = "ssh-ng";
+      sshUser = "root";
+      sshKey = "/home/${username}/.ssh/mlab_key";
+      maxJobs = 8;
+      speedFactor = 2;
+      supportedFeatures = ["nixos-test" "benchmark" "big-parallel" "kvm"];
+    }
+  ];
+
+  programs.ssh.extraConfig = ''
+    Host ssh.marcel.cool
+      AddressFamily inet
+  '';
+
   nix.settings = {
     # cores = 0; # Use all cores
 

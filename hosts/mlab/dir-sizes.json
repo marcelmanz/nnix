@@ -8,15 +8,52 @@
   "liveNow": false,
   "panels": [
     {
-      "type": "bargauge",
-      "title": "Disk Usage by Service Directory (/var/lib)",
-      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 0 },
+      "type": "gauge",
+      "title": "Root Disk Used",
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 0 },
       "id": 1,
       "targets": [
         {
           "datasource": { "type": "prometheus" },
           "editorMode": "code",
-          "expr": "topk(10, node_directory_size_bytes)",
+          "expr": "1 - (node_filesystem_avail_bytes{mountpoint=\"/\",fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{mountpoint=\"/\",fstype!~\"tmpfs|overlay\"})",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.8 },
+              { "color": "red", "value": 0.9 }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      }
+    },
+    {
+      "type": "bargauge",
+      "title": "Service Directories — % of Disk",
+      "gridPos": { "h": 7, "w": 16, "x": 8, "y": 0 },
+      "id": 2,
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "editorMode": "code",
+          "expr": "node_directory_size_bytes{directory!~\"/var/lib/media/.+\"} / on() group_left() node_filesystem_size_bytes{mountpoint=\"/\",fstype!~\"tmpfs|overlay\"}",
           "legendFormat": "{{directory}}",
           "range": true,
           "refId": "A"
@@ -24,6 +61,49 @@
       ],
       "fieldConfig": {
         "defaults": {
+          "unit": "percentunit",
+          "color": { "mode": "palette-classic" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.4 },
+              { "color": "red", "value": 0.6 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "lcd",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showUnfilled": true,
+        "sortOrder": "descending",
+        "text": {}
+      }
+    },
+    {
+      "type": "bargauge",
+      "title": "Disk Usage by Service Directory (/var/lib)",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 7 },
+      "id": 3,
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "editorMode": "code",
+          "expr": "topk(10, node_directory_size_bytes{directory!~\"/var/lib/media/.+\"})",
+          "legendFormat": "{{directory}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes",
           "color": { "mode": "palette-classic" },
           "custom": { "hideFrom": { "legend": false, "tooltip": false, "viz": false } },
           "mappings": [],
@@ -33,8 +113,50 @@
               { "color": "green", "value": null },
               { "color": "red", "value": 100000000000 }
             ]
-          },
-          "unit": "decbytes"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "lcd",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showUnfilled": true,
+        "sortOrder": "descending",
+        "text": {}
+      }
+    },
+    {
+      "type": "bargauge",
+      "title": "Media Library Breakdown (/var/lib/media, top 20)",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 16 },
+      "id": 4,
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "editorMode": "code",
+          "expr": "topk(20, node_directory_size_bytes{directory=~\"/var/lib/media/.+\"})",
+          "legendFormat": "{{directory}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes",
+          "color": { "mode": "palette-classic" },
+          "custom": { "hideFrom": { "legend": false, "tooltip": false, "viz": false } },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 50000000000 },
+              { "color": "red", "value": 200000000000 }
+            ]
+          }
         },
         "overrides": []
       },
@@ -59,5 +181,5 @@
   "timezone": "",
   "title": "Directory Sizes",
   "uid": "dir-sizes",
-  "version": 1
+  "version": 2
 }

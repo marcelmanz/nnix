@@ -147,6 +147,7 @@ with pkgs; [
   pulseaudioFull
   pwgen
   rabbitmqadmin-ng
+  rbw
   rclone
   repgrep
   rich-cli
