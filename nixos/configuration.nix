@@ -25,11 +25,11 @@
   nix.distributedBuilds = true;
   nix.buildMachines = [
     {
-      hostName = "ssh.marcel.cool";
+      hostName = "mlab";
       system = "x86_64-linux";
       protocol = "ssh-ng";
-      sshUser = "root";
-      sshKey = "/home/${username}/.ssh/mlab_key";
+      # sshUser = "root";
+      # sshKey = "/home/${username}/.ssh/mlab_key";
       maxJobs = 8;
       speedFactor = 2;
       supportedFeatures = ["nixos-test" "benchmark" "big-parallel" "kvm"];
@@ -37,13 +37,18 @@
   ];
 
   programs.ssh.extraConfig = ''
-    Host ssh.marcel.cool
+    Host mlab
+      HostName ssh.marcel.cool
+      User root
+      IdentityFile /etc/nix/keys/mlab_key
+      IdentitiesOnly yes
       AddressFamily inet
   '';
 
   nix.settings = {
     # cores = 0; # Use all cores
-
+    builders-use-substitutes = true;
+    builders = "@/etc/nix/machines";
     auto-optimise-store = true;
     connect-timeout = 15;
     http-connections = 0;
@@ -344,6 +349,12 @@
     age.sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
 
     secrets = {
+      "mlab_builder_key" = {
+        owner = "root";
+        group = "root";
+        mode = "0600";
+        path = "/etc/nix/keys/mlab_key";
+      };
       "SLSKD_SLSK_USERNAME" = {
         owner = username;
       };
