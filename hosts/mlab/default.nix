@@ -462,11 +462,11 @@
       programs.ssh = {
         enable = true;
         enableDefaultConfig = false;
-        matchBlocks."github.com" = {
-          hostname = "github.com";
-          user = "git";
-          identityFile = "/run/secrets/github_ssh_key";
-          extraOptions.IdentitiesOnly = "yes";
+        settings."github.com" = {
+          HostName = "github.com";
+          User = "git";
+          IdentityFile = "/run/secrets/github_ssh_key";
+          IdentitiesOnly = "yes";
         };
       };
     };

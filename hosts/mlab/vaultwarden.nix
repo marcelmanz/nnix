@@ -11,7 +11,7 @@
     dbBackend = "postgresql";
     environmentFile = config.sops.secrets."vaultwarden_env".path;
     config = {
-      DOMAIN = services.vaultwarden.href; 
+      DOMAIN = services.vaultwarden.href;
       ROCKET_PORT = services.vaultwarden.port;
       ROCKET_ADDRESS = "127.0.0.1";
       DATABASE_URL = "postgresql://vaultwarden@%2Frun%2Fpostgresql/vaultwarden";

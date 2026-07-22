@@ -18,12 +18,13 @@
     };
     "m.server_name" = serverName;
     "widget_url" = "https://${callDomain}/";
-    "org.matrix.msc4143.rtc_foci" = [{
-      type = "livekit";
-      livekit_service_url = "https://${domain}/livekit/jwt";
-    }];
+    "org.matrix.msc4143.rtc_foci" = [
+      {
+        type = "livekit";
+        livekit_service_url = "https://${domain}/livekit/jwt";
+      }
+    ];
   };
-
 in {
   imports = [
     ./cinny.nix
@@ -38,21 +39,37 @@ in {
       enable_registration = false;
       server_name = serverName;
       experimental_features.msc4143_enabled = true;
-      listeners = [{
-        port = 8088;
-        bind_addresses = ["127.0.0.1"];
-        type = "http";
-        tls = false;
-        resources = [{ names = ["client" "federation"]; compress = true; }];
-      }];
+      listeners = [
+        {
+          port = 8088;
+          bind_addresses = ["127.0.0.1"];
+          type = "http";
+          tls = false;
+          resources = [
+            {
+              names = ["client" "federation"];
+              compress = true;
+            }
+          ];
+        }
+      ];
       use_appservice_welcome_email = false;
       matrix_rtc = {
-        transports = [{
-          type = "livekit";
-          livekit_service_url = "https://${domain}/livekit/jwt";
-        }];
+        transports = [
+          {
+            type = "livekit";
+            livekit_service_url = "https://${domain}/livekit/jwt";
+          }
+        ];
       };
-      database = { name = "psycopg2"; args = { database = "matrix"; user = "matrix"; host = "/run/postgresql"; }; };
+      database = {
+        name = "psycopg2";
+        args = {
+          database = "matrix";
+          user = "matrix";
+          host = "/run/postgresql";
+        };
+      };
     };
   };
 
@@ -133,13 +150,20 @@ in {
     port = 8090;
   };
 
-  services.matrix-synapse.settings.turn_servers = [{
-    urls = ["turn:${domain}:3478" "turn:${domain}:3478?transport=udp"];
-    username = "turn_user";
-    credential = config.sops.placeholder.coturn_secret;
-  }];
+  services.matrix-synapse.settings.turn_servers = [
+    {
+      urls = ["turn:${domain}:3478" "turn:${domain}:3478?transport=udp"];
+      username = "turn_user";
+      credential = config.sops.placeholder.coturn_secret;
+    }
+  ];
 
   networking.firewall.allowedTCPPorts = [80 443 3478];
   networking.firewall.allowedUDPPorts = [3478];
-  networking.firewall.allowedUDPPortRanges = [{ from = 49152; to = 49200; }];
+  networking.firewall.allowedUDPPortRanges = [
+    {
+      from = 49152;
+      to = 49200;
+    }
+  ];
 }

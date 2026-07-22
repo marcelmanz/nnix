@@ -14,7 +14,7 @@
     }}/Myna.otf $out/share/fonts/truetype/Myna.otf
   '';
 in {
-  fonts.packages = [ myna-font ];
+  fonts.packages = [myna-font];
   hardware.bluetooth = {
     enable = true;
     powerOnBoot = true;
