@@ -305,6 +305,19 @@
     '';
   };
 
+  # dev keeps password auth (any-device escape hatch); fail2ban rate-limits the
+  # brute-force surface that exposes on public :22.
+  services.fail2ban = {
+    enable = true;
+    jails.sshd.settings = {
+      enabled = true;
+      backend = "systemd"; # sshd logs to journald on NixOS
+      maxretry = 5; # 5 failed attempts within findtime → ban
+      findtime = "10m";
+      bantime = "1h";
+    };
+  };
+
   environment.systemPackages = with pkgs; [
     attic-client
     atuin
