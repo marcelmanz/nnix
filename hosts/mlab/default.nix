@@ -305,14 +305,19 @@
     '';
   };
 
-  # dev keeps password auth (any-device escape hatch); fail2ban rate-limits the
-  # brute-force surface that exposes on public :22.
+  # rate limit brute-force attacks
   services.fail2ban = {
     enable = true;
+    ignoreip = [
+      "127.0.0.0/8"
+      "192.168.0.0/24"
+      "192.168.1.0/24"
+    ];
+    bantime-increment = true; # repeat offenders get longer bans each time
     jails.sshd.settings = {
       enabled = true;
       backend = "systemd"; # sshd logs to journald on NixOS
-      maxretry = 5; # 5 failed attempts within findtime → ban
+      maxretry = 5;
       findtime = "10m";
       bantime = "1h";
     };
