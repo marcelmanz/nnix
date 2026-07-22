@@ -83,6 +83,7 @@
         allowUnfree = true;
         permittedInsecurePackages = [
           "qtwebengine-5.15.19"
+          "pnpm-9.15.9"
         ];
       };
       overlays = [

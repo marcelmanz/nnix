@@ -343,16 +343,21 @@
 
   environment.sessionVariables.NVIM_PROFILE = "minimal";
 
-  nix.settings = {
-    experimental-features = [
-      "nix-command"
-      "flakes"
-    ];
-
-    # optimization for 32gb + likely a multi-core cpu
-    auto-optimise-store = true;
-    cores = 0;
-    max-jobs = "auto";
+  nix = {
+    gc = {
+      automatic = true;
+      dates = "weekly";
+      options = "--delete-older-than 30d";
+    };
+    settings = {
+      experimental-features = [
+        "nix-command"
+        "flakes"
+      ];
+      auto-optimise-store = true;
+      cores = 0;
+      max-jobs = "auto";
+    };
   };
 
   security.sudo.extraRules = [

@@ -41,7 +41,8 @@
     settings = {
       # Dynamically grab the port from your main file's services block
       listen = "[::]:${toString services.attic.port}";
-      database.url = "postgresql://atticd?host=/run/postgresql";
+      # database.url = "postgresql://atticd?host=/run/postgresql";
+      database.url = "postgresql://atticd@%2Frun%2Fpostgresql/atticd";
       storage = {
         type = "local";
         path = "/var/lib/atticd";

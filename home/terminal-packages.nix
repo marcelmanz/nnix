@@ -148,6 +148,7 @@ with pkgs; [
   pwgen
   rabbitmqadmin-ng
   rbw
+  rofi-rbw
   rclone
   repgrep
   rich-cli
