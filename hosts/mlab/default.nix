@@ -308,12 +308,12 @@
   # rate limit brute-force attacks
   services.fail2ban = {
     enable = true;
-    ignoreip = [
+    ignoreIP = [
       "127.0.0.0/8"
       "192.168.0.0/24"
       "192.168.1.0/24"
     ];
-    bantime-increment = true; # repeat offenders get longer bans each time
+    bantime-increment.enable = true; # repeat offenders get longer bans each time
     jails.sshd.settings = {
       enabled = true;
       backend = "systemd"; # sshd logs to journald on NixOS
