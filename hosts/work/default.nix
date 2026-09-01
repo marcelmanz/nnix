@@ -54,12 +54,16 @@ in {
     (config.lib.nixGL.wrap inputs.openlogi.packages.${pkgs.system}.default)
   ];
 
-  # Fix FiiO EH11: drop hfp/hsp roles so BlueZ never opens the Hands-Free
-  # gateway connect that wedges the FiiO's A2DP channel ("Host is down").
+  # FiiO EH11 keeps its a2dp-only codecs; hfp roles are back so headsets
+  # (WH-1000XM4) can offer HSP/HFP for mic. hfp_ag is REQUIRED by this
+  # pipewire build: the native backend only registers its HFP application
+  # with BlueZ when the ag role is present (hfp_hf alone is not enough).
+  # REMEMBER: if the FiiO EH11 A2DP "Host is down" wedge returns, hfp_ag
+  # in this roles line is the knob — drop it and XM4 loses the mic instead.
   # Must be lua syntax for WirePlumber 0.4.x; the 0.5 monitor.bluez.properties
   # form is silently ignored here.
   xdg.configFile."wireplumber/bluetooth.lua.d/51-a2dp-only.lua".text = ''
-    bluez_monitor.properties["bluez5.roles"] = "[ a2dp_sink a2dp_source ]"
+    bluez_monitor.properties["bluez5.roles"] = "[ a2dp_sink a2dp_source hfp_hf hfp_ag hsp_hs ]"
     bluez_monitor.properties["bluez5.codecs"] = "[ ldac aac sbc_xq sbc ]"
     bluez_monitor.properties["bluez5.enable-sbc-xq"] = true
     bluez_monitor.properties["bluez5.enable-hw-volume"] = true
