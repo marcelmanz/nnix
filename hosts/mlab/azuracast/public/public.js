@@ -1,4 +1,6 @@
 (function () {
+  if (location.pathname !== "/" && location.pathname !== "/public/radio_marcel") return;
+
   // Muted-autoplay-where-allowed + unmute on first user gesture.
   // Chrome/Firefox allow muted autoplay without a gesture; Brave (and Chromium with autoplay
   // disabled) block even muted play() until the user interacts. We probe below and only attempt
@@ -2351,7 +2353,7 @@
   // A "pick an image" button (bottom-left) lets a listener replace the page background with
   // their own photo. The image never leaves the browser: it's downscaled on a <canvas> and
   // saved as a data URL in localStorage, then applied via --az-bg-custom (see the
-  // background-image rule in azuracast-public.css), so it's back on the next visit from the
+  // background-image rule in public.css), so it's back on the next visit from the
   // same browser/device.
   (function () {
     var BG_KEY = "az_bg_custom";

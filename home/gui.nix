@@ -84,6 +84,7 @@ in {
     wl-clipboard
     wlr-layout-ui
     wofi-emoji
+    anki
     gelly
     ydotool
     zathura

@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Two-part azuracast report:
+#   1. is /var/lib/media/music fully imported and in the playing playlist?
+#   2. which library tracks have never been played?
+set -u
+DIR=$(cd "$(dirname "$0")" && pwd)
+CONNECT="$DIR/connect"
+
+echo "=== 1. sync with /var/lib/media/music ==="
+"$CONNECT" 'bash -s' < "$DIR/sync-check.sh"
+SYNC=$?  # sync-check exits 1 when out of sync; keep going, part 2 is independent
+
+echo
+echo "=== 2. never played ==="
+# station_media has no station_id (it hangs off the storage location, and this
+# box runs a single station) - the station filter belongs on song_history.
+UNPLAYED=$(echo "SELECT COUNT(*) FROM station_media sm
+WHERE NOT EXISTS (SELECT 1 FROM song_history sh
+  WHERE sh.station_id=(SELECT id FROM station WHERE short_name='radio_marcel')
+  AND sh.media_id=sm.id);" | "$CONNECT" sql)
+TOTAL=$(echo "SELECT COUNT(*) FROM station_media;" | "$CONNECT" sql)
+if [ -z "$UNPLAYED" ] || [ -z "$TOTAL" ]; then echo "report query failed"; exit 2; fi
+echo "$UNPLAYED of $TOTAL tracks never played"
+if [ "$UNPLAYED" != 0 ]; then
+  echo "SELECT sm.path FROM station_media sm
+WHERE NOT EXISTS (SELECT 1 FROM song_history sh
+  WHERE sh.station_id=(SELECT id FROM station WHERE short_name='radio_marcel')
+  AND sh.media_id=sm.id)
+ORDER BY sm.path;" | "$CONNECT" sql
+fi
+
+[ "$SYNC" = 0 ] || exit 1

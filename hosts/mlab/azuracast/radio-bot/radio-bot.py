@@ -3,16 +3,17 @@
 Every bulletin is also kept as mp3 in ARCHIVE_DIR with a static index.html listing it, which is
 what https://bulletins.marcel.cool serves; the Monday run clears the previous week out.
 
-Run twice a day by the azuracast-radio-bot systemd timer (see radio-bot.nix). All secrets and
+Run twice a day by the azuracast-radio-bot systemd timer (see default.nix). All secrets and
 endpoints arrive as environment variables; nothing is configured in this file.
 
-What the station actually says lives in radio-bot-morning.md / radio-bot-afternoon.md - their
+What the station actually says lives in morning.md / afternoon.md - their
 Intro and Outro are spoken verbatim and never reach the model, which only writes the middle.
 """
 
 import html
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -46,8 +47,12 @@ AFTERNOON_DOC = os.environ.get("AFTERNOON_DOC")
 # Optional. A missing bed downgrades to a dry read rather than failing the bulletin.
 BED_FILE = os.environ.get("BED_FILE")
 
+# Optional. Bold ttf used to render each bulletin's cover art - "NEWS" plus the bulletin's
+# date, what the player shows while it airs. No font = tag-only bulletin.
+NEWS_ART_FONT = os.environ.get("NEWS_ART_FONT")
+
 # Web archive of this week's bulletins. Served straight off disk by the bulletins.marcel.cool
-# vhost in radio-bot.nix, so there is no service behind the page.
+# vhost in default.nix, so there is no service behind the page.
 ARCHIVE_DIR = os.environ.get("ARCHIVE_DIR")
 
 TZ = ZoneInfo(os.environ.get("TZ", "Europe/Madrid"))
@@ -65,7 +70,7 @@ REQUIRED = {
     "AFTERNOON_DOC": AFTERNOON_DOC,
 }
 
-# The news slot is fifteen minutes (see radio-program-plan.md), so there is room for a real
+# The news slot is fifteen minutes (see program-plan.md), so there is room for a real
 # bulletin rather than a handful of headlines. Anything past MAX_ENTRIES stays unread and leads
 # the next run. FETCH_LIMIT is what the round-robin in by_source() picks from: Miniflux returns
 # the newest entries overall, so a fetch the size of MAX_ENTRIES would often be one chatty feed.
@@ -297,7 +302,7 @@ def mix(vox_path, out_path):
     lead = int((INTRO_SECONDS - DUCK_LEAD_SECONDS) * 1000)
     fmt = f"aformat=sample_fmts=fltp:sample_rates={SAMPLE_RATE}:channel_layouts=mono"
     graph = (
-        f"[0:a]{fmt},adelay={int(INTRO_SECONDS * 1000)},apad[vox];"
+        f"[0:a]{fmt},volume=1.4,adelay={int(INTRO_SECONDS * 1000)},apad[vox];"
         f"[0:a]{fmt},adelay={lead},apad[key];"
         f"[1:a]{fmt},volume=0.5,afade=t=in:st=0:d=2,"
         f"afade=t=out:st={round(total - 3, 2)}:d=3[bedraw];"
@@ -311,6 +316,13 @@ def mix(vox_path, out_path):
     cmd += ["-stream_loop", "-1", "-i", BED_FILE]
     cmd += ["-filter_complex", graph, "-map", "[out]", "-t", str(total), out_path]
     subprocess.run(cmd, check=True)
+
+
+def bulletin_meta(now):
+    """The ID3 title (what the player displays) and uploaded filename for one bulletin."""
+    slot = "Morning News" if now.hour < 12 else "Afternoon News"
+    title = f"{slot} - {now:%A %d %B}"
+    return title, f"{title} {now:%H%M}.mp3"
 
 
 def archived_at(name):
@@ -382,20 +394,57 @@ def render_index(names):
     )
 
 
-def archive(wav_path, now):
-    """Keep the week's bulletins on disk as mp3 and rewrite the page that lists them.
+def make_news_art(path, now):
+    """Per-bulletin cover art: 'NEWS' plus the bulletin's date, in the player's neon palette."""
+    vf = (
+        "drawbox=x=0:y=0:w=1000:h=14:color=0xff3df0@1:t=fill,"
+        f"drawtext=fontfile={NEWS_ART_FONT}:text='NEWS':fontcolor=white:fontsize=250:"
+        "x=(w-text_w)/2:y=360,"
+        f"drawtext=fontfile={NEWS_ART_FONT}:text='{now:%A %-d %B}':fontcolor=0xffe600:"
+        "fontsize=72:x=(w-text_w)/2:y=660"
+    )
+    subprocess.run(
+        ["ffmpeg", "-y", "-v", "error", "-f", "lavfi",
+         "-i", "color=c=0x14141e:s=1000x1000,format=rgb24",
+         "-vf", vf, "-frames:v", "1", path],
+        check=True,
+    )
 
-    mp3 rather than the broadcast wav: a bulletin is ~22MB of 24kHz mono wav and this page is
-    meant to be opened on a phone.
+
+def to_mp3(wav_path, mp3_path, title, art=None):
+    """Tagged mp3 that AzuraCast airs and bulletins.marcel.cool serves - one encode for both.
+
+    The wav a bulletin starts as is ~22MB of 24kHz mono; mp3 at -q:a 5 more than halves that and
+    both consumers are fine with it. The ID3 title is what the player shows instead of a raw
+    filename, and the embedded picture (make_news_art renders it) is its album art. mp3 (not the
+    wav muxer) is the only ffmpeg container that carries the picture as a plain flag rather than
+    hand-built ID3 bytes.
+    """
+    cmd = ["ffmpeg", "-y", "-v", "error", "-i", wav_path]
+    if art and os.path.exists(art):
+        cmd += [
+            "-i", art, "-map", "0:a", "-map", "1:v",
+            "-c:v", "copy", "-disposition:v", "attached_pic",
+            "-metadata:s:v", "comment=Cover (front)",
+        ]
+    cmd += [
+        "-codec:a", "libmp3lame", "-q:a", "5", "-ac", "1",
+        "-id3v2_version", "3",
+        "-metadata", f"title={title}",
+        mp3_path,
+    ]
+    subprocess.run(cmd, check=True)
+
+
+def archive(mp3_path, now):
+    """Keep the week's bulletins on disk and rewrite the page that lists them.
+
+    The mp3 already exists (to_mp3 made it for the upload), so archiving is a plain copy. Names
+    are parsed by archived_at() and the page is served as-is by nginx.
     """
     os.makedirs(ARCHIVE_DIR, exist_ok=True)
     name = f"{now:%Y-%m-%d-%H%M}.mp3"
-    subprocess.run(
-        ["ffmpeg", "-y", "-v", "error", "-i", wav_path]
-        + ["-codec:a", "libmp3lame", "-q:a", "5", "-ac", "1"]
-        + [os.path.join(ARCHIVE_DIR, name)],
-        check=True,
-    )
+    shutil.copy(mp3_path, os.path.join(ARCHIVE_DIR, name))
     monday = now.date() - timedelta(days=now.weekday())
     for stale in expired(os.listdir(ARCHIVE_DIR), monday):
         os.remove(os.path.join(ARCHIVE_DIR, stale))
@@ -406,21 +455,24 @@ def archive(wav_path, now):
     print(f"radio-bot: archived {name}, {len(names)} bulletin(s) on the page")
 
 
-def upload(wav_path, name):
-    with open(wav_path, "rb") as wav:
+def upload(mp3_path, name):
+    with open(mp3_path, "rb") as mp3:
         res = requests.post(
             f"{AZURACAST_URL}/api/station/{AZURACAST_STATION}/files/upload",
             headers={"X-API-Key": AZURACAST_API_KEY},
             data={"currentDirectory": AZURACAST_DIR},
-            files={"file": (name, wav, "audio/wav")},
+            files={"file": (name, mp3, "audio/mpeg")},
             timeout=300,
         )
     res.raise_for_status()
 
 
 def stale_paths(rows, keep_path):
+    # .wav as well: bulletins uploaded before the mp3 switch must not linger in the playlist.
     return [
-        r["path"] for r in rows if r["path"].endswith(".wav") and r["path"] != keep_path
+        r["path"]
+        for r in rows
+        if r["path"].endswith((".wav", ".mp3")) and r["path"] != keep_path
     ]
 
 
@@ -466,12 +518,21 @@ def self_check():
     assert to_plain_text("") == ""
 
     rows = [
-        {"path": "news/new.wav"},
-        {"path": "news/old.wav"},
+        {"path": "news/older.wav"},
+        {"path": "news/old.mp3"},
+        {"path": "news/new.mp3"},
         {"path": "news/cover.jpg"},
     ]
-    assert stale_paths(rows, "news/new.wav") == ["news/old.wav"]
-    assert stale_paths(rows[:1], "news/new.wav") == []
+    assert stale_paths(rows, "news/new.mp3") == ["news/older.wav", "news/old.mp3"]
+    assert stale_paths([{"path": "news/new.mp3"}], "news/new.mp3") == []
+
+    title, name = bulletin_meta(datetime(2026, 8, 31, 8, 0))
+    assert title == "Morning News - Monday 31 August" and name == (
+        "Morning News - Monday 31 August 0800.mp3"
+    )
+    assert bulletin_meta(datetime(2026, 8, 31, 17, 0))[0] == (
+        "Afternoon News - Monday 31 August"
+    )
 
     feed_a = {"id": 1}
     feed_b = {"id": 2}
@@ -537,24 +598,30 @@ def main():
     body = drop_trailing_signoff(write_body(entries, doc, now))
     script = "\n\n".join([doc["intro"], body, doc["outro"]])
 
-    name = f"news-{now:%Y-%m-%d-%H%M}.wav"
+    title, name = bulletin_meta(now)
     dry_run = "--dry-run" in sys.argv
     with tempfile.TemporaryDirectory() as tmp:
         vox_path = os.path.join(tmp, "vox.wav")
-        wav_path = os.path.abspath(name) if dry_run else os.path.join(tmp, name)
+        mixed_path = os.path.join(tmp, "mixed.wav")
+        mp3_path = os.path.abspath(name) if dry_run else os.path.join(tmp, name)
         synthesize(script, vox_path)
+        art_path = None
+        if NEWS_ART_FONT and os.path.exists(NEWS_ART_FONT):
+            art_path = os.path.join(tmp, "art.jpg")
+            make_news_art(art_path, now)
         if BED_FILE and os.path.exists(BED_FILE):
-            mix(vox_path, wav_path)
+            mix(vox_path, mixed_path)
         else:
             print(f"radio-bot: no bed at {BED_FILE!r}, uploading a dry read")
-            os.rename(vox_path, wav_path)
+            mixed_path = vox_path
+        to_mp3(mixed_path, mp3_path, title, art_path)
         if dry_run:
             # preview only: nothing airs, and the entries stay unread for the real run
-            print(f"radio-bot: dry run, wrote {wav_path}\n\n{script}")
+            print(f"radio-bot: dry run, wrote {mp3_path}\n\n{script}")
             return
-        upload(wav_path, name)
+        upload(mp3_path, name)
         if ARCHIVE_DIR:
-            archive(wav_path, now)
+            archive(mp3_path, now)
 
     mark_read(entries)
     print(f"radio-bot: uploaded {AZURACAST_DIR}/{name} from {len(entries)} entries")

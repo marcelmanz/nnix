@@ -3,9 +3,11 @@ final: prev: {
     src = final.fetchFromGitHub {
       owner = "marcelmanz";
       repo = "whatsapp";
-      rev = "keep-deleted-messages";
-      sha256 = "02njg78j7dr68g5r9xvqdrzyxzg3gpw66w944icmn4mwa9avy59w";
+      rev = "8fe4ad77e6286277607f70537d40225c085fe33d";
+      sha256 = "sha256-QUIMr7VlA7d7xjEYEPIPhLX7NwONcVgp5lRFh1tX0BY=";
     };
-    vendorHash = "sha256-U67qtG+J7iXq1+YApwWj1P0S9Rp0X5fMnXwiY8/8LOw=";
+    vendorHash = "sha256-WUJeI8lb7/YYqNzm0IMB/uCgdb5Mcz7bii2fsI4gOKc=";
+    nativeBuildInputs = (old.nativeBuildInputs or []) ++ [final.pkg-config];
+    buildInputs = (old.buildInputs or []) ++ [final.libopus final.opusfile final.libogg final.soxr];
   });
 }

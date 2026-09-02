@@ -9,7 +9,7 @@
   # allowedTCPPorts, and this port must stay loopback-only.
   listenTimePort = 8320;
 in {
-  imports = [./radio-bot.nix];
+  imports = [./radio-bot];
 
   systemd.tmpfiles.rules = [
     "d /var/lib/azuracast 0755 1000 1000 -"
@@ -42,7 +42,7 @@ in {
   };
 
   # declarative azuracast settings, applied via the app's own cli so they survive fresh installs and resist ui drift.
-  # public_custom_css / public_custom_js are loaded from standalone files (see ./azuracast-public.{css,js}).
+  # public_custom_css / public_custom_js are loaded from standalone files (see ./public/public.{css,js}).
   systemd.services.azuracast-settings = {
     description = "Apply declarative AzuraCast settings";
     after = ["podman-azuracast.service"];
@@ -53,8 +53,8 @@ in {
       RemainAfterExit = true;
     };
     script = ''
-      CSS_FILE=${./azuracast-public.css}
-      JS_FILE=${./azuracast-public.js}
+      CSS_FILE=${./public/public.css}
+      JS_FILE=${./public/public.js}
 
       for i in $(seq 1 60); do
         if podman exec azuracast azuracast_cli azuracast:settings:set homepage_redirect_url /public/radio_marcel 2>/dev/null; then
@@ -146,7 +146,7 @@ in {
               && echo "azuracast-settings: reset invalid playlist type(s) to 'default'"
           fi
 
-          # News bulletin playlist. radio-bot.nix generates a bulletin at 07:30 and 16:30 and
+          # News bulletin playlist. radio-bot generates a bulletin at 07:30 and 16:30 and
           # uploads it to the news/ folder; the folder row below makes AzuraCast attach each
           # upload to this playlist on arrival (FlowUploadAction does that for any directory
           # with a playlist binding), so no per-run playlist call is needed.
@@ -158,9 +158,14 @@ in {
           # playlist only ever holds the current one.
           NEWS_PID=$(mysql "SELECT id FROM station_playlists WHERE station_id=$SID AND name='news';")
           if [ -z "$NEWS_PID" ]; then
-            mysql "INSERT INTO station_playlists (station_id, name, type, is_enabled, play_per_songs, play_per_minutes, weight, source, include_in_requests, playback_order, is_jingle, play_per_hour_minute, remote_timeout, include_in_on_demand, avoid_duplicates) VALUES ($SID, 'news', 'default', 1, 0, 0, 3, 'songs', 0, 'sequential', 0, 0, 0, 0, 0);"
+            mysql "INSERT INTO station_playlists (station_id, name, type, is_enabled, play_per_songs, play_per_minutes, weight, source, include_in_requests, playback_order, is_jingle, play_per_hour_minute, remote_timeout, include_in_on_demand, avoid_duplicates) VALUES ($SID, 'news', 'default', 1, 0, 0, 20, 'songs', 0, 'sequential', 0, 0, 0, 0, 0);"
             NEWS_PID=$(mysql "SELECT id FROM station_playlists WHERE station_id=$SID AND name='news';")
             echo "azuracast-settings: created 'news' playlist (id=$NEWS_PID)"
+          fi
+
+          if [ "$(mysql "SELECT weight FROM station_playlists WHERE id=$NEWS_PID;")" != "20" ]; then
+            mysql "UPDATE station_playlists SET weight=20 WHERE id=$NEWS_PID;" \
+              && echo "azuracast-settings: news playlist weight=20"
           fi
 
           if [ -n "$NEWS_PID" ]; then
@@ -227,7 +232,7 @@ in {
 
       # quote-doubling (MariaDB single-quoted string escape) for apostrophes in folder names
       q="'"
-      # 'news' is excluded: radio-bot.nix uploads bulletins there and they get their own
+      # 'news' is excluded: radio-bot uploads bulletins there and they get their own
       # scheduled playlist, so they must not join the music rotation.
       find /var/lib/media/music -maxdepth 1 -mindepth 1 -type d ! -name '.*' ! -name news -printf '%f\n' 2>/dev/null \
         | while IFS= read -r dir; do
@@ -262,7 +267,7 @@ in {
     path = [pkgs.podman];
     serviceConfig = {
       Type = "simple";
-      ExecStart = "${pkgs.python3}/bin/python3 ${./azuracast-listen-time.py} ${toString listenTimePort}";
+      ExecStart = "${pkgs.python3}/bin/python3 ${./listen-time.py} ${toString listenTimePort}";
       Environment = [
         "MYSQL_PASSWORD=${config.virtualisation.oci-containers.containers.azuracast.environment.MYSQL_PASSWORD}"
       ];

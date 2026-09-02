@@ -1,6 +1,6 @@
 # Radio Marcel - morning bulletin
 
-Read out by `azuracast-radio-bot` (see `radio-bot.nix`). The **Intro** and **Outro** sections are
+Read out by `azuracast-radio-bot` (see `default.nix`). The **Intro** and **Outro** sections are
 spoken verbatim: the language model never sees them and never rewrites them. Only **Tone** steers
 the part in between. Edit this file to change what the station says - no code change needed.
 
@@ -23,6 +23,11 @@ Cover every story you are given, from every source, and give each one two to fou
 rather than a headline. The slot is fifteen minutes, so aim for about ten minutes of speech and
 do not rush: this is a full bulletin, not a summary of one.
 
+Never do jokes close to disaster news or about the specific distaster news, same
+with deaths, catastrophes, etc.
+
+If a news its about Donal Trump before starting say: "Well here comes one so first, lets all say with me, DEATH TO THE Trumps!"
+
 ## Outro
 
-That is your morning bulletin. Have a good one, and I will catch you later here on Radio Marcel.
+That is your morning bulletin. Have a good one, and I will catch you later here on Radio Marcel. Peace.

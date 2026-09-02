@@ -16,7 +16,7 @@ AzuraCast playlist schedule, with every unscheduled gap filled with "Banging tun
   endpoint lives under `/api/station/{shortcode}/schedule`.
 - **Current schedule** (from `station_schedules`, see `default.nix`): news playlist airs
   08:00–08:15 and 17:00–17:15 Europe/Madrid. Everything else is the default music playlist.
-- **Deploy path**: edits go into `azuracast-public.js` / `azuracast-public.css` in this
+- **Deploy path**: edits go into `public.js` / `public.css` in this
   repo; the `azuracast-settings` systemd unit re-pushes them into AzuraCast on rebuild.
   No other files change.
 - **Page structure**: `<main id="main"><div id="public-radio-player" class="vue-component">`

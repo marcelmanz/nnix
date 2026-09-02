@@ -1,9 +1,9 @@
-// Self-check for the 't'/'T' theme cycle (cycleTheme in azuracast-public.js).
+// Self-check for the 't'/'T' theme cycle (cycleTheme in public.js).
 // Run: node test-cycle-theme.js
 var fs = require("fs");
-var src = fs.readFileSync(__dirname + "/azuracast-public.js", "utf8");
+var src = fs.readFileSync(__dirname + "/public.js", "utf8");
 var m = src.match(/function cycleTheme\(dir\) \{[\s\S]*?\n  \}/);
-if (!m) throw new Error("cycleTheme not found in azuracast-public.js");
+if (!m) throw new Error("cycleTheme not found in public.js");
 var make = new Function("document", "azBgCycleCustom", m[0] + "\nreturn cycleTheme;");
 
 function run(withCustom) {

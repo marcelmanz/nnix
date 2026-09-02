@@ -1,5 +1,5 @@
 /* HUD chrome tokens (calm button, stream/background popovers, listen-time chip) - dark neon by
-   default. html.az-light (JS toggles it - see azuracast-public.js) swaps these to a light
+   default. html.az-light (JS toggles it - see public.js) swaps these to a light
    variant when the "Device" background preset resolves to a light system theme. Only the fixed
    HUD widgets read these; the player card itself (its own dark glass look) is untouched, since
    a dark card reads fine floating over either a light or dark page background. */
@@ -193,7 +193,7 @@ html.az-calm.az-stopped body.page-minimal .public-page .card {
 }
 
 /* Player card background - lighter (transparent); html.az-light (Device -> light system theme,
-   see azuracast-public.js) swaps it to a light glass card with dark text to match. */
+   see public.js) swaps it to a light glass card with dark text to match. */
 body.page-minimal .public-page .card,
 body.page-minimal .public-page .card-body {
   background: rgba(0, 0, 0, 0.45);
@@ -607,7 +607,7 @@ html.az-calm .radio-player-widget .now-playing-artist.az-nudge-on {
    music-driven zoom/shake transform never shifts real page content or triggers a scrollbar.
    ::after is a colored glow that pulses with the beat. Both driven by CSS vars
    (--az-bg-scale/-x/-y, --az-glow-opacity/-color) set every audio frame in JS from the same
-   analyser that feeds the equalizer (see eqFrame in azuracast-public.js); reset to neutral
+   analyser that feeds the equalizer (see eqFrame in public.js); reset to neutral
    when paused so the background goes still. Muted-but-playing keeps the effects alive: the
    analyser reads zeros there, so eqFrame feeds the same vars from synthetic drift. */
 [data-bs-theme] body.page-minimal {
@@ -618,7 +618,7 @@ html.az-calm .radio-player-widget .now-playing-artist.az-nudge-on {
   position: fixed;
   inset: -6%;
   z-index: -2;
-  /* --az-bg-custom is set by JS (azuracast-public.js) when the listener has picked their own
+  /* --az-bg-custom is set by JS (public.js) when the listener has picked their own
      background image, stored client-side in localStorage; falls back to the default here.
      /party-bg.jpg is served declaratively by nginx (see proxy.nix), not AzuraCast's own asset
      uploader - so the default survives fresh installs/rebuilds without any manual re-upload. */
@@ -1226,7 +1226,7 @@ html.az-light .az-bgwaves {
   }
 }
 
-/* Anti-seizure toggle: JS puts .az-calm on <html> (see azuracast-public.js) and the rules
+/* Anti-seizure toggle: JS puts .az-calm on <html> (see public.js) and the rules
    below freeze the music-driven background zoom/shake, kill the pulsing glow layer and stop
    the animated text colors (rainbow title/artist hover, flashing PLAY/PAUSE) - the same
    opt-out prefers-reduced-motion already gets, on demand. */
@@ -1408,7 +1408,7 @@ html.az-calm .radio-player-widget .now-playing-art .az-overlay-play {
   text-shadow: none;
 }
 
-/* Shared top HUD bar: built lazily by JS (getHudSlot in azuracast-public.js) the first time any
+/* Shared top HUD bar: built lazily by JS (getHudSlot in public.js) the first time any
    of the stream-info/radio-program/calm buttons mounts, then reused by the other two - each
    lands in one of the three slots below instead of being independently position:fixed. Real flex
    layout replaces manual pixel offsets between these three: left/right get equal flex-grow off a
@@ -1463,7 +1463,7 @@ html.az-calm .radio-player-widget .now-playing-art .az-overlay-play {
 /* Radio program button: top-center, the one HUD position with room to spare - top-left is only
    the stream-info button, top-right only the calm button (the listen-time chip that used to
    share top-left moved to bottom-center, see .az-listen-time, specifically to leave this whole
-   band free). Lives in the shared flex header's center slot (.az-hud-center, see azuracast-public.js
+   band free). Lives in the shared flex header's center slot (.az-hud-center, see public.js
    getHudSlot and the .az-hud-top rules below) rather than being independently position:fixed, so
    it only ever gets as much width as the side buttons leave - shrinking/eliding its own content
    instead of overlapping them. Same clickable-chip + popover shape as .az-stream-btn/.az-bg-btn
@@ -1638,7 +1638,7 @@ html.az-calm .az-program-row.az-now {
 /* Stream-link info "?" button (top-left) + popover. Mirrors the calm button's HUD silhouette
    (notched corners, neon border, dark translucent panel) but STATIC - it's an info control, not
    an alert, so no glitch/breathe animation. Click toggles; outside click or Esc dismisses
-   (see azuracast-public.js). URL derived from location.origin -> https://radio.marcel.cool/stream. */
+   (see public.js). URL derived from location.origin -> https://radio.marcel.cool/stream. */
 .az-stream-btn {
   flex: 0 0 auto;
   width: 34px;
@@ -1799,7 +1799,7 @@ html.az-calm .az-stream-pop-url {
 /* Custom-background picker button (bottom-left) + popover. Same HUD silhouette as
    .az-stream-btn, just bottom-anchored so it doesn't collide with the top-left
    stream/listen-time chips or the top-right calm button. Picked image is stored client-side
-   (localStorage, see azuracast-public.js) - nothing is uploaded anywhere. */
+   (localStorage, see public.js) - nothing is uploaded anywhere. */
 .az-bg-btn {
   position: fixed;
   bottom: 10px;
@@ -1837,7 +1837,7 @@ html.az-calm .az-stream-pop-url {
 }
 /* Wave overlay toggle (bottom-left, just right of the background picker button). Same HUD
    silhouette as .az-bg-btn. ON = lit, OFF = dimmed ghost (like the calm button's idle state).
-   State is persisted client-side in localStorage (see setWavesBg in azuracast-public.js). */
+   State is persisted client-side in localStorage (see setWavesBg in public.js). */
 .az-waves-btn {
   position: fixed;
   bottom: 10px;

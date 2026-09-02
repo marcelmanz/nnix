@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# ssh to the mlab box running azuracast (mlab-local preferred, else mlab).
+#   connect 'bash -s' < script.sh   pipe a local script over ssh
+#   connect sql 'SELECT ...'        run SQL in the azuracast mariadb
+#   connect sql < file.sql          SQL from stdin
+#   connect <remote command...>     plain ssh passthrough
+set -eu
+# -n on the probe: without it ssh drains stdin (a piped script or SQL query)
+# before the real command ever reads it.
+if ssh -n -q -o ConnectTimeout=5 root@mlab-local exit 2>/dev/null; then HOST=root@mlab-local; else HOST=root@mlab; fi
+
+if [ "${1:-}" = sql ]; then
+  # must be ONE ssh arg: ssh joins multiple args with spaces but never re-quotes,
+  # so the sh -c payload would lose its quoting and the password expansion.
+  SQLCMD="podman exec -i azuracast sh -c 'mariadb -N -B -u azuracast -p\"\$MYSQL_PASSWORD\" azuracast'"
+  if [ $# -gt 1 ]; then
+    printf '%s\n' "${*:2}" | ssh "$HOST" "$SQLCMD"
+  else
+    exec ssh "$HOST" "$SQLCMD"
+  fi
+else
+  exec ssh "$HOST" "$@"
+fi

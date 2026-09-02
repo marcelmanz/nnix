@@ -159,9 +159,15 @@
     enable = true;
     authentication = lib.mkForce ''
       # TYPE  DATABASE        USER            ADDRESS                 METHOD
+      # synapse runs as matrix-synapse but owns the db as matrix, so it needs the map
+      local   all             matrix                                  peer map=synapse
       local   all             all                                     peer
       host    all             all             127.0.0.1/32            scram-sha-256
       host    all             all             ::1/128                 scram-sha-256
+    '';
+    identMap = ''
+      # MAP     SYSTEM-USER      PG-USER
+      synapse   matrix-synapse   matrix
     '';
     ensureDatabases = ["navidrome" "paperless" "matrix"];
     ensureUsers = [
