@@ -2046,3 +2046,201 @@ html.az-calm .az-bg-pop-title {
     font-size: 12px;
   }
 }
+
+.az-webcam {
+  display: block;
+  width: 100%;
+  max-height: 50vh;
+  border-radius: 8px;
+  background: #000;
+  margin-bottom: 0.75rem;
+  object-fit: contain;
+  cursor: pointer;
+}
+
+.az-webcam-offline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 120px;
+  border-radius: 8px;
+  background: #000;
+  color: rgb(var(--hud-accent-rgb));
+  font-family: "Courier New", ui-monospace, monospace;
+  margin-bottom: 0.75rem;
+  text-align: center;
+  padding: 0 1rem;
+}
+
+.az-chat-panel {
+  position: fixed;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1000;
+  width: 300px;
+  height: min(70vh, 500px);
+  display: flex;
+  flex-direction: column;
+  border: 2px solid rgb(var(--hud-accent-rgb));
+  background: var(--hud-bg-strong);
+  color: rgb(var(--hud-text-rgb));
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 13px;
+  box-shadow: 0 0 18px rgba(var(--hud-accent-rgb), 0.3);
+}
+/* No room beside the player under this width - docking a fixed sidebar there would overlap it. */
+@media (max-width: 1099px) {
+  .az-chat-panel {
+    display: none;
+  }
+}
+.az-chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(var(--hud-accent-rgb), 0.4);
+  color: rgb(var(--hud-accent-rgb));
+  font-weight: 700;
+}
+.az-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 10px;
+}
+.az-chat-msg {
+  margin: 0 0 6px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+.az-chat-msg-name {
+  color: rgb(var(--hud-accent-rgb));
+  font-weight: 700;
+  margin-right: 4px;
+}
+.az-chat-form {
+  display: flex;
+  border-top: 1px solid rgba(var(--hud-accent-rgb), 0.4);
+}
+.az-chat-input {
+  flex: 1;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  color: rgb(var(--hud-text-rgb));
+  font: inherit;
+  min-width: 0;
+}
+.az-chat-input:focus {
+  outline: none;
+}
+.az-chat-send {
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: rgb(var(--hud-accent-rgb));
+  font: inherit;
+  cursor: pointer;
+}
+.az-chat-send:hover,
+.az-chat-send:focus-visible {
+  color: rgb(var(--hud-accent-3-rgb));
+}
+
+/* Mobile "live" takeover: webcam / track / chat stacked full-screen, toggled by JS (see the
+   "mobile live layout" IIFE in public.js) only while there's a live webcam feed on a narrow
+   screen. Sits above everything else on the page (including the HUD buttons, z-index 1000). */
+.az-live-mobile {
+  display: none;
+  position: fixed;
+  inset: 0;
+  height: 100svh;
+  z-index: 1500;
+  flex-direction: column;
+  background: #000;
+}
+.az-live-mobile.az-open {
+  display: flex;
+}
+.az-live-mobile-webcam {
+  flex: 0 0 50%;
+  min-height: 0;
+  background: #000;
+}
+.az-live-mobile-webcam .az-webcam {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  margin-bottom: 0;
+  border-radius: 0;
+  object-fit: cover;
+}
+.az-live-mobile-track {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  text-align: center;
+  color: rgb(var(--hud-text-rgb));
+  font-family: "Courier New", ui-monospace, monospace;
+  border-bottom: 1px solid rgba(var(--hud-accent-rgb), 0.4);
+}
+.az-live-mobile-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: rgb(var(--hud-accent-rgb));
+}
+.az-live-mobile-artist {
+  margin: 4px 0 0;
+  font-size: 13px;
+  opacity: 0.85;
+}
+.az-live-mobile-chat {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.az-live-mobile-tap {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 2; /* above the webcam/track/chat stack, which has no z-index of its own (auto) */
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+}
+.az-live-mobile-tap.az-open {
+  display: flex;
+}
+.az-live-mobile-tap-badge {
+  padding: 0.8rem 1.6rem;
+  border: 2px solid rgb(var(--hud-accent-rgb));
+  border-radius: 2rem;
+  background: var(--hud-bg-strong);
+  color: rgb(var(--hud-accent-rgb));
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 1.1rem;
+  font-weight: 700;
+  box-shadow: 0 0 18px rgba(var(--hud-accent-rgb), 0.4);
+  animation: az-tap-pulse 1.6s ease-in-out infinite;
+}
+@keyframes az-tap-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+/* Overrides the standalone (desktop sidebar) .az-chat-panel rules - higher specificity wins
+   regardless of source order, including over the max-width:1099px { display:none } rule. */
+.az-live-mobile-chat .az-chat-panel {
+  display: flex;
+  position: static;
+  width: 100%;
+  height: 100%;
+  transform: none;
+  border: none;
+  box-shadow: none;
+}

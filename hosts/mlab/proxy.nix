@@ -24,6 +24,7 @@
     bazarr = {
       port = 6767;
       href = "https://bazarr.marcel.cool";
+      vpn = "pia";
     };
     calibre = {
       port = 8083;
@@ -32,6 +33,7 @@
     chaptarr = {
       port = 8789;
       href = "https://chaptarr.marcel.cool";
+      vpn = "pia";
     };
     grafana = {
       port = 3005;
@@ -53,6 +55,17 @@
     lidarr = {
       port = 8686;
       href = "https://lidarr.marcel.cool";
+      vpn = "pia";
+    };
+    livedj = {
+      port = 8290;
+      href = "https://livedj.marcel.cool";
+      protected = true;
+    };
+    streamcam = {
+      port = 8291;
+      href = "https://streamcam.marcel.cool";
+      protected = true;
     };
     miniflux = {
       port = 8085;
@@ -82,16 +95,19 @@
     prowlarr = {
       port = 9696;
       href = "https://prowlarr.marcel.cool";
+      vpn = "pia";
     };
     qbit = {
       port = 8081;
       href = "https://qbit.marcel.cool";
       # Arr stack talks to qbit on localhost, so this only gates browser access.
       protected = true;
+      vpn = "pia";
     };
     radarr = {
       port = 7878;
       href = "https://radarr.marcel.cool";
+      vpn = "pia";
     };
     pinchflat = {
       port = 8945;
@@ -105,6 +121,7 @@
     sabnzbd = {
       port = 8080;
       href = "https://sabnzbd.marcel.cool";
+      vpn = "pia";
     };
     seafile = {
       port = 8008;
@@ -129,6 +146,7 @@
     sonarr = {
       port = 8989;
       href = "https://sonarr.marcel.cool";
+      vpn = "pia";
     };
     syncthing = {
       port = 8384;
@@ -163,13 +181,22 @@
     };
   };
 
+  # Must match vpnNamespaces.pia.namespaceAddress in vpn.nix.
+  vpnAddresses = {
+    pia = "192.168.16.1";
+  };
+
   mkProxyHost = name: service: {
     serverName = lib.removePrefix "https://" service.href;
     forceSSL = true;
     useACMEHost = "marcel.cool";
 
     locations."/" = {
-      proxyPass = "http://127.0.0.1:${toString service.port}";
+      proxyPass = "http://${
+        if service ? vpn
+        then vpnAddresses.${service.vpn}
+        else "127.0.0.1"
+      }:${toString service.port}";
       proxyWebsockets = true;
       extraConfig = ''
         # Tell the app what the original URL and IP were
@@ -245,6 +272,11 @@ in {
   services.nginx = {
     enable = true;
     clientMaxBodySize = "0";
+
+    appendHttpConfig = ''
+      limit_req_zone $binary_remote_addr zone=webcam:10m rate=10r/m;
+      limit_conn_zone $binary_remote_addr zone=webcam_conn:10m;
+    '';
 
     virtualHosts =
       (builtins.removeAttrs serviceVirtualHosts ["auth" "jellyfin" "seafile" "azuracast"])
@@ -418,6 +450,28 @@ in {
                     proxy_send_timeout 1h;
                   '';
                 };
+                "/webcam/" = {
+                  proxyPass = "http://127.0.0.1:8889/webcam/";
+                  extraConfig = ''
+                    limit_req zone=webcam burst=5 nodelay;
+                    limit_conn webcam_conn 10;
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto https;
+                  '';
+                };
+                # Public, unauthenticated: whether the admin has toggled the webcam visible on
+                # this page (streamcam.marcel.cool, Authelia-gated - see webcam-control.py).
+                # Exact match so it isn't swallowed by base "/".
+                "= /webcam-status" = {
+                  proxyPass = "http://127.0.0.1:${toString services.streamcam.port}/status";
+                  extraConfig = ''
+                    proxy_set_header Host $host;
+                    proxy_connect_timeout 3s;
+                    proxy_read_timeout 10s;
+                  '';
+                };
                 # Centrifugo-backed SSE (now-playing live updates). Base "/" location has no
                 # proxy_buffering off, so nginx buffers the event stream instead of flushing it
                 # -> updates arrive up to ~15s late / look dead. SSE needs the same no-buffering
@@ -432,6 +486,21 @@ in {
                     proxy_set_header X-Forwarded-Proto https;
                     proxy_buffering off;
                     proxy_cache off;
+                    proxy_read_timeout 1h;
+                    proxy_send_timeout 1h;
+                  '';
+                };
+                # Live chat for the public page (chat.py). SSE stream, same no-buffering
+                # treatment as /live/ above so messages arrive immediately instead of batched.
+                # Port must match chatPort in azuracast/default.nix.
+                "/chat/" = {
+                  proxyPass = "http://127.0.0.1:8321";
+                  extraConfig = ''
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto https;
+                    proxy_buffering off;
                     proxy_read_timeout 1h;
                     proxy_send_timeout 1h;
                   '';
@@ -523,6 +592,13 @@ in {
           };
         };
       };
+  };
+
+  # nginx proxies some vhosts into the pia netns (vpn.nix) - wait for it so
+  # those don't 502 during the first seconds after boot.
+  systemd.services.nginx = {
+    after = ["pia.service"];
+    wants = ["pia.service"];
   };
 
   # /var/www/pages is the docroot for the catch-all *.marcel.cool vhost above.

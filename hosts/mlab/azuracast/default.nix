@@ -8,8 +8,11 @@
   # Kept OUT of the shared `services` attrset on purpose: that attrset feeds the firewall's
   # allowedTCPPorts, and this port must stay loopback-only.
   listenTimePort = 8320;
+  # loopback-only; referenced by the "/chat/" nginx location in proxy.nix. Same reasoning as
+  # listenTimePort above - kept out of the shared `services` attrset.
+  chatPort = 8321;
 in {
-  imports = [./radio-bot];
+  imports = [./radio-bot ./live.nix ./webcam.nix];
 
   systemd.tmpfiles.rules = [
     "d /var/lib/azuracast 0755 1000 1000 -"
@@ -35,7 +38,9 @@ in {
       "/var/lib/azuracast/storage:/var/azuracast/storage"
       "/var/lib/media/music:/var/azuracast/media/music"
     ];
-    ports = ["${toString services.azuracast.port}:80"];
+    # 8005 = liquidsoap's DJ/streamer harbor (station backend_config.dj_port), loopback-only:
+    # only the local azuracast-live-capture service (live.nix) connects to it.
+    ports = ["${toString services.azuracast.port}:80" "127.0.0.1:8005:8005"];
     extraOptions = [
       "--group-add=986"
     ];
@@ -270,6 +275,30 @@ in {
       ExecStart = "${pkgs.python3}/bin/python3 ${./listen-time.py} ${toString listenTimePort}";
       Environment = [
         "MYSQL_PASSWORD=${config.virtualisation.oci-containers.containers.azuracast.environment.MYSQL_PASSWORD}"
+      ];
+      Restart = "on-failure";
+      RestartSec = "5s";
+    };
+  };
+
+  # Live chat for the public radio page: random per-visitor name, no accounts. History and the
+  # live-text override persist to StateDirectory across restarts/deploys (connections and
+  # per-IP throttle state don't - see chat.py). Nginx fronts it as same-origin /chat/ (proxy.nix)
+  # with proxy_buffering off for the SSE stream. See chat.py for the protocol.
+  systemd.services.azuracast-chat = {
+    description = "Live chat for the radio public page";
+    after = ["network.target"];
+    wantedBy = ["multi-user.target"];
+    serviceConfig = {
+      Type = "simple";
+      DynamicUser = true;
+      StateDirectory = "azuracast-chat";
+      ExecStart = "${pkgs.python3}/bin/python3 ${./chat.py} ${toString chatPort}";
+      # Owner recognition goes through Authelia (auth.marcel.cool, see authelia.nix) instead of an
+      # IP allowlist - see chat.py's is_owner().
+      Environment = [
+        "AUTH_VERIFY_URL=http://127.0.0.1:${toString services.auth.port}/api/verify"
+        "AUTH_CHECK_DOMAIN=home.marcel.cool"
       ];
       Restart = "on-failure";
       RestartSec = "5s";

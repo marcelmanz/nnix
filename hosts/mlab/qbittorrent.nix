@@ -46,12 +46,32 @@
       else
         echo "qbittorrent preStart: $conf or its Password_PBKDF2 line missing; start once to create it" >&2
       fi
-      # trust the local nginx proxy so bans/real IPs work; without this qbit bans
-      # 127.0.0.1 after failed logins = whole world locked out for BanDuration
+      # trust the nginx proxy so bans/real IPs work; without this qbit bans the
+      # proxy's source IP after failed logins = whole world locked out for
+      # BanDuration. qbit is vpn-confined (vpn.nix), so nginx reaches it
+      # via the netns bridge address, not loopback - trust that address instead.
       grep -q "^WebUI.ReverseProxySupportEnabled=" "$conf" || \
         sed -i "/^\[Preferences\]/a WebUI\\\\ReverseProxySupportEnabled=true" "$conf"
-      grep -q "^WebUI.TrustedReverseProxiesList=" "$conf" || \
-        sed -i "/^\[Preferences\]/a WebUI\\\\TrustedReverseProxiesList=127.0.0.1" "$conf"
+      if grep -q "^WebUI.TrustedReverseProxiesList=" "$conf"; then
+        sed -i "s|^\(WebUI.TrustedReverseProxiesList=\).*|\1${config.vpnNamespaces.pia.bridgeAddress}|" "$conf"
+      else
+        sed -i "/^\[Preferences\]/a WebUI\\\\TrustedReverseProxiesList=${config.vpnNamespaces.pia.bridgeAddress}" "$conf"
+      fi
+      # bind all interfaces, not just loopback - nginx and anything else
+      # outside this netns reaches qbit via the bridge address, not 127.0.0.1
+      if grep -q "^WebUI.Address=" "$conf"; then
+        sed -i "s|^\(WebUI.Address=\).*|\10.0.0.0|" "$conf"
+      else
+        sed -i "/^\[Preferences\]/a WebUI\\\\Address=0.0.0.0" "$conf"
+      fi
+      # BT listen socket must bind to "any interface" - a leftover
+      # Session\Interface(Name|Address) pinned to the host's real NIC
+      # (enp1s0) doesn't exist inside the pia netns, so the listen port never
+      # actually opens and qbit is unreachable for peers/trackers even though
+      # pia-portfwd reports a bound port.
+      sed -i "s|^Session\\\\Interface=.*|Session\\\\Interface=|" "$conf"
+      sed -i "s|^Session\\\\InterfaceAddress=.*|Session\\\\InterfaceAddress=|" "$conf"
+      sed -i "s|^Session\\\\InterfaceName=.*|Session\\\\InterfaceName=|" "$conf"
     '';
   };
 }

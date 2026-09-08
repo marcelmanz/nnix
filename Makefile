@@ -1,4 +1,4 @@
-.PHONY: format nixos nixos-nixbuild mlab nixos-nixbuild-mlab droid hm news sops android-mirror whatsapp-register azuracast-deploy azuracast-connect azuracast-report
+.PHONY: format nixos nixos-nixbuild mlab nixos-nixbuild-mlab droid hm news sops android-mirror whatsapp-register azuracast-deploy azuracast-connect azuracast-report azuracast-clear-chat
 
 lint: 
 	@nix run .#ruff -- check --fix
@@ -64,6 +64,10 @@ azuracast-connect:
 
 azuracast-report:
 	@hosts/mlab/azuracast/report
+
+# chat history is in-memory only (see chat.py) - a service restart is all "clear the chat" needs.
+azuracast-clear-chat:
+	@hosts/mlab/azuracast/connect systemctl restart azuracast-chat
 
 # a bit complex but its the only way to deploy to android that I (claude) found so the phone does not do the build
 droid:

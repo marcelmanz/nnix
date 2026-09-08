@@ -60,6 +60,9 @@
 
       session = {
         name = "authelia_session";
+        expiration = "1M";
+        inactivity = "1w";
+        remember_me_duration = "1M";
         cookies = [
           {
             domain = "marcel.cool";
@@ -76,6 +79,11 @@
         rules = [
           # Every `protected` vhost in proxy.nix needs a rule here; without one
           # default_policy = "deny" returns 403 instead of the login page.
+          {
+            domain = "home.marcel.cool";
+            policy = "two_factor";
+            subject = ["group:admins"];
+          }
           {
             domain = "qbit.marcel.cool";
             policy = "two_factor";
@@ -113,6 +121,16 @@
           }
           {
             domain = "nitter.marcel.cool";
+            policy = "two_factor";
+            subject = ["group:admins"];
+          }
+          {
+            domain = "livedj.marcel.cool";
+            policy = "two_factor";
+            subject = ["group:admins"];
+          }
+          {
+            domain = "streamcam.marcel.cool";
             policy = "two_factor";
             subject = ["group:admins"];
           }

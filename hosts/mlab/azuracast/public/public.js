@@ -222,7 +222,17 @@
     autoplayPollId,
     autoplayOk = null; // null = probe pending; true/false once resolved
 
+  // Phones get no muted-autoplay-then-restore-unmute dance at all, regardless of what the probe
+  // below would say: treating them like an autoplay-blocked browser (e.g. Brave) reuses that
+  // already-working fallback - stay paused, flashing PLAY overlay, start on the first real tap,
+  // which always lands inside a genuine user gesture instead of racing a synthetic one.
+  var IS_MOBILE = window.matchMedia("(max-width: 767px)").matches;
+
   (function probeAutoplay() {
+    if (IS_MOBILE) {
+      autoplayOk = false;
+      return;
+    }
     try {
       var probe = new Audio();
       probe.muted = true;
@@ -1778,6 +1788,15 @@
     var art = document.querySelector(".radio-player-widget .now-playing-art");
     var img = art && art.querySelector("img");
     if (!art || !img) return;
+    // playArtPush defers this call behind an async preload (up to PUSH_WAIT_MS), and preloads
+    // don't resolve in call order - a second, faster track change can call startArtPush before
+    // an earlier, slower one's preload finishes. When that earlier call's callback finally
+    // fires, img.src has already moved past newSrc: running it anyway would layer a stale cover
+    // over the current one, which is the "photo gets duplicated" bug. Skip it.
+    if (img.getAttribute("src") !== newSrc) {
+      DBG("playArtPush: stale (img already moved on) - skipped");
+      return;
+    }
 
     DBG("playArtPush", art._azPushTimer ? "RESTART (previous push still in flight)" : "start");
     if (art._azPushTimer) clearTimeout(art._azPushTimer); // a transition was already mid-flight -> its cleanup must not fire late and cut this one short
@@ -1864,6 +1883,73 @@
       preloaded[url] = new Image();
       preloaded[url].src = url;
     }
+    // AzuraCast's player only ever binds art to now_playing.song.art; it never reads live.art
+    // (the streamer's uploaded image), even though the API sends it. .now-playing-art is Vue's
+    // v-if on song.art, so with no song metadata during a live set the container doesn't exist -
+    // build the same markup AlbumArt.vue would so relocate()/attachImgWatch treat it the same.
+    function applyLiveArt(live, songArt) {
+      var details = document.querySelector(".radio-player-widget .now-playing-details");
+      if (!details) return;
+      var isLive = !!(live && live.is_live && live.art);
+      var art = details.querySelector(".now-playing-art");
+      if (isLive) {
+        if (!art) {
+          art = document.createElement("div");
+          art.className = "now-playing-art";
+          art._azLiveSynthetic = true;
+          var mainCol = details.querySelector(".now-playing-main");
+          if (mainCol) details.insertBefore(art, mainCol);
+          else details.appendChild(art);
+          var link = document.createElement("a");
+          link.className = "album-art";
+          link.target = "_blank";
+          link.href = live.art;
+          var img = document.createElement("img");
+          img.className = "album_art";
+          img.alt = "";
+          img.src = live.art;
+          link.appendChild(img);
+          art.appendChild(link);
+        } else {
+          if (!art._azLiveSynthetic) art._azLiveOverridden = true; // was Vue's node - remember to restore it
+          var existingImg = art.querySelector("img");
+          var existingLink = art.querySelector("a.album-art");
+          if (existingImg && existingImg.src !== live.art) existingImg.src = live.art;
+          if (existingLink && existingLink.href !== live.art) existingLink.href = live.art;
+        }
+      } else if (art) {
+        if (art._azLiveSynthetic) {
+          art.remove();
+        } else if (art._azLiveOverridden) {
+          art._azLiveOverridden = false;
+          var restoreImg = art.querySelector("img");
+          var restoreLink = art.querySelector("a.album-art");
+          if (restoreImg && songArt) restoreImg.src = songArt;
+          if (restoreLink && songArt) restoreLink.href = songArt;
+        }
+      }
+    }
+    // Same gap as the art: now_playing.song.title/artist stay frozen on the last AutoDJ track
+    // for the whole live broadcast. Idempotent (always sets what the current poll says is
+    // correct), so no create/restore bookkeeping needed like the art container.
+    function applyLiveText(live, song) {
+      var titleEl = document.querySelector(".radio-player-widget .now-playing-title");
+      var artistEl = document.querySelector(".radio-player-widget .now-playing-artist");
+      if (!titleEl) return;
+      if (live && live.is_live) {
+        var name = window.azLiveTextOverride || live.streamer_name || "Live Broadcast";
+        if (titleEl.textContent !== name) titleEl.textContent = name;
+        if (artistEl && artistEl.style.display !== "none") artistEl.style.display = "none";
+      } else {
+        var title = (song && song.title) || "";
+        var artist = (song && song.artist) || "";
+        if (titleEl.textContent !== title) titleEl.textContent = title;
+        if (artistEl) {
+          if (artistEl.style.display === "none") artistEl.style.display = "";
+          if (artistEl.textContent !== artist) artistEl.textContent = artist;
+        }
+      }
+    }
     function fetchSong() {
       fetch(apiUrl, { cache: "no-store" })
         .then(function (r) {
@@ -1873,6 +1959,8 @@
           if (data && data.playing_next && data.playing_next.song)
             preloadArt(data.playing_next.song.art);
           var song = data && data.now_playing && data.now_playing.song;
+          applyLiveArt(data && data.live, song && song.art);
+          applyLiveText(data && data.live, song);
           if (!song) return;
           lastSong = song;
           applyArtistLink();
@@ -1883,6 +1971,133 @@
       setTimeout(fetchSong, 0);
     });
     fetchSong();
+  })();
+
+  // --- live webcam ---
+  // Only mounted once the admin flips the "go live" toggle at streamcam.marcel.cool
+  // (webcam-control.py); /webcam-status is same-origin, unauthenticated, cheap to poll. Same
+  // WHEP negotiation as the private test page - MediaMTX allows any origin to read the stream
+  // (webrtcAllowOrigins), so the only gate on whether this ever shows is the status flag.
+  (function () {
+    var STATUS_URL = "/webcam-status";
+    var WHEP_URL = "https://radio.marcel.cool/webcam/whep";
+    var POLL_MS = 5000;
+    var pc = null,
+      videoEl = null,
+      mounted = false,
+      offlineEl = null;
+
+    function mount() {
+      if (mounted) return;
+      mounted = true;
+      var host = document.querySelector(".radio-player-widget");
+      if (!host) {
+        mounted = false;
+        return;
+      }
+      videoEl = document.createElement("video");
+      videoEl.className = "az-webcam";
+      videoEl.autoplay = true;
+      videoEl.muted = true;
+      videoEl.playsInline = true;
+      videoEl.poster =
+        "data:image/svg+xml," +
+        encodeURIComponent(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="225">' +
+            '<rect width="100%" height="100%" fill="#000"/>' +
+            '<text x="50%" y="50%" fill="#0ce5ff" font-family="monospace" font-size="16" text-anchor="middle" dominant-baseline="middle">Connecting to live stream…</text>' +
+            "</svg>"
+        );
+      videoEl.addEventListener("click", function () {
+        if (videoEl.paused) {
+          videoEl.muted = false;
+          videoEl.play();
+        } else {
+          videoEl.pause();
+        }
+      });
+      host.insertBefore(videoEl, host.firstChild);
+
+      pc = new RTCPeerConnection();
+      pc.ontrack = function (e) {
+        videoEl.srcObject = e.streams[0];
+      };
+      pc.addTransceiver("video", { direction: "recvonly" });
+      pc
+        .createOffer()
+        .then(function (offer) {
+          return pc.setLocalDescription(offer).then(function () {
+            return fetch(WHEP_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/sdp" },
+              body: offer.sdp,
+            });
+          });
+        })
+        .then(function (res) {
+          return res.ok ? res.text() : Promise.reject();
+        })
+        .then(function (answer) {
+          return pc.setRemoteDescription({ type: "answer", sdp: answer });
+        })
+        .catch(function () {
+          unmount();
+        });
+    }
+
+    function unmount() {
+      mounted = false;
+      if (pc) {
+        pc.close();
+        pc = null;
+      }
+      if (videoEl) {
+        videoEl.remove();
+        videoEl = null;
+      }
+    }
+
+    // Shown in the video's place while the cam is off - text set at streamcam.marcel.cool
+    // (webcam-control.py), falls back to its own default when nothing's been set.
+    function showOffline(text) {
+      var host = document.querySelector(".radio-player-widget");
+      if (!host) return;
+      if (!offlineEl) {
+        offlineEl = document.createElement("div");
+        offlineEl.className = "az-webcam-offline";
+        host.insertBefore(offlineEl, host.firstChild);
+      }
+      if (offlineEl.textContent !== text) offlineEl.textContent = text;
+    }
+
+    function hideOffline() {
+      if (offlineEl) {
+        offlineEl.remove();
+        offlineEl = null;
+      }
+    }
+
+    function poll() {
+      fetch(STATUS_URL, { cache: "no-store" })
+        .then(function (r) {
+          return r.ok ? r.json() : { live: false };
+        })
+        .then(function (data) {
+          // Read by the mobile live layout below - it needs to know this without polling
+          // /webcam-status itself a second time.
+          window.azWebcamLive = !!(data && data.live);
+          if (data && data.live) {
+            hideOffline();
+            mount();
+          } else {
+            unmount();
+            showOffline((data && data.offline_text) || "");
+          }
+        })
+        .catch(function () {});
+    }
+    poll();
+    setInterval(poll, POLL_MS);
   })();
 
   // --- bandcamp nudge tooltip ---
@@ -2634,5 +2849,145 @@
       }
       return false;
     };
+  })();
+
+  // --- live chat ---
+  // Random per-visitor name assigned server-side (chat.py); see proxy.nix's "/chat/" location.
+  // Always open, docked to the right of the player (hidden below that width - see CSS media
+  // query, there's no room beside the player on narrow viewports).
+  // EventSource reconnects on its own after a drop - no retry logic needed here.
+  (function () {
+    var panel = document.createElement("div");
+    panel.className = "az-chat-panel";
+    panel.innerHTML =
+      '<div class="az-chat-header"><span class="az-chat-you"></span></div>' +
+      '<div class="az-chat-messages"></div>' +
+      '<form class="az-chat-form"><input class="az-chat-input" maxlength="300" autocomplete="off" placeholder="Say something…">' +
+      '<button type="submit" class="az-chat-send">Send</button></form>';
+
+    var youEl = panel.querySelector(".az-chat-you");
+    var messagesEl = panel.querySelector(".az-chat-messages");
+    var formEl = panel.querySelector(".az-chat-form");
+    var inputEl = panel.querySelector(".az-chat-input");
+
+    function addMessage(msg) {
+      var row = document.createElement("p");
+      row.className = "az-chat-msg";
+      var nameEl = document.createElement("span");
+      nameEl.className = "az-chat-msg-name";
+      nameEl.textContent = msg.name + ":";
+      row.appendChild(nameEl);
+      row.appendChild(document.createTextNode(msg.text));
+      messagesEl.appendChild(row);
+      while (messagesEl.children.length > 100) messagesEl.removeChild(messagesEl.firstChild);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    formEl.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var text = inputEl.value.trim();
+      if (!text) return;
+      inputEl.value = "";
+      fetch("/chat/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text }),
+      }).catch(function () {});
+    });
+
+    var es = new EventSource("/chat/events");
+    es.addEventListener("name", function (e) {
+      youEl.textContent = "You: " + JSON.parse(e.data).name;
+    });
+    es.addEventListener("message", function (e) {
+      addMessage(JSON.parse(e.data));
+    });
+    // Owner-only "!t <text>" chat command (chat.py); overrides the on-air title normally read
+    // from live.streamer_name - see applyLiveText() above.
+    es.addEventListener("livetext", function (e) {
+      window.azLiveTextOverride = JSON.parse(e.data).text || "";
+    });
+
+    if (document.body) document.body.appendChild(panel);
+    else document.addEventListener("DOMContentLoaded", function () {
+      document.body.appendChild(panel);
+    });
+  })();
+
+  // --- mobile live layout ---
+  // A fixed sidebar chat + inline webcam don't fit on a phone. When there's a live webcam feed
+  // (window.azWebcamLive, set by the live-webcam IIFE above) on a narrow screen, take over the
+  // screen instead: webcam on top, track info in the middle, chat filling the rest. Reparents
+  // the real webcam <video> and chat panel rather than cloning them, so nothing needs to be
+  // kept in sync - and moves them back to their normal homes if the screen widens or the
+  // webcam goes offline while this is up.
+  //
+  // This hero sits ABOVE the real play button (it's a full-screen overlay), so the "tap
+  // anywhere to unlock autoplay" hint that button normally gives is now invisible - without a
+  // "tap to listen" prompt, muted autoplay just looks like a black screen with no sound. A tap
+  // on the prompt is itself the gesture: the page's own global gesture listener (see unmute()
+  // near the top of this file) already starts/unmutes playback for ANY tap, so this only needs
+  // to show/hide the hint - not trigger playback itself.
+  (function () {
+    var MOBILE_QUERY = "(max-width: 767px)";
+    var hero = document.createElement("div");
+    hero.className = "az-live-mobile";
+    hero.innerHTML =
+      '<div class="az-live-mobile-webcam"></div>' +
+      '<div class="az-live-mobile-track"><p class="az-live-mobile-title"></p><p class="az-live-mobile-artist"></p></div>' +
+      '<div class="az-live-mobile-chat"></div>' +
+      '<div class="az-live-mobile-tap"><div class="az-live-mobile-tap-badge">&#9654; Tap to listen</div></div>';
+    var webcamSlot = hero.querySelector(".az-live-mobile-webcam");
+    var chatSlot = hero.querySelector(".az-live-mobile-chat");
+    var titleEl = hero.querySelector(".az-live-mobile-title");
+    var artistEl = hero.querySelector(".az-live-mobile-artist");
+    var tapEl = hero.querySelector(".az-live-mobile-tap");
+    var tapDismissed = false;
+    tapEl.addEventListener("click", function () {
+      // Don't just rely on the page's global gesture listener (unmute() near the top of this
+      // file) to also catch this tap - it only fires ONCE and this hero hides the real play
+      // button, which is otherwise the always-available fallback if that first gesture got
+      // consumed early (e.g. by an incidental touch before the stream was ready) with no
+      // effect. Calling it here directly, inside this trusted click, works regardless.
+      ensurePlaying();
+      tapDismissed = true;
+      tapEl.classList.remove("az-open");
+    });
+
+    function syncTrackText() {
+      var t = document.querySelector(".radio-player-widget .now-playing-title");
+      var a = document.querySelector(".radio-player-widget .now-playing-artist");
+      titleEl.textContent = (t && t.textContent) || "";
+      artistEl.textContent = (a && a.textContent) || "";
+    }
+
+    function update() {
+      var on = window.matchMedia(MOBILE_QUERY).matches && !!window.azWebcamLive;
+      hero.classList.toggle("az-open", on);
+      var video = document.querySelector(".az-webcam");
+      var chat = document.querySelector(".az-chat-panel");
+      if (on) {
+        if (video && video.parentElement !== webcamSlot) webcamSlot.appendChild(video);
+        if (chat && chat.parentElement !== chatSlot) chatSlot.appendChild(chat);
+        syncTrackText();
+        if (!tapDismissed && isPlaying() && !isMuted()) tapDismissed = true; // started some other way (e.g. muted autoplay succeeded and got unmuted) - no need to prompt
+        tapEl.classList.toggle("az-open", !tapDismissed);
+      } else {
+        var playerHost = document.querySelector(".radio-player-widget");
+        if (video && playerHost && video.parentElement !== playerHost) {
+          playerHost.insertBefore(video, playerHost.firstChild);
+        }
+        if (chat && chat.parentElement !== document.body) document.body.appendChild(chat);
+      }
+    }
+
+    function mount() {
+      document.body.appendChild(hero);
+      update();
+      setInterval(update, 500);
+      window.addEventListener("resize", update);
+    }
+    if (document.body) mount();
+    else document.addEventListener("DOMContentLoaded", mount);
   })();
 })();

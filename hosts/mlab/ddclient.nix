@@ -16,10 +16,10 @@
     zone = "marcel.cool";
     username = "token";
     passwordFile = config.sops.secrets.cloudflare_ddclient_token.path;
-    # single source of truth = ssh.marcel.cool (A+AAAA)
+    # single source of truth = ssh.marcel.cool (A only - this host has no working IPv6 route,
+    # so usev6 just timed out on api6.ipify.org every run, ~4min+ per cycle across all domains)
     domains = ["ssh.marcel.cool" "marcel.cool"];
     usev4 = "webv4, webv4=ifconfig.me";
-    usev6 = "webv6, webv6=api6.ipify.org";
     ssl = true;
   };
 

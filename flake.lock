@@ -820,6 +820,7 @@
         "psysonic": "psysonic",
         "sops-nix": "sops-nix",
         "tmex": "tmex",
+        "vpn-confinement": "vpn-confinement",
         "xelabash": "xelabash",
         "zuban": "zuban"
       }
@@ -976,6 +977,21 @@
       "original": {
         "owner": "marcelmanz",
         "repo": "tmex",
+        "type": "github"
+      }
+    },
+    "vpn-confinement": {
+      "locked": {
+        "lastModified": 1788035501,
+        "narHash": "sha256-3Xs9lCMwjvFURU7/fPEGDR5kCKvcdX2l5Fah1nZoaGQ=",
+        "owner": "Maroka-chan",
+        "repo": "VPN-Confinement",
+        "rev": "ce8949125b698406810ea71a8bd7b567d9a0b09f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Maroka-chan",
+        "repo": "VPN-Confinement",
         "type": "github"
       }
     },

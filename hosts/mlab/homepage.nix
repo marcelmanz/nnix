@@ -140,6 +140,13 @@
               description = "AzuraCast Admin";
             };
           }
+          {
+            "Live DJ" = {
+              icon = "mdi-microphone";
+              href = services.livedj.href;
+              description = "Start/stop the live mixer stream";
+            };
+          }
         ];
       }
       {
@@ -162,7 +169,7 @@
               href = services.sonarr.href;
               widget = {
                 type = "sonarr";
-                url = "http://127.0.0.1:${toString services.sonarr.port}";
+                url = "http://${config.vpnNamespaces.pia.namespaceAddress}:${toString services.sonarr.port}";
                 key = "{{HOMEPAGE_VAR_SONARR_API}}";
               };
             };
@@ -173,7 +180,7 @@
               href = services.radarr.href;
               widget = {
                 type = "radarr";
-                url = "http://127.0.0.1:${toString services.radarr.port}";
+                url = "http://${config.vpnNamespaces.pia.namespaceAddress}:${toString services.radarr.port}";
                 key = "{{HOMEPAGE_VAR_RADARR_API}}";
               };
             };
@@ -184,7 +191,7 @@
               href = services.lidarr.href;
               widget = {
                 type = "lidarr";
-                url = "http://127.0.0.1:${toString services.lidarr.port}";
+                url = "http://${config.vpnNamespaces.pia.namespaceAddress}:${toString services.lidarr.port}";
                 key = "{{HOMEPAGE_VAR_LIDARR_API}}";
               };
             };
@@ -195,7 +202,7 @@
               href = services.bazarr.href;
               widget = {
                 type = "bazarr";
-                url = "http://127.0.0.1:${toString services.bazarr.port}";
+                url = "http://${config.vpnNamespaces.pia.namespaceAddress}:${toString services.bazarr.port}";
                 key = "{{HOMEPAGE_VAR_BAZARR_API}}";
               };
             };
@@ -206,7 +213,7 @@
               href = services.prowlarr.href;
               widget = {
                 type = "prowlarr";
-                url = "http://127.0.0.1:${toString services.prowlarr.port}";
+                url = "http://${config.vpnNamespaces.pia.namespaceAddress}:${toString services.prowlarr.port}";
                 key = "{{HOMEPAGE_VAR_PROWLARR_API}}";
               };
             };
@@ -242,7 +249,7 @@
               href = services.qbit.href;
               widget = {
                 type = "qbittorrent";
-                url = "http://127.0.0.1:${toString services.qbit.port}";
+                url = "http://${config.vpnNamespaces.pia.namespaceAddress}:${toString services.qbit.port}";
                 username = "{{HOMEPAGE_VAR_WEB_USER}}";
                 password = "{{HOMEPAGE_VAR_WEB_PASS}}";
               };
@@ -254,7 +261,7 @@
               href = services.sabnzbd.href;
               widget = {
                 type = "sabnzbd";
-                url = "http://127.0.0.1:${toString services.sabnzbd.port}";
+                url = "http://${config.vpnNamespaces.pia.namespaceAddress}:${toString services.sabnzbd.port}";
                 key = "{{HOMEPAGE_VAR_SABNZBD_API}}";
               };
             };

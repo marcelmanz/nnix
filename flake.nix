@@ -60,6 +60,7 @@
       url = "git+https://codeberg.org/marcelmanz/pir";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    vpn-confinement.url = "github:Maroka-chan/VPN-Confinement";
   };
 
   outputs = {
@@ -185,6 +186,7 @@
       modules = [
         inputs.sops-nix.nixosModules.sops
         inputs.openlogi.nixosModules.default
+        inputs.vpn-confinement.nixosModules.default
         {
           programs.openlogi.enable = true;
         }

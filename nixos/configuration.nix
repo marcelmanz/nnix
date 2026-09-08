@@ -37,12 +37,23 @@
   ];
 
   programs.ssh.extraConfig = ''
-    Host mlab
-      HostName ssh.marcel.cool
+    Host mlab ssh.marcel.cool
       User root
       IdentityFile /etc/nix/keys/mlab_key
       IdentitiesOnly yes
       AddressFamily inet
+      Compression yes
+      ServerAliveInterval 15
+      ServerAliveCountMax 2
+      TCPKeepAlive yes
+      ControlMaster auto
+      ControlPath /tmp/ssh-%r@%h:%p
+      ControlPersist 10m
+      ConnectTimeout 5
+      ExitOnForwardFailure yes
+      Ciphers aes128-gcm@openssh.com
+      IPQoS=throughput
+      # Toggle Compression: ssh -o Compression=no mlab
   '';
 
   nix.package = pkgs.lixPackageSets.stable.lix;
@@ -173,6 +184,11 @@
       PasswordAuthentication = false;
       KbdInteractiveAuthentication = false;
       PermitRootLogin = "no";
+
+      # SSH latency optimizations
+      ClientAliveInterval = 15;
+      ClientAliveCountMax = 2;
+      TCPKeepAlive = "yes";
     };
   };
 
@@ -373,8 +389,10 @@
     age.sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
 
     secrets = {
+      # owned by the interactive user so plain `ssh mlab` can read it;
+      # root (nix builder) reads it regardless of owner
       "mlab_builder_key" = {
-        owner = "root";
+        owner = username;
         group = "root";
         mode = "0600";
         path = "/etc/nix/keys/mlab_key";

@@ -27,6 +27,7 @@ in {
     simplex-chat-desktop
     strawberry
 
+    audacity
     cinny
     # librewolf # no active commiter in nixpkgs
     jellyfin-desktop

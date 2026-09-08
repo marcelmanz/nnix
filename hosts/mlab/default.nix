@@ -24,6 +24,7 @@
     ./homepage.nix
     ./immich.nix
     ./invidious
+    ./ipv6-rotator.nix
     ./jellyfin.nix
     ./livekit.nix
     ./matrix.nix
@@ -50,6 +51,7 @@
     ./syncthing.nix
     ./uptime-kuma.nix
     ./vaultwarden.nix
+    ./vpn.nix
   ];
 
   time.timeZone = "Europe/Madrid";
@@ -97,6 +99,7 @@
       "ms01_admin_hash" = {neededForUsers = true;};
       "ms01_dev_hash" = {neededForUsers = true;};
       "ytify_user_password" = {};
+      "azuracast_dj_password" = {};
     };
 
     templates."cloudflare-acme.env" = {
@@ -234,10 +237,9 @@
         53 # DNS (dnsmasq), LAN only - see local-service below
         80 # nginx catch-all / http to https redirects
         443 # Nginx HTTPS
-        23951 # qBittorrent torrent port
         50300 # Soulseek peer port
       ];
-      allowedUDPPorts = [53 23951];
+      allowedUDPPorts = [53];
       allowedUDPPortRanges = [
         {
           from = 60000;
@@ -345,6 +347,11 @@
       PasswordAuthentication = false;
       KbdInteractiveAuthentication = false;
       AllowAgentForwarding = true;
+
+      # SSH latency optimizations
+      ClientAliveInterval = 15;
+      ClientAliveCountMax = 2;
+      TCPKeepAlive = "yes";
     };
     extraConfig = ''
       Subsystem sftp internal-sftp -l INFO
