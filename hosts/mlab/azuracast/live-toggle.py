@@ -54,7 +54,9 @@ def is_active() -> bool:
 def mic_on() -> bool:
     out = subprocess.run(
         [AMIXER, "-c", "Mic", "cget", f"name={MIC_CONTROL}"],
-        capture_output=True, text=True, check=False,
+        capture_output=True,
+        text=True,
+        check=False,
     ).stdout
     return "values=on" in out
 
@@ -103,7 +105,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         if self.path == "/toggle":
-            action = "stop" if is_active() else "start"
+            live = is_active()
+            if not live:
+                set_mic(True)
+            action = "stop" if live else "start"
             subprocess.run([SUDO, SYSTEMCTL, action, UNIT], check=False)
             self.send_response(303)
             self.send_header("Location", "/")
@@ -123,15 +128,32 @@ class Handler(BaseHTTPRequestHandler):
             # than fighting over the device.
             proc = subprocess.run(
                 [
-                    FFMPEG, "-y", "-f", "alsa", "-ar", "44100", "-ac", "1",
-                    "-i", "plughw:CARD=Mic", "-t", str(TEST_SECS),
-                    "-c:a", "libmp3lame", "-b:a", "128k", str(TEST_FILE),
+                    FFMPEG,
+                    "-y",
+                    "-f",
+                    "alsa",
+                    "-ar",
+                    "44100",
+                    "-ac",
+                    "1",
+                    "-i",
+                    "plughw:CARD=Mic",
+                    "-t",
+                    str(TEST_SECS),
+                    "-c:a",
+                    "libmp3lame",
+                    "-b:a",
+                    "128k",
+                    str(TEST_FILE),
                 ],
-                capture_output=True, check=False,
+                capture_output=True,
+                check=False,
             )
             if proc.returncode == 0:
                 result = (
-                    '<audio controls autoplay src="/test-mic.mp3?t=' + str(int(time.time())) + '"></audio>'
+                    '<audio controls autoplay src="/test-mic.mp3?t='
+                    + str(int(time.time()))
+                    + '"></audio>'
                 )
             else:
                 result = '<p class="err">Could not record - is the mic connected, and not already in use by a live broadcast?</p>'
