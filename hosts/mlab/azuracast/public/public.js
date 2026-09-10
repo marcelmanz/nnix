@@ -2387,11 +2387,7 @@
       pop.setAttribute("role", "dialog");
       pop.setAttribute("aria-label", "Radio program schedule");
       pop.innerHTML =
-        '<p class="az-program-pop-title">Radio Program</p><div class="az-program-list"></div>' +
-        // az-stream-pop-footer is the stream popover's footer style; the rule is not scoped to
-        // that popover, so reusing the class here costs no extra CSS.
-        '<p class="az-stream-pop-footer">Check the past daily bulletins at ' +
-        '<a href="https://bulletins.marcel.cool" target="_blank" rel="noopener">bulletins.marcel.cool</a></p>';
+        '<p class="az-program-pop-title">Radio Program</p><div class="az-program-list"></div>';
       var listEl = pop.querySelector(".az-program-list");
 
       var rowEls = rows.map(function (row) {
