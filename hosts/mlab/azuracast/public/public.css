@@ -6,6 +6,7 @@
 :root {
   --hud-bg: linear-gradient(120deg, rgba(10, 0, 25, 0.85), rgba(0, 22, 38, 0.85));
   --hud-bg-strong: linear-gradient(120deg, rgba(10, 0, 25, 0.96), rgba(0, 22, 38, 0.96));
+  --hud-bg-waves: linear-gradient(120deg, rgba(10, 0, 25, 0.6), rgba(0, 22, 38, 0.6));
   --hud-bg-flat-rgb: 8, 8, 22; /* flat (non-gradient) - for spots like the tooltip arrow
                                        that must blend seamlessly with its own chip background */
   --hud-accent-rgb: 0, 229, 255; /* cyan */
@@ -17,6 +18,7 @@
 html.az-light {
   --hud-bg: linear-gradient(120deg, rgba(255, 255, 255, 0.92), rgba(230, 244, 250, 0.95));
   --hud-bg-strong: linear-gradient(120deg, rgba(255, 255, 255, 0.98), rgba(230, 244, 250, 0.98));
+  --hud-bg-waves: linear-gradient(120deg, rgba(255, 255, 255, 0.6), rgba(230, 244, 250, 0.6));
   --hud-bg-flat-rgb: 250, 250, 252;
   --hud-accent-rgb: 0, 119, 168; /* deep teal, readable on white */
   --hud-accent-2-rgb: 163, 21, 127; /* deep magenta */
@@ -81,115 +83,179 @@ html.az-calm.az-stopped body.page-minimal .public-page .card {
     transition: none;
   }
 }
-/* Wave mode -> footer player. When the wave overlay is on (html.az-waves) the card docks to
-   the bottom edge as a compact full-width bar: small art, track name left, controls right,
-   equalizer strip / volume / shortcut hint tucked away - leaving the rest of the screen for
-   the waves. Desktop only; under 768px the normal stacked card stays (see the media block
-   above). The marquee re-measures itself on its own 300ms interval, so the width change
-   needs no JS. */
+/* Docked bar mode: the player docks to the bottom edge as a compact full-width bar (small art,
+   track name left, controls right, equalizer strip along the bottom edge) and a "top stage"
+   (see .az-topstage below) takes the rest of the screen for the webcam/chat. One shared class,
+   html.az-bar, drives both - set by JS (updateBarMode() in public.js) whenever EITHER the
+   manual "≈" toggle is on at desktop width, OR a live webcam forces it on mobile. That's the
+   single source of truth: no separate per-breakpoint copy of this block, and no fixed pixel
+   guessing between it and the top stage - both read --az-bar-h. The marquee re-measures itself
+   on its own 300ms interval, so the width change needs no JS of its own. */
+:root {
+  --az-bar-h: 76px;
+}
+html.az-bar body.page-minimal .public-page .card {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto;
+  margin: 0;
+  border-radius: 0;
+  z-index: 1001; /* above .az-topstage (500) and the HUD chips (999/1000) */
+  border-width: 2px 0 0; /* docked bar: any state border (calm/stopped/mode hairline) reads
+                              as a top edge only - sides/bottom would box in the footer */
+}
+html.az-bar body.page-minimal .public-page .card-body {
+  padding: 8px 12px;
+}
+html.az-bar .radio-player-widget .now-playing-details {
+  flex-direction: row;
+}
+html.az-bar .radio-player-widget .now-playing-art,
+html.az-bar .radio-player-widget .now-playing-art img {
+  width: 56px;
+  height: 56px;
+  aspect-ratio: auto;
+}
+html.az-bar .radio-player-widget .now-playing-art {
+  margin-right: 12px;
+}
+html.az-bar .radio-player-widget .now-playing-main {
+  display: block;
+  flex: 1 1 auto;
+  padding-right: 84px; /* reserved slot so the marquee never scrolls under the controls */
+}
+/* !important: the desktop rules set clamp() sizes with !important (see above). */
+html.az-bar .radio-player-widget .now-playing-title {
+  font-size: 1.25rem !important;
+}
+html.az-bar .radio-player-widget .now-playing-artist {
+  font-size: 1rem !important;
+}
+html.az-bar .radio-player-widget .az-eq {
+  height: 28px;
+  margin: 4px 0 0;
+}
+/* Volume pill (with the quality selector riding inside it - see relocate() in the JS)
+   stays visible in the docked bar but in-flow: the corner-pin makes no sense in a
+   full-width bar, and the selector needs a volume bar to sit left of. */
+html.az-bar .radio-player-widget .radio-control-volume {
+  position: static;
+  margin-top: 0;
+}
+/* Shortcut hint: instead of the bottom-right corner pin it floats dead-centre in the bar
+   (the title/artist marquee scrolls under it - z-index 3 is already above the text). Desktop
+   only - the base rule already hides it under 768px. */
 @media (min-width: 769px) {
-  html.az-waves body.page-minimal .public-page .card {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: auto;
-    margin: 0;
-    border-radius: 0;
-    z-index: 1; /* above the negative-z background layers, below the fixed HUD buttons */
-    border-width: 2px 0 0; /* docked bar: any state border (calm/stopped/mode hairline) reads
-                                as a top edge only - sides/bottom would box in the footer */
-  }
-  html.az-waves body.page-minimal .public-page .card-body {
-    padding: 8px 12px;
-  }
-  html.az-waves .radio-player-widget .now-playing-art,
-  html.az-waves .radio-player-widget .now-playing-art img {
-    width: 56px;
-    height: 56px;
-  }
-  html.az-waves .radio-player-widget .now-playing-art {
-    margin-right: 12px;
-  }
-  html.az-waves .radio-player-widget .now-playing-main {
-    flex: 1 1 auto;
-    padding-right: 84px; /* reserved slot so the marquee never scrolls under the controls */
-  }
-  /* !important: the desktop rules set clamp() sizes with !important (see above). */
-  html.az-waves .radio-player-widget .now-playing-title {
-    font-size: 1.25rem !important;
-  }
-  html.az-waves .radio-player-widget .now-playing-artist {
-    font-size: 1rem !important;
-  }
-  html.az-waves .radio-player-widget .az-eq {
-    display: none;
-  }
-  /* Volume pill (with the quality selector riding inside it - see relocate() in the JS)
-     stays visible in the docked bar but in-flow: the corner-pin makes no sense in a
-     full-width bar, and the selector needs a volume bar to sit left of. */
-  html.az-waves .radio-player-widget .radio-control-volume {
-    position: static;
-    margin-top: 0;
-  }
-  /* Shortcut hint: instead of the bottom-right corner pin it floats dead-centre in the bar
-     (the title/artist marquee scrolls under it - z-index 3 is already above the text). */
-  html.az-waves .radio-player-widget .az-hint {
+  html.az-bar .radio-player-widget .az-hint {
     left: 50%;
     top: 50%;
     bottom: auto;
     right: auto;
     transform: translate(-50%, -50%);
   }
-  /* Controls row parks at the right edge, vertically centred (same trick as the desktop
-     volume corner-pin; .now-playing-main is already position:relative + overflow:hidden). */
-  html.az-waves .radio-player-widget .radio-controls {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-  }
-  /* Footer mode keeps the PLAY/PAUSE letters (the mask icon read as a glitch mark), scaled to
-     fit the 56px art instead of the desktop clamp(). Since letters that fit that box are too
-     small to read, the whole thumbnail zooms on hover - it grows upward out of the bar
-     (transform-origin bottom) so the docked footer keeps its height. The base rule already
-     reveals the overlay on hover and while stopped, so the zoom and the letters appear
-     together. */
-  html.az-waves .radio-player-widget .now-playing-art {
-    transition: transform 0.2s ease;
-    transform-origin: left bottom; /* grows up and to the RIGHT - centre origin would push it
-                                        off the left screen edge (the art sits 12px from it) */
-    z-index: 3;
-  }
-  html.az-waves .radio-player-widget .now-playing-art:hover {
-    transform: scale(2.1);
-  }
-  /* The zoomed art has to clear the HUD chips (z-index 999/1000), but the card is a fixed,
-     z-index:1 stacking context - no child z-index can escape it, so the CARD is what gets
-     lifted while the art is hovered. */
-  html.az-waves body.page-minimal .public-page .card:has(.now-playing-art:hover) {
-    z-index: 1001;
-  }
-  html.az-waves .radio-player-widget .now-playing-art .az-overlay-play {
-    padding: 0 2px;
-    font-size: 0.8rem; /* PAUSE at Arial Black ~50px wide - just inside the 56px art */
-    letter-spacing: 0;
-    -webkit-text-stroke-width: 1px;
-    text-stroke-width: 1px;
-    text-shadow: 0 0 6px rgba(255, 230, 0, 0.9);
-  }
-  /* The bottom HUD chips would sink into the docked bar (they stack above it, so they'd just
-     float on top of the player) - lift them above the footer's height with a bit of extra
-     separation, and move the picker popover up to stay glued to its button. */
-  html.az-waves .az-bg-btn,
-  html.az-waves .az-waves-btn,
-  html.az-waves .az-listeners,
-  html.az-waves .az-listen-time {
-    bottom: 100px;
-  }
-  html.az-waves .az-bg-pop {
-    bottom: 140px;
-  }
+}
+/* Controls row parks at the right edge, vertically centred (same trick as the desktop
+   volume corner-pin; .now-playing-main is already position:relative + overflow:hidden). */
+html.az-bar .radio-player-widget .radio-controls {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+/* Footer mode keeps the PLAY/PAUSE letters (the mask icon read as a glitch mark), scaled to
+   fit the 56px art instead of the desktop clamp(). Since letters that fit that box are too
+   small to read, the whole thumbnail zooms on hover - it grows upward out of the bar
+   (transform-origin bottom) so the docked footer keeps its height. The base rule already
+   reveals the overlay on hover and while stopped, so the zoom and the letters appear
+   together. The card is already z-index 1001 (above the HUD chips), so unlike before, the
+   zoomed art needs no extra lift to clear them. */
+html.az-bar .radio-player-widget .now-playing-art {
+  transition: transform 0.2s ease;
+  transform-origin: left bottom; /* grows up and to the RIGHT - centre origin would push it
+                                      off the left screen edge (the art sits 12px from it) */
+  z-index: 3;
+}
+html.az-bar .radio-player-widget .now-playing-art:hover {
+  transform: scale(2.1);
+}
+html.az-bar .radio-player-widget .now-playing-art .az-overlay-play {
+  padding: 0 2px;
+  font-size: 0.8rem; /* PAUSE at Arial Black ~50px wide - just inside the 56px art */
+  letter-spacing: 0;
+  -webkit-text-stroke-width: 1px;
+  text-stroke-width: 1px;
+  text-shadow: 0 0 6px rgba(255, 230, 0, 0.9);
+}
+/* The bottom HUD chips would sink into the docked bar (they stack above it, so they'd just
+   float on top of the player) - lift them above the footer's height with a bit of extra
+   separation, and move the picker popover up to stay glued to its button. */
+html.az-bar .az-bg-btn,
+html.az-bar .az-waves-btn,
+html.az-bar .az-listeners,
+html.az-bar .az-listen-time {
+  bottom: calc(var(--az-bar-h) + 24px);
+}
+html.az-bar .az-bg-pop {
+  bottom: calc(var(--az-bar-h) + 64px);
+}
+
+/* Top stage: the rest of the screen above the docked bar (see html.az-bar above, which both
+   sets this height and pins the bar under it). Built once by JS (buildTopStage() in
+   public.js) and (re)populated by reparenting the real .az-webcam and .az-chat-panel into it
+   whenever the bar is docked - same two elements everywhere, no separate mobile-only copies to
+   keep in sync. Below the HUD chips (999/1000) so those stay clickable on top of it. */
+.az-topstage {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: var(--az-bar-h);
+  z-index: 500;
+}
+html.az-bar .az-topstage {
+  display: flex;
+}
+.az-topstage-webcam {
+  flex: 1 1 50%;
+  min-width: 0;
+  background: #000;
+}
+.az-topstage-webcam:empty {
+  display: none;
+}
+.az-topstage-webcam .az-webcam {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  margin-bottom: 0;
+  border-radius: 0;
+  object-fit: cover;
+}
+.az-topstage-chat {
+  flex: 1 1 50%;
+  min-width: 0;
+  border-left: 1px solid rgba(var(--hud-accent-rgb), 0.4);
+}
+/* No webcam feed to share the stage with - chat gets the full width, no border to nothing. */
+.az-topstage-webcam:empty + .az-topstage-chat {
+  flex: 1 1 100%;
+  border-left: none;
+}
+/* Overrides the standalone (floating sidebar) .az-chat-panel rules - higher specificity wins
+   regardless of source order, including over the max-width:1099px { display:none } rule. */
+.az-topstage-chat .az-chat-panel {
+  display: flex;
+  position: static;
+  width: 100%;
+  height: 100%;
+  transform: none;
+  border: none;
+  box-shadow: none;
+  background: var(--hud-bg-waves); /* lower opacity than the floating panel - let the
+                                        reactive background show through behind the chat */
 }
 
 /* Player card background - lighter (transparent); html.az-light (Device -> light system theme,
@@ -357,18 +423,16 @@ body.page-minimal .public-page .card-body {
   outline: none;
   box-shadow: none;
 }
-@media (min-width: 769px) {
-  /* Footer mode: the bar is docked to the screen's bottom edge, so the menu unfurls upward
-     and right-aligned (the controls are parked at the bar's right edge). !important beats
-     the inline transform/inset styles Bootstrap's Popper writes onto the menu. */
-  html.az-waves .radio-player-widget .radio-control-select-stream .dropdown-menu {
-    top: auto !important;
-    bottom: calc(100% + 8px) !important;
-    left: auto !important;
-    right: 0 !important;
-    transform: none !important;
-    margin: 0 !important;
-  }
+/* Footer mode: the bar is docked to the screen's bottom edge, so the menu unfurls upward
+   and right-aligned (the controls are parked at the bar's right edge). !important beats
+   the inline transform/inset styles Bootstrap's Popper writes onto the menu. */
+html.az-bar .radio-player-widget .radio-control-select-stream .dropdown-menu {
+  top: auto !important;
+  bottom: calc(100% + 8px) !important;
+  left: auto !important;
+  right: 0 !important;
+  transform: none !important;
+  margin: 0 !important;
 }
 
 /* Hide station history button */
@@ -636,14 +700,6 @@ html.az-calm .radio-player-widget .now-playing-artist.az-nudge-on {
     filter 0.3s linear;
   will-change: transform;
   pointer-events: none;
-}
-/* Waves over a photo: a flat dark veil (second background layer on this same ::before - no
-   extra element, no fight with the trip hue-rotate filter) lifts the neon lines off busy
-   images. Solid white/black/neon skip it (no .az-bg-photo marker class). */
-html.az-waves.az-bg-photo body.page-minimal::before {
-  background-image:
-    linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)),
-    var(--az-bg-custom, url("/party-bg.jpg"));
 }
 [data-bs-theme] body.page-minimal::after {
   content: "";
@@ -1190,40 +1246,6 @@ html.az-calm .az-listeners {
   filter: drop-shadow(
     0 0 2px rgba(255, 255, 255, 0.4)
   ); /* soft neutral glow -> contrast on dark bg, works for all track colors */
-}
-
-/* Fullscreen wave overlay (the "≈" toggle, bottom-left). A fixed SVG behind the page
-   content, above the background image layer, so it rides on top of whatever background is
-   picked: many oscillating lines drawn from the same analyser as the player's equalizer
-   strip, which keeps running on top of this untouched.
-   preserveAspectRatio:none stretches the 100x100 viewBox to the window, so strokes use
-   vector-effect:non-scaling-stroke (set in JS) to stay even. Hidden unless html.az-waves, and
-   off entirely under prefers-reduced-motion - calm mode keeps them (see below). */
-.az-bgwaves {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  width: 100%;
-  height: 100%;
-  display: none;
-  pointer-events: none;
-}
-html.az-waves .az-bgwaves {
-  display: block;
-}
-/* Light theme (html.az-light, the Device preset on a light OS theme): the neon palette
-   (esp. yellow/cyan) vanishes on white, so darken the whole field uniformly instead of
-   re-mapping every stroke - same colors, just readable on light. */
-html.az-light .az-bgwaves {
-  filter: brightness(0.55) saturate(1.3);
-}
-/* Calm (anti-seizure) mode deliberately KEEPS the waves: it kills the background flash/
-   zoom/glow and the strobing text, not the wave field itself. Only the OS-level
-   prefers-reduced-motion (below) still hides them. */
-@media (prefers-reduced-motion: reduce) {
-  .az-bgwaves {
-    display: none !important;
-  }
 }
 
 /* Anti-seizure toggle: JS puts .az-calm on <html> (see public.js) and the rules
@@ -2058,22 +2080,11 @@ html.az-calm .az-bg-pop-title {
   cursor: pointer;
 }
 
-.az-webcam-offline {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 120px;
-  border-radius: 8px;
-  background: #000;
-  color: rgb(var(--hud-accent-rgb));
-  font-family: "Courier New", ui-monospace, monospace;
-  margin-bottom: 0.75rem;
-  text-align: center;
-  padding: 0 1rem;
-}
-
+/* Hidden by default - the chat only ever shows docked inside .az-topstage (see
+   .az-topstage-chat .az-chat-panel below), which itself only exists while html.az-bar is set
+   (live webcam or waves mode). No live, no waves mode, no chat. */
 .az-chat-panel {
+  display: none;
   position: fixed;
   right: 16px;
   top: 50%;
@@ -2081,7 +2092,6 @@ html.az-calm .az-bg-pop-title {
   z-index: 1000;
   width: 300px;
   height: min(70vh, 500px);
-  display: flex;
   flex-direction: column;
   border: 2px solid rgb(var(--hud-accent-rgb));
   background: var(--hud-bg-strong);
@@ -2089,12 +2099,6 @@ html.az-calm .az-bg-pop-title {
   font-family: "Courier New", ui-monospace, monospace;
   font-size: 13px;
   box-shadow: 0 0 18px rgba(var(--hud-accent-rgb), 0.3);
-}
-/* No room beside the player under this width - docking a fixed sidebar there would overlap it. */
-@media (max-width: 1099px) {
-  .az-chat-panel {
-    display: none;
-  }
 }
 .az-chat-header {
   display: flex;
@@ -2149,98 +2153,6 @@ html.az-calm .az-bg-pop-title {
   color: rgb(var(--hud-accent-3-rgb));
 }
 
-/* Mobile "live" takeover: webcam / track / chat stacked full-screen, toggled by JS (see the
-   "mobile live layout" IIFE in public.js) only while there's a live webcam feed on a narrow
-   screen. Sits above everything else on the page (including the HUD buttons, z-index 1000). */
-.az-live-mobile {
-  display: none;
-  position: fixed;
-  inset: 0;
-  height: 100svh;
-  z-index: 1500;
-  flex-direction: column;
-  background: #000;
-}
-.az-live-mobile.az-open {
-  display: flex;
-}
-.az-live-mobile-webcam {
-  flex: 0 0 50%;
-  min-height: 0;
-  background: #000;
-}
-.az-live-mobile-webcam .az-webcam {
-  width: 100%;
-  height: 100%;
-  max-height: none;
-  margin-bottom: 0;
-  border-radius: 0;
-  object-fit: cover;
-}
-.az-live-mobile-track {
-  flex: 0 0 auto;
-  padding: 10px 14px;
-  text-align: center;
-  color: rgb(var(--hud-text-rgb));
-  font-family: "Courier New", ui-monospace, monospace;
-  border-bottom: 1px solid rgba(var(--hud-accent-rgb), 0.4);
-}
-.az-live-mobile-title {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 700;
-  color: rgb(var(--hud-accent-rgb));
-}
-.az-live-mobile-artist {
-  margin: 4px 0 0;
-  font-size: 13px;
-  opacity: 0.85;
-}
-.az-live-mobile-chat {
-  flex: 1 1 auto;
-  min-height: 0;
-}
-.az-live-mobile-tap {
-  display: none;
-  position: absolute;
-  inset: 0;
-  z-index: 2; /* above the webcam/track/chat stack, which has no z-index of its own (auto) */
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.4);
-}
-.az-live-mobile-tap.az-open {
-  display: flex;
-}
-.az-live-mobile-tap-badge {
-  padding: 0.8rem 1.6rem;
-  border: 2px solid rgb(var(--hud-accent-rgb));
-  border-radius: 2rem;
-  background: var(--hud-bg-strong);
-  color: rgb(var(--hud-accent-rgb));
-  font-family: "Courier New", ui-monospace, monospace;
-  font-size: 1.1rem;
-  font-weight: 700;
-  box-shadow: 0 0 18px rgba(var(--hud-accent-rgb), 0.4);
-  animation: az-tap-pulse 1.6s ease-in-out infinite;
-}
-@keyframes az-tap-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.6;
-  }
-}
-/* Overrides the standalone (desktop sidebar) .az-chat-panel rules - higher specificity wins
-   regardless of source order, including over the max-width:1099px { display:none } rule. */
-.az-live-mobile-chat .az-chat-panel {
-  display: flex;
-  position: static;
-  width: 100%;
-  height: 100%;
-  transform: none;
-  border: none;
-  box-shadow: none;
-}
+/* Mobile live-webcam takeover now shares the desktop docked-bar/top-stage mechanism above
+   (html.az-bar / .az-topstage) instead of its own copy - see updateBarMode()/updateTopStage()
+   in public.js. */

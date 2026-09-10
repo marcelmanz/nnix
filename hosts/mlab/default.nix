@@ -156,6 +156,7 @@
     # that; group media (986) is preserved so navidrome/slskd/bandcampsync keep
     # access. Music files inside stay 0644 root:root (read-only to all).
     "d /var/lib/media/music 0775 1000 media -"
+    "d /var/lib/media/dj 0775 root media -"
   ];
 
   services.postgresql = {

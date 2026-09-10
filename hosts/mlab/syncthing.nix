@@ -1,4 +1,7 @@
 {config, ...}: {
+  # syncthing needs group write access to write into bandcampsync's root-owned dj dir
+  users.users.syncthing.extraGroups = ["media"];
+
   services.syncthing = {
     enable = true;
     openDefaultPorts = true;
@@ -26,5 +29,13 @@
     id = "bandcamp-cookies";
     devices = ["nixos"];
     type = "receiveonly";
+  };
+
+  # dj library (aiff, written by bandcampsync) shared to laptop for Mixxx
+  services.syncthing.settings.folders."dj-library" = {
+    path = "/var/lib/media/dj";
+    id = "dj-library";
+    devices = ["nixos"];
+    type = "sendonly";
   };
 }

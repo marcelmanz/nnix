@@ -290,6 +290,15 @@
     };
   };
 
+  # Pioneer DDJ-FLX4 HID interface (jog wheel touch/position) is root-only by
+  # default, which breaks Mixxx's HID mapping for it. TAG+="uaccess" alone
+  # doesn't work here: 99-local.rules runs after 73-seat-late.rules, which is
+  # what actually applies the uaccess ACL, so the tag lands too late. Grant
+  # the group directly instead.
+  services.udev.extraRules = ''
+    SUBSYSTEM=="hidraw", ATTRS{idVendor}=="2b73", ATTRS{idProduct}=="0045", GROUP="users", MODE="0660"
+  '';
+
   musnix.enable = false;
 
   users.users.marcel = {

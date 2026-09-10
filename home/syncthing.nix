@@ -14,6 +14,13 @@
         # laptop only sends cookies, don't accept deletes from mlab
         type = "sendonly";
       };
+      folders."dj-library" = {
+        id = "dj-library";
+        path = "~/Music/dj";
+        devices = ["mlab"];
+        # mlab is the source of truth, don't send deletes back
+        type = "receiveonly";
+      };
     };
   };
 }

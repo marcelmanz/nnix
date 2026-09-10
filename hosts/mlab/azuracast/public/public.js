@@ -1186,8 +1186,7 @@
       now = performance.now();
     if (!muted && eqTime) {
       eqAn.getByteTimeDomainData(eqTime);
-      bgwFreshAt = now;
-    } // raw waveform for the bg waves
+    }
     for (var k = 0; k < EQ_TRACKS.length; k++) {
       var track = EQ_TRACKS[k];
       var b0 = Math.floor(track.band[0] * len);
@@ -1291,90 +1290,66 @@
           el.style.opacity = (el._azOp * (0.62 + 0.38 * Math.sin(now / 5200 + s))).toFixed(3);
       }
     }
-    for (var b = 0; b < peaks.length; b++) bgwBands[b] = bgwBands[b] * 0.8 + (peaks[b] / 255) * 0.2; // -> bg waves
     if (gmax > 8) eqLastSound = now;
     eqBox.style.opacity = now - eqLastSound < 250 ? "1" : "0";
     setBgFx(gmax / 255, peaks[0] / 255, peaks[2] / 255, peaks[4] / 255); // low/mid/high of the five
   }
 
-  // --- fullscreen wave overlay (the "≈" toggle, independent of the background picker) ---
-  // A second, much bigger visualizer that does NOT replace the player strip: many oscillating
-  // lines across the whole viewport, each its own wavelength, speed, amplitude and color.
-  // Unlike the strip (a spectrum envelope riding a baseline) these are real waves centred on
-  // mid-screen - a crest climbs about half the viewport up and the trough the same down, so the
-  // tallest ones sweep nearly the full height. Shape = a travelling sine carrier (the
-  // wavelength) mixed with the analyser's time-domain samples (the real waveform detail),
-  // scaled by the matching equalizer band's level. Its own RAF loop, so it keeps flowing while
-  // paused or muted - free-running on sines when there is no audio to read.
-  var BGW_N = 12,
-    BGW_PTS = 84;
-  var BGW_COLORS = ["#00e5ff", "#00ff9d", "#ff3df0", "#ff8a00", "#ffe600", "#7b5cff"];
-  var bgwSvg,
-    bgwOn = false,
-    bgwRAF = 0,
-    bgwFreshAt = 0,
-    bgwBands = [0, 0, 0, 0, 0],
-    bgwWaves = [];
-  for (var bw = 0; bw < BGW_N; bw++) {
-    bgwWaves.push({
-      amp: 14 + bw * 2.0, // 14..36 of a 100-tall viewBox
-      k: 1.2 + (bw % 5) * 0.9, // crests across the screen = wavelength
-      spd: (bw % 2 ? -1 : 1) * (0.25 + (bw % 4) * 0.18), // alternating directions -> no marching in step
-      cy: 50 + Math.sin(bw * 1.7) * 6,
-      stride: 3 + (bw % 6), // waveform samples per point = detail grain
-      band: bw % 5, // which equalizer band drives its height
-      color: BGW_COLORS[bw % BGW_COLORS.length],
-      op: 1, // full strength - the lines ARE the effect
-      sw: 1 + (bw % 3),
-    });
+  // --- docked bar + top stage ---
+  // html.az-bar is the single flag the CSS (see html.az-bar / .az-topstage in public.css) keys
+  // the docked bottom bar and the top stage off, set here from EITHER the manual "≈" toggle
+  // below (desktop width only) OR a live webcam forcing it on mobile (see the live-webcam poll
+  // further down) - one flag, one docked-bar layout, instead of a separate copy per trigger.
+  var DESKTOP_MQ = window.matchMedia ? window.matchMedia("(min-width: 769px)") : null;
+  var MOBILE_MQ = window.matchMedia ? window.matchMedia("(max-width: 767px)") : null;
+  var mobileLiveOn = false;
+  var topStage, topStageWebcam, topStageChat;
+  function buildTopStage() {
+    if (topStage || !document.body) return;
+    topStage = document.createElement("div");
+    topStage.className = "az-topstage";
+    topStage.innerHTML =
+      '<div class="az-topstage-webcam"></div>' + '<div class="az-topstage-chat"></div>';
+    topStageWebcam = topStage.querySelector(".az-topstage-webcam");
+    topStageChat = topStage.querySelector(".az-topstage-chat");
+    document.body.appendChild(topStage);
   }
-  function buildBgWaves() {
-    if (bgwSvg || !document.body) return;
-    var NS = "http://www.w3.org/2000/svg";
-    bgwSvg = document.createElementNS(NS, "svg");
-    bgwSvg.setAttribute("class", "az-bgwaves");
-    bgwSvg.setAttribute("viewBox", "0 0 100 100");
-    bgwSvg.setAttribute("preserveAspectRatio", "none");
-    bgwSvg.setAttribute("aria-hidden", "true");
-    bgwWaves.forEach(function (wv) {
-      var el = document.createElementNS(NS, "path");
-      el.setAttribute("fill", "none");
-      el.setAttribute("stroke", wv.color);
-      el.setAttribute("stroke-width", wv.sw);
-      el.setAttribute("stroke-linecap", "round");
-      el.setAttribute("vector-effect", "non-scaling-stroke"); // the viewBox is stretched to the window
-      el.style.opacity = wv.op;
-      bgwSvg.appendChild(el);
-      wv.el = el;
-    });
-    document.body.appendChild(bgwSvg);
-  }
-  function bgWaveFrame() {
-    bgwRAF = requestAnimationFrame(bgWaveFrame);
-    if (!bgwOn || !bgwSvg) return; // calm mode on purpose keeps the waves flowing
-    var now = performance.now(),
-      t = now / 1000;
-    var live = !!eqTime && now - bgwFreshAt < 200; // stale (paused/muted) -> free-run instead of freezing
-    for (var w = 0; w < BGW_N; w++) {
-      var wv = bgwWaves[w],
-        pts = [];
-      var lvl = live ? bgwBands[wv.band] : 0.45 + 0.25 * Math.sin(t * (0.3 + wv.band * 0.11));
-      // 0.45 floor so even a quiet passage still sweeps well over half the viewport; loud peaks
-      // on the biggest waves run just past the edges, which is the point
-      var a = wv.amp * (0.45 + 0.55 * lvl);
-      var roll = Math.sin(t * 0.23 + w) * 4; // slow vertical roll so the field is never a static stack
-      for (var i = 0; i < BGW_PTS; i++) {
-        var u = i / (BGW_PTS - 1);
-        var sv = Math.sin(u * wv.k * Math.PI * 2 + t * wv.spd * 3 + w);
-        if (live) {
-          var idx = (i * wv.stride + Math.floor(t * 60)) % eqTime.length; // scroll the read head -> travels
-          sv = sv * 0.55 + ((eqTime[idx] - 128) / 128) * 0.75; // carrier + real waveform detail
-        }
-        pts.push([u * 100, wv.cy + sv * a + roll]);
+  if (document.body) buildTopStage();
+  else document.addEventListener("DOMContentLoaded", buildTopStage);
+  // Reparents the real .az-webcam and .az-chat-panel into the stage (or back to their normal
+  // homes) rather than cloning them, so nothing needs to be kept in sync.
+  function updateTopStage(on) {
+    buildTopStage(); // safety net if the DOMContentLoaded listener above hasn't fired yet
+    if (!topStage) return;
+    var video = document.querySelector(".az-webcam");
+    var chat = document.querySelector(".az-chat-panel");
+    if (on) {
+      if (video && video.parentElement !== topStageWebcam) topStageWebcam.appendChild(video);
+      if (chat && chat.parentElement !== topStageChat) topStageChat.appendChild(chat);
+    } else {
+      var playerHost = document.querySelector(".radio-player-widget");
+      if (video && playerHost && video.parentElement !== playerHost) {
+        playerHost.insertBefore(video, playerHost.firstChild);
       }
-      wv.el.setAttribute("d", "M" + eqSeg(pts, 1));
+      if (chat && chat.parentElement !== document.body) document.body.appendChild(chat);
     }
   }
+  function updateBarMode() {
+    var on = (bgwOn && (!DESKTOP_MQ || DESKTOP_MQ.matches)) || mobileLiveOn;
+    document.documentElement.classList.toggle("az-bar", on);
+    updateTopStage(on);
+  }
+  function onViewportChange() {
+    mobileLiveOn = !!(MOBILE_MQ && MOBILE_MQ.matches && window.azWebcamLive);
+    updateBarMode();
+  }
+  if (DESKTOP_MQ && DESKTOP_MQ.addEventListener) DESKTOP_MQ.addEventListener("change", onViewportChange);
+  if (MOBILE_MQ && MOBILE_MQ.addEventListener) MOBILE_MQ.addEventListener("change", onViewportChange);
+
+  // --- waves mode (the "≈" toggle, independent of the background picker) ---
+  // This is one of two inputs to updateBarMode() above (the other is a live webcam forcing it
+  // on mobile) - it does not touch html.az-bar/.az-topstage directly.
+  var bgwOn = false;
   var WAVES_KEY = "az_waves_on";
   function setWavesBg(on) {
     bgwOn = !!on;
@@ -1382,15 +1357,10 @@
     try {
       localStorage.setItem(WAVES_KEY, bgwOn ? "1" : "0");
     } catch (e) {}
-    if (!bgwOn) return;
-    buildBgWaves();
-    if (!bgwSvg) {
-      document.addEventListener("DOMContentLoaded", buildBgWaves);
-    } // body not up yet
-    if (!bgwRAF) bgWaveFrame();
+    updateBarMode();
   }
-  // Restore last state. The overlay rides on top of whatever background is picked - it is its
-  // own layer, so the background picker no longer switches it on/off.
+  // Restore last state. The docked bar rides on top of whatever background is picked - it is
+  // its own layer, so the background picker no longer switches it on/off.
   try {
     if (localStorage.getItem(WAVES_KEY) === "1") setWavesBg(true);
   } catch (e) {}
@@ -1524,13 +1494,10 @@
       "--az-bg-y",
       ((highN - 0.5) * 10 * azTrip.shakeMul + wobbleY).toFixed(2) + "px",
     );
-    // With the wave overlay on, the beat glow would wash the thin wave lines out (it paints
-    // above them) - cap it lower so the waves stay readable while the pulse still comes through.
-    var glowCap = bgwOn ? 0.3 : 0.85;
     bgFxRoot.setProperty(
       "--az-glow-opacity",
       Math.min(
-        glowCap,
+        0.85,
         (GLOW_BASE_OPACITY + punch * 0.5 + bgDropEnergy * 0.5) * azTrip.glowMul,
       ).toFixed(3),
     );
@@ -1984,8 +1951,7 @@
     var POLL_MS = 5000;
     var pc = null,
       videoEl = null,
-      mounted = false,
-      offlineEl = null;
+      mounted = false;
 
     function mount() {
       if (mounted) return;
@@ -2057,42 +2023,19 @@
       }
     }
 
-    // Shown in the video's place while the cam is off - text set at streamcam.marcel.cool
-    // (webcam-control.py), falls back to its own default when nothing's been set.
-    function showOffline(text) {
-      var host = document.querySelector(".radio-player-widget");
-      if (!host) return;
-      if (!offlineEl) {
-        offlineEl = document.createElement("div");
-        offlineEl.className = "az-webcam-offline";
-        host.insertBefore(offlineEl, host.firstChild);
-      }
-      if (offlineEl.textContent !== text) offlineEl.textContent = text;
-    }
-
-    function hideOffline() {
-      if (offlineEl) {
-        offlineEl.remove();
-        offlineEl = null;
-      }
-    }
-
     function poll() {
       fetch(STATUS_URL, { cache: "no-store" })
         .then(function (r) {
           return r.ok ? r.json() : { live: false };
         })
         .then(function (data) {
-          // Read by the mobile live layout below - it needs to know this without polling
-          // /webcam-status itself a second time.
+          // Global (not just local): onViewportChange (see "docked bar + top stage" above)
+          // reads it on a resize/breakpoint change without waiting for the next poll.
           window.azWebcamLive = !!(data && data.live);
-          if (data && data.live) {
-            hideOffline();
-            mount();
-          } else {
-            unmount();
-            showOffline((data && data.offline_text) || "");
-          }
+          mobileLiveOn = !!(MOBILE_MQ && MOBILE_MQ.matches && window.azWebcamLive);
+          updateBarMode();
+          if (data && data.live) mount();
+          else unmount();
         })
         .catch(function () {});
     }
@@ -2910,80 +2853,6 @@
     });
   })();
 
-  // --- mobile live layout ---
-  // A fixed sidebar chat + inline webcam don't fit on a phone. When there's a live webcam feed
-  // (window.azWebcamLive, set by the live-webcam IIFE above) on a narrow screen, take over the
-  // screen instead: webcam on top, track info in the middle, chat filling the rest. Reparents
-  // the real webcam <video> and chat panel rather than cloning them, so nothing needs to be
-  // kept in sync - and moves them back to their normal homes if the screen widens or the
-  // webcam goes offline while this is up.
-  //
-  // This hero sits ABOVE the real play button (it's a full-screen overlay), so the "tap
-  // anywhere to unlock autoplay" hint that button normally gives is now invisible - without a
-  // "tap to listen" prompt, muted autoplay just looks like a black screen with no sound. A tap
-  // on the prompt is itself the gesture: the page's own global gesture listener (see unmute()
-  // near the top of this file) already starts/unmutes playback for ANY tap, so this only needs
-  // to show/hide the hint - not trigger playback itself.
-  (function () {
-    var MOBILE_QUERY = "(max-width: 767px)";
-    var hero = document.createElement("div");
-    hero.className = "az-live-mobile";
-    hero.innerHTML =
-      '<div class="az-live-mobile-webcam"></div>' +
-      '<div class="az-live-mobile-track"><p class="az-live-mobile-title"></p><p class="az-live-mobile-artist"></p></div>' +
-      '<div class="az-live-mobile-chat"></div>' +
-      '<div class="az-live-mobile-tap"><div class="az-live-mobile-tap-badge">&#9654; Tap to listen</div></div>';
-    var webcamSlot = hero.querySelector(".az-live-mobile-webcam");
-    var chatSlot = hero.querySelector(".az-live-mobile-chat");
-    var titleEl = hero.querySelector(".az-live-mobile-title");
-    var artistEl = hero.querySelector(".az-live-mobile-artist");
-    var tapEl = hero.querySelector(".az-live-mobile-tap");
-    var tapDismissed = false;
-    tapEl.addEventListener("click", function () {
-      // Don't just rely on the page's global gesture listener (unmute() near the top of this
-      // file) to also catch this tap - it only fires ONCE and this hero hides the real play
-      // button, which is otherwise the always-available fallback if that first gesture got
-      // consumed early (e.g. by an incidental touch before the stream was ready) with no
-      // effect. Calling it here directly, inside this trusted click, works regardless.
-      ensurePlaying();
-      tapDismissed = true;
-      tapEl.classList.remove("az-open");
-    });
-
-    function syncTrackText() {
-      var t = document.querySelector(".radio-player-widget .now-playing-title");
-      var a = document.querySelector(".radio-player-widget .now-playing-artist");
-      titleEl.textContent = (t && t.textContent) || "";
-      artistEl.textContent = (a && a.textContent) || "";
-    }
-
-    function update() {
-      var on = window.matchMedia(MOBILE_QUERY).matches && !!window.azWebcamLive;
-      hero.classList.toggle("az-open", on);
-      var video = document.querySelector(".az-webcam");
-      var chat = document.querySelector(".az-chat-panel");
-      if (on) {
-        if (video && video.parentElement !== webcamSlot) webcamSlot.appendChild(video);
-        if (chat && chat.parentElement !== chatSlot) chatSlot.appendChild(chat);
-        syncTrackText();
-        if (!tapDismissed && isPlaying() && !isMuted()) tapDismissed = true; // started some other way (e.g. muted autoplay succeeded and got unmuted) - no need to prompt
-        tapEl.classList.toggle("az-open", !tapDismissed);
-      } else {
-        var playerHost = document.querySelector(".radio-player-widget");
-        if (video && playerHost && video.parentElement !== playerHost) {
-          playerHost.insertBefore(video, playerHost.firstChild);
-        }
-        if (chat && chat.parentElement !== document.body) document.body.appendChild(chat);
-      }
-    }
-
-    function mount() {
-      document.body.appendChild(hero);
-      update();
-      setInterval(update, 500);
-      window.addEventListener("resize", update);
-    }
-    if (document.body) mount();
-    else document.addEventListener("DOMContentLoaded", mount);
-  })();
+  // Mobile live-webcam takeover is now just another updateBarMode() trigger (see
+  // "docked bar + top stage" above and the poll() call above it) - no separate hero/IIFE.
 })();
