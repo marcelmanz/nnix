@@ -63,6 +63,7 @@ in {
     pavucontrol
     pyprland
     qbittorrent
+    ripdrag
     roboto
     roboto-mono
     roboto-serif

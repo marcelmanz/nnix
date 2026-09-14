@@ -144,6 +144,10 @@ in {
         force = true;
       };
       ".config/shellcheckrc".source = link "${dots}/.config/shellcheckrc";
+      ".local/bin/clipfile" = {
+        source = link "${dots}/scripts/clipfile";
+        force = true;
+      };
       # ".cargo/env".source = link "${dots}/.cargo/env";
       # ".cargo/env.fish".source = link "${dots}/.cargo/env.fish";
       # ".cargo/env.nu".source = link "${dots}/.cargo/env.nu";
