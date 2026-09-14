@@ -36,6 +36,10 @@ in {
       pipx run bandcampsync -c /run/bandcamp_cookies_filtered.txt -d /var/lib/media/music -f flac --skip-hidden
       pipx run bandcampsync -c /run/bandcamp_cookies_filtered.txt -d /var/lib/media/dj -f aiff-lossless --skip-hidden
       rm /run/bandcamp_cookies_filtered.txt
+      # bandcampsync writes some files (e.g. bandcamp_item_id.txt) without group
+      # read, which blocks syncthing (group media) from scanning dj-library
+      chown -R root:media /var/lib/media/dj
+      chmod -R g+rX /var/lib/media/dj
       # trigger a navidrome full scan so new tracks show up right away
       curl -fsS "http://127.0.0.1:${toString services.navidrome.port}/rest/startScan.view?u=$(cat ${config.sops.secrets.web_user.path})&t=$(cat ${config.sops.secrets.navidrome_token.path})&s=$(cat ${config.sops.secrets.navidrome_salt.path})&v=1.16.1&c=bandcampsync&f=json&fullScan=true" > /dev/null
     '';

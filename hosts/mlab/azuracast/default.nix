@@ -173,6 +173,13 @@ in {
               && echo "azuracast-settings: news playlist weight=20"
           fi
 
+          # radio-bot is disabled (no timer generating bulletins any more) - keep the
+          # playlist/schedule/folder binding provisioned above, just stop it airing.
+          if [ "$(mysql "SELECT is_enabled FROM station_playlists WHERE id=$NEWS_PID;")" = "1" ]; then
+            mysql "UPDATE station_playlists SET is_enabled=0 WHERE id=$NEWS_PID;" \
+              && echo "azuracast-settings: news playlist disabled"
+          fi
+
           if [ -n "$NEWS_PID" ]; then
             ensure_schedule() {
               if [ "$(mysql "SELECT COUNT(*) FROM station_schedules WHERE playlist_id=$NEWS_PID AND start_time=$1;")" = "0" ]; then

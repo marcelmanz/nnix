@@ -92,17 +92,8 @@ in {
     };
   };
 
-  # static bulletin archive at https://bulletins.marcel.cool (linked from the radio-program
-  # popover on the public player, see public.js)
-  services.nginx.virtualHosts."bulletins.marcel.cool" = {
-    forceSSL = true;
-    useACMEHost = "marcel.cool";
-    root = htmlDir;
-    extraConfig = "autoindex off;";
-  };
-
   systemd.timers.azuracast-radio-bot = {
-    wantedBy = ["timers.target"];
+    # disabled: no wantedBy, so the timer is defined but not activated on switch.
     timerConfig = {
       OnCalendar = ["07:30" "16:30"];
       Persistent = true;

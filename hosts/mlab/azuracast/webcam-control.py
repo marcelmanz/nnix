@@ -13,6 +13,7 @@ STATE_FILE = Path(sys.argv[2])
 TOKEN_FILE = STATE_FILE.parent / "preview-token"
 EFFECT_FILE = STATE_FILE.parent / "effect"
 OFFLINE_TEXT_FILE = STATE_FILE.parent / "offline-text"
+TEXT_MODE_FILE = STATE_FILE.parent / "text-mode"
 DEFAULT_OFFLINE_TEXT = "Off air"
 MAX_OFFLINE_TEXT_LEN = 100
 WHEP_PATH = "/webcam/whep"
@@ -44,6 +45,8 @@ button {{ font-size: 1.25rem; padding: 0.8rem 1.6rem; border-radius: 0.5rem; bor
 <video id="v" autoplay muted playsinline controls></video>
 <div class="badge {badge_class}">Public page: {status}</div>
 <form method="post" action="/toggle"><button>{action}</button></form>
+<div class="badge {text_badge_class}">Text override: {text_status}</div>
+<form method="post" action="/text-mode"><button>{text_action}</button></form>
 <form method="post" action="/effect">
   <select name="effect" onchange="this.form.submit()">{effect_options}</select>
 </form>
@@ -76,6 +79,16 @@ def is_live() -> bool:
     return STATE_FILE.exists()
 
 
+def text_mode_on() -> bool:
+    return TEXT_MODE_FILE.exists()
+
+
+# What the public page/reads actually see: is_live() can stay on while the camera keeps
+# recording, but text-mode substitutes the offline text for the video without touching it.
+def public_live() -> bool:
+    return is_live() and not text_mode_on()
+
+
 def preview_token() -> str:
     if not TOKEN_FILE.exists():
         TOKEN_FILE.write_text(secrets.token_urlsafe(24))
@@ -98,6 +111,7 @@ def current_offline_text() -> str:
 class Handler(BaseHTTPRequestHandler):
     def render(self):
         live = is_live()
+        text_mode = text_mode_on()
         current = current_effect()
         options = "".join(
             f'<option value="{name}"{" selected" if name == current else ""}>{name}</option>'
@@ -109,6 +123,9 @@ class Handler(BaseHTTPRequestHandler):
             badge_class="live" if live else "offline",
             status="LIVE" if live else "hidden",
             action="Stop showing on public page" if live else "Show on public page",
+            text_badge_class="live" if text_mode else "offline",
+            text_status="showing text" if text_mode else "off",
+            text_action="Resume live video" if text_mode else "Show text instead of video",
             effect_options=options,
             whep_url=whep_url,
             default_offline_text=html.escape(DEFAULT_OFFLINE_TEXT),
@@ -122,7 +139,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/status":
-            body = json.dumps({"live": is_live(), "offline_text": current_offline_text()}).encode()
+            body = json.dumps({"live": public_live(), "offline_text": current_offline_text()}).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Access-Control-Allow-Origin", "*")
@@ -159,6 +176,16 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             return
 
+        if self.path == "/text-mode":
+            if text_mode_on():
+                TEXT_MODE_FILE.unlink(missing_ok=True)
+            else:
+                TEXT_MODE_FILE.touch()
+            self.send_response(303)
+            self.send_header("Location", "/")
+            self.end_headers()
+            return
+
         if self.path == "/offline-text":
             length = int(self.headers.get("Content-Length", 0))
             body = parse_qs(self.rfile.read(length).decode())
@@ -185,7 +212,7 @@ class Handler(BaseHTTPRequestHandler):
             elif action == "read":
                 query = parse_qs(req.get("query") or "")
                 given_token = (query.get("preview") or [None])[0]
-                allowed = is_live() or (given_token == preview_token())
+                allowed = public_live() or (given_token == preview_token())
             self.send_response(200 if allowed else 401)
             self.end_headers()
             return
