@@ -60,6 +60,8 @@ in {
       home.stateVersion = stateVersion;
       home.packages = with pkgs; [
         gnupg
+        rbw
+        pinentry-tty
       ];
 
       home = {
@@ -68,6 +70,20 @@ in {
         file."clones/forks/xelabash".source = inputs.xelabash;
         file."scripts".source = "${inputs.dots}/scripts";
         file.".config/git".source = "${inputs.dots}/.config/git";
+        # no secret-tool/D-Bus secret service on Termux, so this uses
+        # pinentry-tty instead of the shared keyring-backed config
+        file.".config/rbw/config.json".text = builtins.toJSON {
+          email = "vaultwarden@marcel.cool";
+          sso_id = null;
+          base_url = "https://vault.marcel.cool";
+          identity_url = null;
+          ui_url = null;
+          notifications_url = null;
+          lock_timeout = 3600;
+          sync_interval = 3600;
+          pinentry = "pinentry-tty";
+          client_cert_path = null;
+        };
         file.".ssh/authorized_keys".text = sshKey;
         file.".ssh/sshd_config".text = ''
           Port 8022

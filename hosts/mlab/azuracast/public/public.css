@@ -88,9 +88,12 @@ html.az-calm.az-stopped body.page-minimal .public-page .card {
    (see .az-topstage below) takes the rest of the screen for the webcam/chat. One shared class,
    html.az-bar, drives both - set by JS (updateBarMode() in public.js) whenever EITHER the
    manual "≈" toggle is on at desktop width, OR a live webcam forces it on mobile. That's the
-   single source of truth: no separate per-breakpoint copy of this block, and no fixed pixel
-   guessing between it and the top stage - both read --az-bar-h. The marquee re-measures itself
-   on its own 300ms interval, so the width change needs no JS of its own. */
+   single source of truth: no separate per-breakpoint copy of this block, both it and the top
+   stage read --az-bar-h. 76px below is only the pre-measurement fallback (first paint / no
+   ResizeObserver) - ensureBarHeightSync() in public.js measures the real bar and overwrites
+   it, so a taller-than-usual bar (long title, mobile) never sinks into the chat/HUD chrome
+   anchored above it. The marquee re-measures itself on its own 300ms interval, so the width
+   change needs no JS of its own. */
 :root {
   --az-bar-h: 76px;
 }
@@ -188,24 +191,18 @@ html.az-bar .radio-player-widget .now-playing-art .az-overlay-play {
   text-stroke-width: 1px;
   text-shadow: 0 0 6px rgba(255, 230, 0, 0.9);
 }
-/* The bottom HUD chips would sink into the docked bar (they stack above it, so they'd just
-   float on top of the player) - lift them above the footer's height with a bit of extra
-   separation, and move the picker popover up to stay glued to its button. */
-html.az-bar .az-bg-btn,
-html.az-bar .az-waves-btn,
-html.az-bar .az-listeners,
-html.az-bar .az-listen-time {
-  bottom: calc(var(--az-bar-h) + 24px);
-}
-html.az-bar .az-bg-pop {
-  bottom: calc(var(--az-bar-h) + 64px);
-}
-
-/* Top stage: the rest of the screen above the docked bar (see html.az-bar above, which both
-   sets this height and pins the bar under it). Built once by JS (buildTopStage() in
-   public.js) and (re)populated by reparenting the real .az-webcam and .az-chat-panel into it
-   whenever the bar is docked - same two elements everywhere, no separate mobile-only copies to
-   keep in sync. Below the HUD chips (999/1000) so those stay clickable on top of it. */
+/* Top stage: everything above the docked bar (see html.az-bar above, which both sets this
+   height and pins the bar under it), stacked as solid, in-flow rows instead of independently
+   fixed/floating pieces - navbar (options, shared with the rest of the page - see .az-hud-top
+   below, bg/waves buttons now live there too), content (webcam or just the reactive background
+   showing through), chat (always its own row, never shareable/coverable), bottom bar (listen-time
+   + listener count). Built once by JS (buildTopStage() in public.js) and (re)populated by
+   reparenting the real .az-webcam/.az-chat-panel/.az-listen-time/.az-listeners into it whenever
+   the bar is docked - same elements everywhere, nothing to keep in sync. z-index 500: below the
+   navbar's own HUD chips (999/1000, still position:fixed so they read as one persistent top bar
+   across both stage and docked-bar content) so they stay visible over the content row on
+   purpose (a video player's own overlay controls) - chat/bottom-bar need no such overlap since
+   they're solid rows below the content row, not underneath it. */
 .az-topstage {
   display: none;
   position: fixed;
@@ -214,17 +211,17 @@ html.az-bar .az-bg-pop {
   top: 0;
   bottom: var(--az-bar-h);
   z-index: 500;
+  flex-direction: column;
 }
 html.az-bar .az-topstage {
   display: flex;
 }
+/* Transparent, not black: unlike the old row-split layout this never collapses when there's no
+   video (a fixed-height chat row below has nothing to grow into), so an opaque background here
+   would paint over the page's own reactive background/photo instead of just leaving it visible. */
 .az-topstage-webcam {
-  flex: 1 1 50%;
-  min-width: 0;
-  background: #000;
-}
-.az-topstage-webcam:empty {
-  display: none;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 .az-topstage-webcam .az-webcam {
   width: 100%;
@@ -233,16 +230,14 @@ html.az-bar .az-topstage {
   margin-bottom: 0;
   border-radius: 0;
   object-fit: cover;
+  background: #000;
 }
+/* Fixed, viewport-scaled height (not a share of whatever's left) - a solid row that's always
+   there and always the same size, live cam or not, rather than growing/shrinking around it. */
 .az-topstage-chat {
-  flex: 1 1 50%;
+  flex: 0 0 clamp(200px, 40vh, 320px);
   min-width: 0;
-  border-left: 1px solid rgba(var(--hud-accent-rgb), 0.4);
-}
-/* No webcam feed to share the stage with - chat gets the full width, no border to nothing. */
-.az-topstage-webcam:empty + .az-topstage-chat {
-  flex: 1 1 100%;
-  border-left: none;
+  border-top: 1px solid rgba(var(--hud-accent-rgb), 0.4);
 }
 /* Overrides the standalone (floating sidebar) .az-chat-panel rules - higher specificity wins
    regardless of source order, including over the max-width:1099px { display:none } rule. */
@@ -256,6 +251,49 @@ html.az-bar .az-topstage {
   box-shadow: none;
   background: var(--hud-bg-waves); /* lower opacity than the floating panel - let the
                                         reactive background show through behind the chat */
+}
+/* Bottom bar: listen-time + listener count, always their own solid row - never a floating chip
+   that can end up over the chat above. Same override trick as the chat panel: reset each chip's
+   own fixed-corner CSS once it's nested here (see public.js's getBottomBarHost). */
+.az-topstage-bottom {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border-top: 1px solid rgba(var(--hud-accent-rgb), 0.4);
+  background: var(--hud-bg-strong);
+}
+.az-topstage-bottom:empty {
+  display: none;
+}
+.az-topstage-bottom .az-listen-time,
+.az-topstage-bottom .az-listeners {
+  position: static;
+  inset: auto;
+  transform: none;
+}
+
+/* Live webcam as the page background: the docked-bar/top-stage state a live webcam forces on
+   its own (waves toggle off) keeps .az-topstage-webcam empty and transparent (see
+   updateTopStage()'s bgMode in public.js, which reparents .az-webcam here instead), with the
+   video showing through the chat row's translucent background below it.
+   z-index -1: above the plain background image layer (-2) below, under everything else. */
+.az-webcam-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+}
+.az-webcam-bg .az-webcam {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  margin-bottom: 0;
+  border-radius: 0;
+  object-fit: cover;
 }
 
 /* Player card background - lighter (transparent); html.az-light (Device -> light system theme,
@@ -1453,6 +1491,7 @@ html.az-calm .radio-player-widget .now-playing-art .az-overlay-play {
   display: flex;
   align-items: center;
   min-width: 0;
+  gap: 6px; /* between buttons sharing one slot - hud-left now holds 3 (stream-info, bg, waves) */
 }
 /* Only the actual buttons re-enable pointer-events - the wide invisible flex-grow area around
    them (left/right slots grow to balance the center one, see .az-hud-left/-right below) must
@@ -1818,15 +1857,13 @@ html.az-calm .az-stream-pop-url {
     transform: none;
   }
 }
-/* Custom-background picker button (bottom-left) + popover. Same HUD silhouette as
-   .az-stream-btn, just bottom-anchored so it doesn't collide with the top-left
-   stream/listen-time chips or the top-right calm button. Picked image is stored client-side
+/* Custom-background picker button + popover. Same HUD silhouette as .az-stream-btn, and now
+   lives right alongside it in the shared navbar (.az-hud-left, see getHudSlot in public.js)
+   instead of an independent fixed bottom-left corner - a floating chip there used to end up on
+   top of the docked-bar/chat-stage content below it. Picked image is stored client-side
    (localStorage, see public.js) - nothing is uploaded anywhere. */
 .az-bg-btn {
-  position: fixed;
-  bottom: 10px;
-  left: 10px;
-  z-index: 1000;
+  flex: 0 0 auto;
   width: 34px;
   height: 34px;
   padding: 0;
@@ -1857,14 +1894,13 @@ html.az-calm .az-stream-pop-url {
   color: rgb(var(--hud-accent-3-rgb));
   box-shadow: 0 0 16px rgba(var(--hud-accent-3-rgb), 0.6);
 }
-/* Wave overlay toggle (bottom-left, just right of the background picker button). Same HUD
-   silhouette as .az-bg-btn. ON = lit, OFF = dimmed ghost (like the calm button's idle state).
-   State is persisted client-side in localStorage (see setWavesBg in public.js). */
+/* Theater-mode toggle (docked player + content/chat stage - see html.az-bar/.az-topstage; not
+   a "wave overlay" any more, that literal fullscreen SVG was removed, hence the plain-language
+   title/aria-label in public.js instead of the old "wave" wording). Same HUD silhouette as
+   .az-bg-btn, right beside it in the navbar. ON = lit, OFF = dimmed ghost (like the calm
+   button's idle state). State is persisted client-side in localStorage (see setWavesBg). */
 .az-waves-btn {
-  position: fixed;
-  bottom: 10px;
-  left: 52px;
-  z-index: 1000;
+  flex: 0 0 auto;
   width: 34px;
   height: 34px;
   padding: 0;
@@ -1900,10 +1936,12 @@ html.az-calm .az-stream-pop-url {
   box-shadow: 0 0 16px rgba(var(--hud-accent-3-rgb), 0.6);
   outline: none;
 }
+/* top/left set by setOpen() in public.js (measured off .az-bg-btn's real position, which no
+   longer lives at a fixed screen corner) - the 0/0 here is just a pre-JS fallback. */
 .az-bg-pop {
   position: fixed;
-  bottom: 50px;
-  left: 10px;
+  top: 0;
+  left: 0;
   z-index: 1000;
   width: min(86vw, 360px);
   margin: 0;
@@ -2044,12 +2082,8 @@ html.az-calm .az-bg-pop-title {
     width: 30px;
     height: 30px;
     font-size: 14px;
-    bottom: 8px;
-    left: 8px;
   }
   .az-bg-pop {
-    bottom: 46px;
-    left: 8px;
     font-size: 12px;
   }
 }

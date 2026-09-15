@@ -46,6 +46,19 @@
       else
         echo "qbittorrent preStart: $conf or its Password_PBKDF2 line missing; start once to create it" >&2
       fi
+      # bypass WebUI auth for loopback clients - radarr/sonarr/etc share this
+      # netns and log in over 127.0.0.1 on every request; a stretch of bad
+      # creds (or several arr apps retrying at once) trips qbit's
+      # MaxAuthenticationFailCount and bans 127.0.0.1, and the arr app's own
+      # retry loop then renews that ban forever since it keeps re-attempting
+      # login. Nothing outside this isolated netns can reach 127.0.0.1 here,
+      # so skipping auth for it is safe.
+      if grep -q "^WebUI.LocalHostAuth=" "$conf"; then
+        sed -i "s|^\(WebUI.LocalHostAuth=\).*|\1false|" "$conf"
+      else
+        sed -i "/^\[Preferences\]/a WebUI\\\\LocalHostAuth=false" "$conf"
+      fi
+
       # trust the nginx proxy so bans/real IPs work; without this qbit bans the
       # proxy's source IP after failed logins = whole world locked out for
       # BanDuration. qbit is vpn-confined (vpn.nix), so nginx reaches it

@@ -265,24 +265,19 @@ in {
     };
   };
 
-  # Per-IP listen-time endpoint for the public radio page. The public AzuraCast API only exposes
-  # aggregate listener counts; the per-IP numbers live in the DB `listener` table, so this small
-  # service reads them via podman exec (same pattern as azuracast-settings/autoplaylist) and
-  # serves GET /listen-time on 127.0.0.1. Nginx fronts it as same-origin /listen-time
-  # (proxy.nix) with X-Real-IP/X-Forwarded-For = the client, so each visitor only ever gets back
-  # their own aggregate.
+  # Per-visitor listen-time endpoint for the public radio page: tracks each visitor's all-time
+  # total, keyed by a client-generated id (not IP - IPv6 privacy addresses rotate too often for
+  # that to accumulate, see listen-time.py) persisted to StateDirectory. Serves GET /listen-time
+  # on 127.0.0.1; nginx fronts it as same-origin /listen-time (proxy.nix).
   systemd.services.azuracast-listen-time = {
-    description = "Per-IP listen-time endpoint for the radio public page";
-    after = ["network.target" "podman-azuracast.service"];
-    wants = ["podman-azuracast.service"];
+    description = "Per-visitor listen-time endpoint for the radio public page";
+    after = ["network.target"];
     wantedBy = ["multi-user.target"];
-    path = [pkgs.podman];
     serviceConfig = {
       Type = "simple";
+      DynamicUser = true;
+      StateDirectory = "azuracast-listen-time";
       ExecStart = "${pkgs.python3}/bin/python3 ${./listen-time.py} ${toString listenTimePort}";
-      Environment = [
-        "MYSQL_PASSWORD=${config.virtualisation.oci-containers.containers.azuracast.environment.MYSQL_PASSWORD}"
-      ];
       Restart = "on-failure";
       RestartSec = "5s";
     };
