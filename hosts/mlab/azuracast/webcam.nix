@@ -23,11 +23,23 @@
       authHTTPAddress = "http://127.0.0.1:${toString services.streamcam.port}/authcheck";
 
       paths.webcam = {
-        # -c:v libx264 is required, not cosmetic: ffmpeg's RTSP default encoder is MPEG-4 Part 2,
-        # which isn't in WebRTC's codec list (H264/H265/VP8/VP9/AV1). ultrafast/zerolatency keep
-        # the encoder fast enough for real-time capture.
+        # H.264 is required, not cosmetic: ffmpeg's RTSP default encoder is MPEG-4 Part 2,
+        # which isn't in WebRTC's codec list (H264/H265/VP8/VP9/AV1).
 
-        # -g/-keyint_min force a keyframe every 60 frames (~1s): this is a plain RTSP push, not
+        # h264_vaapi, not libx264: at 1080p60 the iGPU encodes this for ~0.55 of a core where
+        # libx264 -preset ultrafast needs ~0.93 and looks markedly worse (measured SSIM against
+        # the camera's own MJPEG: 0.961 vaapi vs 0.947 ultrafast, and vaapi does it at 3.9Mbit/s
+        # vs 4.6). ultrafast was always this soft - it drops CABAC and 8x8 transform, which is
+        # why it can't hold 1080p at this bitrate. Raising the cap doesn't fix it either:
+        # ultrafast at 12M still only reaches 0.954. This ffmpeg has no QSV
+        # (--disable-libmfx/--disable-libvpl), so VAAPI is the way onto the same iGPU.
+
+        # -bf 0 is load-bearing: vaapi emits B-frames by default and WebRTC decoders choke on
+        # them. Note this moves the stream from Constrained Baseline to High profile - any
+        # encoder better than ultrafast does. If a browser ever refuses to play it, going back
+        # is -c:v libx264 -preset veryfast -tune zerolatency (same quality, ~2 cores).
+
+        # -g forces a keyframe every 60 frames (~1s): this is a plain RTSP push, not
         # a live WebRTC publish, so mediamtx has no PLI path back to ffmpeg to request a keyframe
         # for a newly joining viewer - without a short GOP they wait for libx264's default
         # (~250 frames, i.e. up to several seconds of black screen depending on join timing).
@@ -56,7 +68,7 @@
 
           # by-id (serial-pinned), not /dev/video0: device numbering shifts whenever any
           # UVC device is (un)plugged or on boot order changes.
-          exec ${lib.getExe pkgs.ffmpeg} -f v4l2 -input_format mjpeg -video_size 1920x1080 -framerate 60 -i /dev/v4l/by-id/usb-046d_Logitech_BRIO_F67E04C5-video-index0 -an -vf "''${filter:-null}" -c:v libx264 -preset ultrafast -tune zerolatency -maxrate 6M -bufsize 12M -g 60 -keyint_min 60 -pix_fmt yuv420p -f rtsp rtsp://localhost:$RTSP_PORT/$RTSP_PATH
+          exec ${lib.getExe pkgs.ffmpeg} -f v4l2 -input_format mjpeg -video_size 1920x1080 -framerate 60 -i /dev/v4l/by-id/usb-046d_Logitech_BRIO_F67E04C5-video-index0 -an -vaapi_device /dev/dri/renderD128 -vf "''${filter:-null},format=nv12,hwupload" -c:v h264_vaapi -b:v 6M -maxrate 6M -bf 0 -g 60 -f rtsp rtsp://localhost:$RTSP_PORT/$RTSP_PATH
         '';
         runOnInitRestart = true;
       };
