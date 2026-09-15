@@ -254,6 +254,8 @@ in {
   security.acme = {
     acceptTerms = true;
     defaults.email = "admin@marcel.cool";
+    # force a real recursive resolver for the dns-01 zone lookup instead.
+    defaults.dnsResolver = "1.1.1.1:53";
     certs."marcel.cool" = {
       domain = "marcel.cool";
       extraDomainNames = ["*.marcel.cool"];
