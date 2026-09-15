@@ -38,7 +38,9 @@
         # directly (no shell), so "filter=$(...)" isn't parsed - it's treated as the program name.
         runOnInit = pkgs.writeShellScript "webcam-publish" ''
           filter="$(cat /var/lib/webcam-control/effect 2>/dev/null)"
-          exec ${lib.getExe pkgs.ffmpeg} -f v4l2 -i /dev/video0 -an -vf "''${filter:-null}" -c:v libx264 -preset ultrafast -tune zerolatency -g 30 -keyint_min 30 -pix_fmt yuv420p -f rtsp rtsp://localhost:$RTSP_PORT/$RTSP_PATH
+          # by-id (serial-pinned), not /dev/video0: device numbering shifts whenever any
+          # UVC device is (un)plugged or on boot order changes.
+          exec ${lib.getExe pkgs.ffmpeg} -f v4l2 -i /dev/v4l/by-id/usb-046d_Logitech_BRIO_F67E04C5-video-index0 -an -vf "''${filter:-null}" -c:v libx264 -preset ultrafast -tune zerolatency -g 30 -keyint_min 30 -pix_fmt yuv420p -f rtsp rtsp://localhost:$RTSP_PORT/$RTSP_PATH
         '';
         runOnInitRestart = true;
       };

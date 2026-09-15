@@ -22,7 +22,7 @@ in {
       unauthenticated_search_query_limit = 0;
       captcha_enabled = false;
       pwned_check = false;
-      channel_threads = 0; # disable InnerTube scraping (blocked by YouTube)
+      channel_threads = 1; # was 0 (blocked by YouTube), re-enabled: needed to actually refresh subscriptions
       feed_threads = 1; # use RSS feeds instead (works reliably)
       invidious_companion = [
         {

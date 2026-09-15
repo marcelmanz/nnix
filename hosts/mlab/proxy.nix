@@ -515,9 +515,10 @@ in {
                     add_header Cache-Control "public, max-age=31536000, immutable";
                   '';
                 };
-                # Per-IP listen-time counter for the public page. Proxied to the
-                # azuracast-listen-time service (azuracast.nix) on loopback; exact match so the
-                # base "/" location above doesn't swallow it. Port must match listenTimePort there.
+                # Per-visitor listen-time counter for the public page (keyed client-side, not by
+                # IP - see listen-time.py). Proxied to the azuracast-listen-time service
+                # (azuracast.nix) on loopback; exact match so the base "/" location above doesn't
+                # swallow it. Port must match listenTimePort there.
                 "= /listen-time" = {
                   proxyPass = "http://127.0.0.1:8320";
                   extraConfig = ''

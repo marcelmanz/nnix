@@ -6,6 +6,7 @@
 }: {
   systemd.tmpfiles.rules = [
     "d /var/lib/media/audiobooks 2775 root media -"
+    "d /var/lib/media/podcasts 2775 root media -"
   ];
 
   services.audiobookshelf = {

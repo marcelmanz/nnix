@@ -1297,25 +1297,54 @@
 
   // --- docked bar + top stage ---
   // html.az-bar is the single flag the CSS (see html.az-bar / .az-topstage in public.css) keys
-  // the docked bottom bar and the top stage off, set here from EITHER the manual "≈" toggle
-  // below (desktop width only) OR a live webcam forcing it on mobile (see the live-webcam poll
-  // further down) - one flag, one docked-bar layout, instead of a separate copy per trigger.
+  // the docked bottom bar off, set here from EITHER the manual "≈" toggle below (desktop width
+  // only) OR a live webcam forcing it, on any viewport (see the live-webcam poll further down).
+  // Within that docked bar, live video goes one of two places: the classic split topstage
+  // panel while waves is manually on, or the fullscreen background (webcamBgHost below) while
+  // it's just a live-triggered bar with waves off - see the bgMode check in updateTopStage.
   var DESKTOP_MQ = window.matchMedia ? window.matchMedia("(min-width: 769px)") : null;
-  var MOBILE_MQ = window.matchMedia ? window.matchMedia("(max-width: 767px)") : null;
-  var mobileLiveOn = false;
-  var topStage, topStageWebcam, topStageChat;
+  var liveOn = false;
+  // Stacked, solid regions (navbar -> content -> chat -> bottom bar) instead of independently
+  // fixed/floating pieces: every "X sits on top of Y" bug so far (chat input under the footer,
+  // listen-time/listeners over the chat) came from things that only ever coexisted via z-index,
+  // never by reserving their own space. Each row below gets real height in normal flow, so
+  // nothing can cover another row - only the docked player (outside this stage) stays
+  // position:fixed, sized via --az-bar-h (see ensureBarHeightSync below).
+  var topStage, topStageWebcam, topStageChat, topStageBottom;
   function buildTopStage() {
     if (topStage || !document.body) return;
     topStage = document.createElement("div");
     topStage.className = "az-topstage";
     topStage.innerHTML =
-      '<div class="az-topstage-webcam"></div>' + '<div class="az-topstage-chat"></div>';
+      '<div class="az-topstage-webcam"></div>' +
+      '<div class="az-topstage-chat"></div>' +
+      '<div class="az-topstage-bottom"></div>';
     topStageWebcam = topStage.querySelector(".az-topstage-webcam");
     topStageChat = topStage.querySelector(".az-topstage-chat");
+    topStageBottom = topStage.querySelector(".az-topstage-bottom");
     document.body.appendChild(topStage);
   }
   if (document.body) buildTopStage();
   else document.addEventListener("DOMContentLoaded", buildTopStage);
+  // The read-only listen-time/listeners chips normally float fixed over the plain background
+  // (harmless there - nothing else is under them); while the stage is up they instead dock into
+  // its solid bottom row, so they never end up floating over the chat bar. Each chip's own paint()
+  // appends into whatever this returns, checked on every repaint (see public.css for the
+  // position:static override that applies once inside .az-topstage-bottom).
+  function getBottomBarHost() {
+    return document.documentElement.classList.contains("az-bar") && topStageBottom
+      ? topStageBottom
+      : document.body;
+  }
+  var webcamBg;
+  function webcamBgHost() {
+    if (!webcamBg && document.body) {
+      webcamBg = document.createElement("div");
+      webcamBg.className = "az-webcam-bg";
+      document.body.appendChild(webcamBg);
+    }
+    return webcamBg;
+  }
   // Reparents the real .az-webcam and .az-chat-panel into the stage (or back to their normal
   // homes) rather than cloning them, so nothing needs to be kept in sync.
   function updateTopStage(on) {
@@ -1323,8 +1352,15 @@
     if (!topStage) return;
     var video = document.querySelector(".az-webcam");
     var chat = document.querySelector(".az-chat-panel");
+    // Live + waves off: the video IS the page background (webcamBgHost), leaving the content
+    // row empty (still solid/in-flow, just showing whatever's behind it). Waves on (regardless
+    // of live): the classic content-row panel.
+    var bgMode = on && liveOn && !bgwOn;
     if (on) {
-      if (video && video.parentElement !== topStageWebcam) topStageWebcam.appendChild(video);
+      if (video) {
+        var target = bgMode ? webcamBgHost() : topStageWebcam;
+        if (video.parentElement !== target) target.appendChild(video);
+      }
       if (chat && chat.parentElement !== topStageChat) topStageChat.appendChild(chat);
     } else {
       var playerHost = document.querySelector(".radio-player-widget");
@@ -1333,18 +1369,42 @@
       }
       if (chat && chat.parentElement !== document.body) document.body.appendChild(chat);
     }
+    // The chips may already exist under body (painted before the stage came up, or before it
+    // went down) - move them to wherever they belong now, same reparent-not-recreate approach.
+    var bottomHost = on ? topStageBottom : document.body;
+    [".az-listen-time", ".az-listeners"].forEach(function (sel) {
+      var el = document.querySelector(sel);
+      if (el && el.parentElement !== bottomHost) bottomHost.appendChild(el);
+    });
+  }
+  // --az-bar-h (public.css) started as a fixed guess at the docked bar's height; real content
+  // (long titles, mobile widths) can run taller than that guess, which left the bar (z-index
+  // 1001) painting over the bottom of whatever is anchored to --az-bar-h - notably the chat
+  // panel's input line, sat at the top stage's bottom edge. Measure the real bar instead.
+  var barCard, barHeightObserver;
+  function syncBarHeight() {
+    if (barCard) {
+      document.documentElement.style.setProperty("--az-bar-h", barCard.getBoundingClientRect().height + "px");
+    }
+  }
+  function ensureBarHeightSync() {
+    if (barHeightObserver || !window.ResizeObserver) return;
+    barCard = document.querySelector(".public-page .card");
+    if (!barCard) return;
+    barHeightObserver = new ResizeObserver(syncBarHeight);
+    barHeightObserver.observe(barCard);
+    syncBarHeight();
   }
   function updateBarMode() {
-    var on = (bgwOn && (!DESKTOP_MQ || DESKTOP_MQ.matches)) || mobileLiveOn;
+    var on = (bgwOn && (!DESKTOP_MQ || DESKTOP_MQ.matches)) || liveOn;
     document.documentElement.classList.toggle("az-bar", on);
     updateTopStage(on);
+    if (on) ensureBarHeightSync();
   }
   function onViewportChange() {
-    mobileLiveOn = !!(MOBILE_MQ && MOBILE_MQ.matches && window.azWebcamLive);
     updateBarMode();
   }
   if (DESKTOP_MQ && DESKTOP_MQ.addEventListener) DESKTOP_MQ.addEventListener("change", onViewportChange);
-  if (MOBILE_MQ && MOBILE_MQ.addEventListener) MOBILE_MQ.addEventListener("change", onViewportChange);
 
   // --- waves mode (the "≈" toggle, independent of the background picker) ---
   // This is one of two inputs to updateBarMode() above (the other is a live webcam forcing it
@@ -1370,14 +1430,18 @@
     b.type = "button";
     b.className = "az-waves-btn" + (bgwOn ? " az-on" : "");
     b.textContent = "≈";
-    b.setAttribute("aria-label", "Toggle wave overlay");
+    // Renamed from "wave overlay": that was the literal fullscreen SVG waveform this button
+    // used to toggle, since removed - it now only switches to the docked player + stage view
+    // (see html.az-bar/.az-topstage in public.css), same as a live webcam does on its own.
+    b.title = "Theater mode: docked player, live cam & chat stage";
+    b.setAttribute("aria-label", "Toggle theater mode");
     b.setAttribute("aria-pressed", String(bgwOn));
     b.addEventListener("click", function () {
       setWavesBg(!bgwOn);
       b.classList.toggle("az-on", bgwOn);
       b.setAttribute("aria-pressed", String(bgwOn));
     });
-    document.body.appendChild(b);
+    getHudSlot("left").appendChild(b);
   }
   if (document.body) addWavesToggle();
   else document.addEventListener("DOMContentLoaded", addWavesToggle);
@@ -2029,10 +2093,10 @@
           return r.ok ? r.json() : { live: false };
         })
         .then(function (data) {
-          // Global (not just local): onViewportChange (see "docked bar + top stage" above)
-          // reads it on a resize/breakpoint change without waiting for the next poll.
+          // Global (not just local): other code (see "docked bar + top stage" above) can read
+          // it without waiting for the next poll.
           window.azWebcamLive = !!(data && data.live);
-          mobileLiveOn = !!(MOBILE_MQ && MOBILE_MQ.matches && window.azWebcamLive);
+          liveOn = window.azWebcamLive;
           updateBarMode();
           if (data && data.live) mount();
           else unmount();
@@ -2138,31 +2202,41 @@
     }, 1000);
   })();
 
-  // --- listen-time counter (server-backed, per-IP) ---
-  // Shows how long THIS visitor has been listening: current session + all-time total, both keyed
-  // by their IP and read from AzuraCast's own listener records via the /listen-time endpoint
-  // (the azuracast-listen-time service in azuracast.nix; same origin, so no CORS). The public
-  // AzuraCast API only exposes aggregate listener counts, so a tiny host-side endpoint sums the
-  // per-IP rows from the `listener` table. Polled once a minute and on tab refocus.
+  // --- listen-time counter (client-tracked, per-visitor) ---
+  // Shows how long THIS visitor has been listening: current session (computed client-side -
+  // trivial, just the time since the <audio> started playing) + all-time total (has to survive
+  // reloads, so the only part persisted server-side, via /listen-time - the azuracast-listen-time
+  // service in azuracast.nix). Keyed by a random id in localStorage rather than the visitor's IP:
+  // IPv6 privacy-extension addresses rotate several times a day, which fragmented the old
+  // IP-keyed totals (verified live - each rotation restarted the count from zero).
   (function () {
     function fmt(secs) {
       if (secs < 60) return secs + "s";
       var m = Math.floor(secs / 60);
       return m < 60 ? m + "m" : Math.floor(m / 60) + "h " + (m % 60) + "m";
     }
+    var vid = null;
+    try {
+      vid = localStorage.getItem("az_vid");
+      if (!vid) {
+        vid = crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(36).slice(2);
+        localStorage.setItem("az_vid", vid);
+      }
+    } catch (e) {
+      /* private mode / storage blocked - total just won't persist across reloads */
+    }
     function getEl() {
       return document.querySelector(".az-listen-time");
     }
-    function paint(d) {
-      var cur = (d && d.current) || 0,
-        tot = (d && d.total) || 0;
-      // "now" = current listening session, "total" = all-time; hide the total half until there's
-      // a minute of history, and hide everything for a brand-new visitor who isn't listening.
+    var total = 0;
+    function paint(cur) {
+      // hide the total half until there's a minute of history, and hide everything for a
+      // brand-new visitor who isn't listening.
       var txt =
         cur > 0
-          ? "⏱ now " + fmt(cur) + (tot >= 60 ? " · total " + fmt(tot) : "")
-          : tot >= 60
-            ? "⏱ total " + fmt(tot)
+          ? "⏱ now " + fmt(cur) + (total >= 60 ? " · total " + fmt(total) : "")
+          : total >= 60
+            ? "⏱ total " + fmt(total)
             : "";
       var e = getEl();
       if (!txt) {
@@ -2172,24 +2246,41 @@
       if (!e) {
         e = document.createElement("div");
         e.className = "az-listen-time";
-        document.body.appendChild(e); // next to .az-stream-btn (fixed top-left), so body-scoped
+        getBottomBarHost().appendChild(e);
       }
       e.textContent = txt;
     }
-    function poll() {
-      if (document.hidden) return;
-      fetch("/listen-time", { cache: "no-store" })
+    function fetchTotal(heartbeatSecs) {
+      if (!vid) return;
+      var url = "/listen-time?vid=" + encodeURIComponent(vid);
+      if (heartbeatSecs) url += "&heartbeat=" + heartbeatSecs;
+      fetch(url, { cache: "no-store" })
         .then(function (r) {
           return r.ok ? r.json() : null;
         })
-        .then(paint)
+        .then(function (d) {
+          if (d && typeof d.total === "number") total = d.total;
+        })
         .catch(function () {});
     }
-    poll();
-    setInterval(poll, 60000);
-    document.addEventListener("visibilitychange", function () {
-      if (!document.hidden) poll();
-    });
+    fetchTotal(); // initial read (no heartbeat) - shows a returning visitor's total right away
+    var sessionStart = null,
+      lastHeartbeat = null;
+    setInterval(function () {
+      var audio = getAudioEl();
+      var playing = !!(audio && !audio.paused);
+      var now = Date.now();
+      if (playing && sessionStart === null) {
+        sessionStart = lastHeartbeat = now;
+      } else if (!playing && sessionStart !== null) {
+        sessionStart = lastHeartbeat = null;
+      }
+      if (playing && now - lastHeartbeat >= 20000) {
+        fetchTotal(Math.round((now - lastHeartbeat) / 1000));
+        lastHeartbeat = now;
+      }
+      paint(sessionStart ? Math.floor((now - sessionStart) / 1000) : 0);
+    }, 1000);
   })();
 
   // --- current listener count (bottom-right chip) ---
@@ -2210,7 +2301,7 @@
         if (!document.body) return;
         e = document.createElement("div");
         e.className = "az-listeners";
-        document.body.appendChild(e);
+        getBottomBarHost().appendChild(e);
       }
       e.textContent = n + (n === 1 ? " listener" : " listeners");
     }
@@ -2754,7 +2845,15 @@
         btn.classList.toggle("az-open", on);
         pop.classList.toggle("az-open", on);
         btn.setAttribute("aria-expanded", String(on));
-        if (on) markSelected(currentKey());
+        if (on) {
+          markSelected(currentKey());
+          // Anchored to the button's real position (JS, not CSS): now that the button lives
+          // in-flow in the shared navbar (see getHudSlot in "docked bar + top stage" above)
+          // instead of a fixed screen corner, a hardcoded offset can't track it - measure it.
+          var r = btn.getBoundingClientRect();
+          pop.style.top = r.bottom + 8 + "px";
+          pop.style.left = Math.max(8, r.left) + "px";
+        }
       }
       btn.addEventListener("click", function () {
         setOpen(!btn.classList.contains("az-open"));
@@ -2768,8 +2867,8 @@
         if (e.key === "Escape" && btn.classList.contains("az-open")) setOpen(false);
       });
 
-      document.body.appendChild(btn);
-      document.body.appendChild(pop);
+      getHudSlot("left").appendChild(btn);
+      document.body.appendChild(pop); // positioned under btn via setOpen(), not DOM nesting
       document.body.appendChild(input);
     }
     if (document.body) addBgPicker();
