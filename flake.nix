@@ -101,7 +101,6 @@
         (import ./overlays/neovim-nightly.nix {inherit inputs;})
         (import ./overlays/mautrix-whatsapp.nix)
         (import ./overlays/hyprland-glaze-fix.nix)
-        (import ./overlays/font-manager-vala-fix.nix)
         (import ./overlays/myna-font.nix {inherit inputs;})
         (final: prev: {tmex = tmexPkg;})
         pir.overlays.default
