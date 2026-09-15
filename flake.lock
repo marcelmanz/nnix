@@ -73,11 +73,11 @@
     "dots": {
       "flake": false,
       "locked": {
-        "lastModified": 1789035000,
-        "narHash": "sha256-1wB/0sHgXJmm1A46ziSX/UM8hYDS0eMQt6xtGj5UIZY=",
+        "lastModified": 1789488448,
+        "narHash": "sha256-9Wj5xrSso9ZDOx2h+KyOkzpz1XtlA3zVgkFbz+rg4d8=",
         "owner": "marcelmanz",
         "repo": "dots",
-        "rev": "6b5ebfadd58185972714957e51cb90adda9f8b35",
+        "rev": "ee59301fe0c4260752632b56066518288fcc42db",
         "type": "github"
       },
       "original": {
