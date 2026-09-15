@@ -1,5 +1,12 @@
 - [ ] Setup Anki Server in mlab
 - [ ] Fix Soulbeet
+- [ ] Calibrate the live recording A/V offset
+  - Go live, clap on camera, stop, open the mkv in /var/lib/media/shows and
+    measure how far the sound lags the clap. Write the seconds into
+    /var/lib/azuracast-live-record/offset (no rebuild needed).
+  - Until it's set the recorder uses 0, so video runs ahead of the audio by
+    darkice's 5s buffer plus whatever liquidsoap adds. The livedj page says
+    "not calibrated" while the file is empty.
 - [ ] Revisit 4K webcam when building the custom radio client
   - The BRIO does MJPG 2160p30 on SuperSpeed; publishing it costs 2.34 cores
     and 16 Mbit/s per viewer (both measured). The server side is fine - uplink

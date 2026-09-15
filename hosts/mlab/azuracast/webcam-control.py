@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import html
 import json
 import secrets
 import subprocess
@@ -28,51 +27,6 @@ EFFECTS = {
     "edge": "edgedetect",
     "vintage": "curves=vintage,vignette",
 }
-
-PAGE = """<!doctype html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Webcam test</title>
-<style>
-body {{ font-family: sans-serif; background: #111; color: #eee; display: flex; flex-direction: column;
-       align-items: center; justify-content: center; min-height: 100vh; margin: 0; gap: 1.5rem; padding: 1rem; }}
-video {{ width: min(90vw, 640px); background: #000; border-radius: 0.5rem; }}
-.badge {{ font-size: 1.25rem; padding: 0.4rem 1.2rem; border-radius: 2rem; }}
-.live {{ background: #2e7d32; }}
-.offline {{ background: #555; }}
-button {{ font-size: 1.25rem; padding: 0.8rem 1.6rem; border-radius: 0.5rem; border: none; cursor: pointer; }}
-</style></head>
-<body>
-<video id="v" autoplay muted playsinline controls></video>
-<div class="badge {badge_class}">Public page: {status}</div>
-<form method="post" action="/toggle"><button>{action}</button></form>
-<div class="badge {text_badge_class}">Text override: {text_status}</div>
-<form method="post" action="/text-mode"><button>{text_action}</button></form>
-<form method="post" action="/effect">
-  <select name="effect" onchange="this.form.submit()">{effect_options}</select>
-</form>
-<form method="post" action="/offline-text">
-  <input type="text" name="text" placeholder="{default_offline_text}" maxlength="{max_offline_text_len}" value="{offline_text}">
-  <button>Save offline text</button>
-</form>
-<script>
-(async function () {{
-  var pc = new RTCPeerConnection();
-  pc.ontrack = function (e) {{ document.getElementById("v").srcObject = e.streams[0]; }};
-  pc.addTransceiver("video", {{direction: "recvonly"}});
-  var offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  var res = await fetch("{whep_url}", {{
-    method: "POST",
-    headers: {{"Content-Type": "application/sdp"}},
-    body: offer.sdp,
-  }});
-  if (!res.ok) return;
-  var answer = await res.text();
-  await pc.setRemoteDescription({{type: "answer", sdp: answer}});
-}})().catch(function () {{}});
-</script>
-</body></html>
-"""
 
 
 def is_live() -> bool:
@@ -109,35 +63,33 @@ def current_offline_text() -> str:
 
 
 class Handler(BaseHTTPRequestHandler):
-    def render(self):
-        live = is_live()
-        text_mode = text_mode_on()
-        current = current_effect()
-        options = "".join(
-            f'<option value="{name}"{" selected" if name == current else ""}>{name}</option>'
-            for name in EFFECTS
-        )
-        whep_url = f"https://radio.marcel.cool{WHEP_PATH}?preview={preview_token()}"
-        stored_offline_text = OFFLINE_TEXT_FILE.read_text().strip() if OFFLINE_TEXT_FILE.exists() else ""
-        page = PAGE.format(
-            badge_class="live" if live else "offline",
-            status="LIVE" if live else "hidden",
-            action="Stop showing on public page" if live else "Show on public page",
-            text_badge_class="live" if text_mode else "offline",
-            text_status="showing text" if text_mode else "off",
-            text_action="Resume live video" if text_mode else "Show text instead of video",
-            effect_options=options,
-            whep_url=whep_url,
-            default_offline_text=html.escape(DEFAULT_OFFLINE_TEXT),
-            max_offline_text_len=MAX_OFFLINE_TEXT_LEN,
-            offline_text=html.escape(stored_offline_text),
-        )
-        self.send_response(200)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.end_headers()
-        self.wfile.write(page.encode())
-
     def do_GET(self):
+        # Everything the merged live.marcel.cool page needs to render the webcam controls,
+        # so EFFECTS and the state-file semantics stay defined here only. Not the same as
+        # /status: that one is proxied to the public page, this one is loopback-only (nginx
+        # maps exactly "= /webcam-status" to /status and nothing else on this port).
+        if self.path == "/state":
+            body = json.dumps(
+                {
+                    "live": is_live(),
+                    "text_mode": text_mode_on(),
+                    "effect": current_effect(),
+                    "effects": list(EFFECTS),
+                    "offline_text": OFFLINE_TEXT_FILE.read_text().strip()
+                    if OFFLINE_TEXT_FILE.exists()
+                    else "",
+                    "default_offline_text": DEFAULT_OFFLINE_TEXT,
+                    "max_offline_text_len": MAX_OFFLINE_TEXT_LEN,
+                    "whep_url": f"https://radio.marcel.cool{WHEP_PATH}?preview={preview_token()}",
+                }
+            ).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
+            return
+
         if self.path == "/status":
             body = json.dumps({"live": public_live(), "offline_text": current_offline_text()}).encode()
             self.send_response(200)
@@ -147,7 +99,11 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
             return
-        self.render()
+
+        # No UI lives here any more - live.marcel.cool renders the controls from /state and
+        # posts back through nginx's /cam/ route. This process is state, auth and actions.
+        self.send_response(404)
+        self.end_headers()
 
     def do_POST(self):
         if self.path == "/toggle":

@@ -115,7 +115,7 @@
       Type = "simple";
       User = "azuracast-live-web";
       StateDirectory = "azuracast-live-web"; # holds the last test-mic.mp3 recording
-      ExecStart = "${pkgs.python3}/bin/python3 ${./live-toggle.py} ${toString services.livedj.port} ${pkgs.alsa-utils}/bin/amixer ${pkgs.ffmpeg}/bin/ffmpeg";
+      ExecStart = "${pkgs.python3}/bin/python3 ${./live-toggle.py} ${toString services.livedj.port} ${pkgs.alsa-utils}/bin/amixer ${pkgs.ffmpeg}/bin/ffmpeg ${pkgs.ffmpeg}/bin/ffprobe ${toString services.streamcam.port} ${toString services.azuracast.port}";
       Restart = "on-failure";
       RestartSec = "5s";
     };
@@ -130,6 +130,12 @@
   #
   # bindsTo+wantedBy on the capture unit: the existing livedj.marcel.cool toggle starts and stops
   # this too, so there's one switch for the show, not two that can drift apart.
+  # Owned by the web user, not the recorder: azuracast-live-web writes `offset` from the
+  # live.marcel.cool deck, and the recorder (root) only ever reads it.
+  systemd.tmpfiles.rules = [
+    "d /var/lib/azuracast-live-record 0755 azuracast-live-web azuracast-live-web -"
+  ];
+
   systemd.services.azuracast-live-record = {
     description = "Record the webcam + the live broadcast into one file";
     after = ["azuracast-live-capture.service" "mediamtx.service"];
@@ -139,7 +145,6 @@
     startLimitIntervalSec = 0;
     serviceConfig = {
       Type = "simple";
-      StateDirectory = "azuracast-live-record"; # holds `offset`, below
       # A camera that's unplugged (or a mediamtx still retrying its publish) makes ffmpeg exit
       # immediately; restarting forever is the point - the show keeps recording the moment the
       # camera comes back - but systemd's default start rate limit would give up after 5 tries.

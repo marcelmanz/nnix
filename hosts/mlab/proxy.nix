@@ -57,6 +57,14 @@
       href = "https://lidarr.marcel.cool";
       vpn = "pia";
     };
+    # live.marcel.cool is the one page you drive a show from. It serves livedj's backend at
+    # / and streamcam's at /cam/; both entries below stay because live.nix and webcam.nix
+    # read their ports, but their hostnames are only redirects now (see virtualHosts).
+    live = {
+      port = 8290;
+      href = "https://live.marcel.cool";
+      protected = true;
+    };
     livedj = {
       port = 8290;
       href = "https://livedj.marcel.cool";
@@ -281,8 +289,48 @@ in {
     '';
 
     virtualHosts =
-      (builtins.removeAttrs serviceVirtualHosts ["auth" "jellyfin" "seafile" "azuracast"])
+      (builtins.removeAttrs serviceVirtualHosts ["auth" "jellyfin" "seafile" "azuracast" "live" "livedj" "streamcam"])
       // {
+        # Merged show-control page. / is live-toggle.py (go live, mic, recording status) and
+        # /cam/ is webcam-control.py - the trailing slash on proxyPass strips the prefix, so
+        # that service still sees its own "/toggle", "/effect", ... and its 303s back to "/"
+        # land on this page rather than on its own.
+        "live.marcel.cool" = let
+          base = mkProxyHost "live" services.live;
+        in
+          base
+          // {
+            locations =
+              base.locations
+              // {
+                "/cam/" = {
+                  proxyPass = "http://127.0.0.1:${toString services.streamcam.port}/";
+                  extraConfig = ''
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto https;
+                    auth_request /internal/authelia/authz;
+                    error_page 401 = @authelia_login;
+                  '';
+                };
+              };
+          };
+
+        # Old bookmarks and phone shortcuts.
+        "livedj.marcel.cool" = {
+          serverName = "livedj.marcel.cool";
+          forceSSL = true;
+          useACMEHost = "marcel.cool";
+          locations."/".return = "302 https://live.marcel.cool$request_uri";
+        };
+        "streamcam.marcel.cool" = {
+          serverName = "streamcam.marcel.cool";
+          forceSSL = true;
+          useACMEHost = "marcel.cool";
+          locations."/".return = "302 https://live.marcel.cool$request_uri";
+        };
+
         "jellyfin.marcel.cool" = let
           base = mkProxyHost "jellyfin" services.jellyfin;
         in
