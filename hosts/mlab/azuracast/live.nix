@@ -21,8 +21,7 @@
     description = "Mix Scarlett 2i2 + USB mic into the loopback device darkice reads from";
     after = ["sound.target"];
     serviceConfig = {
-      Type = "simple";
-      # ffmpeg's own alsa output negotiates a 128-frame (~3ms) period against Loopback's
+      Type = "simple"; # ffmpeg's own alsa output negotiates a 128-frame (~3ms) period against Loopback's
       # 131072-frame buffer - impossible for a non-hard-realtime filter pipeline to service
       # every write, causing constant "ALSA buffer xrun" (audible glitches/dropouts). ffmpeg
       # exposes no period/buffer controls for alsa output, so the mix is piped as raw PCM into
@@ -119,6 +118,52 @@
       ExecStart = "${pkgs.python3}/bin/python3 ${./live-toggle.py} ${toString services.livedj.port} ${pkgs.alsa-utils}/bin/amixer ${pkgs.ffmpeg}/bin/ffmpeg";
       Restart = "on-failure";
       RestartSec = "5s";
+    };
+  };
+
+  # Records the show while it's on air: the webcam's H.264 straight off mediamtx's internal RTSP
+  # path, muxed live against the station's own FLAC mount. Two things this deliberately does not
+  # do: it never touches the loopback darkice reads from (a second ALSA capture client on
+  # cable#0 would fight darkice for it, and dsnoop in that path risks xruns on the actual
+  # broadcast), and it never re-encodes video - the webcam is already H.264 for WebRTC, so
+  # -c:v copy costs no CPU and can't compete with Jellyfin for the iGPU.
+  #
+  # bindsTo+wantedBy on the capture unit: the existing livedj.marcel.cool toggle starts and stops
+  # this too, so there's one switch for the show, not two that can drift apart.
+  systemd.services.azuracast-live-record = {
+    description = "Record the webcam + the live broadcast into one file";
+    after = ["azuracast-live-capture.service" "mediamtx.service"];
+    bindsTo = ["azuracast-live-capture.service"];
+    wantedBy = ["azuracast-live-capture.service"];
+    path = [pkgs.coreutils];
+    startLimitIntervalSec = 0;
+    serviceConfig = {
+      Type = "simple";
+      StateDirectory = "azuracast-live-record"; # holds `offset`, below
+      # A camera that's unplugged (or a mediamtx still retrying its publish) makes ffmpeg exit
+      # immediately; restarting forever is the point - the show keeps recording the moment the
+      # camera comes back - but systemd's default start rate limit would give up after 5 tries.
+      Restart = "always";
+      RestartSec = "10s";
+      ExecStart = pkgs.writeShellScript "azuracast-live-record" ''
+        # The FLAC mount is the broadcast, so it runs a few seconds behind the mic (darkice's
+        # bufferSecs=5 above, plus liquidsoap). -itsoffset delays the *video* by that much to
+        # line the two back up. Measure it once by clapping on camera and reading the gap off
+        # the recording; write the number of seconds into the file below. No rebuild needed.
+        offset="$(cat /var/lib/azuracast-live-record/offset 2>/dev/null)"
+        out="/var/lib/media/shows/$(date +%F_%H%M%S).mkv"
+
+        # ?preview= is not needed: /authcheck lets loopback RTSP reads through (see
+        # webcam-control.py) - nginx only ever proxies the WebRTC leg, never 8554.
+        ${pkgs.ffmpeg}/bin/ffmpeg -nostdin -hide_banner -loglevel warning \
+          -itsoffset "''${offset:-0}" -rtsp_transport tcp -i rtsp://127.0.0.1:8554/webcam \
+          -i http://127.0.0.1:${toString services.azuracast.port}/listen/radio_marcel/radio.flac \
+          -map 0:v -map 1:a -c:v copy -c:a copy -f matroska "$out" || true
+
+        # Every restart above opens a new file; without this a camera-less show leaves one
+        # header-only mkv per retry sitting in the library.
+        [ "$(stat -c%s "$out")" -gt 1000000 ] || rm -f "$out"
+      '';
     };
   };
 

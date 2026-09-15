@@ -157,6 +157,10 @@
     # access. Music files inside stay 0644 root:root (read-only to all).
     "d /var/lib/media/music 0775 1000 media -"
     "d /var/lib/media/dj 2775 root media -"
+    # Live show recordings (azuracast/live.nix). Kept out of music/ and dj/ on purpose: the
+    # first is AzuraCast's rotation library, the second is bandcampsync's, and neither wants
+    # multi-GB mkvs walked by their chmod/sync passes.
+    "d /var/lib/media/shows 2775 root media -"
   ];
 
   services.postgresql = {
