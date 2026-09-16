@@ -212,7 +212,16 @@ class Handler(BaseHTTPRequestHandler):
             elif action == "read":
                 query = parse_qs(req.get("query") or "")
                 given_token = (query.get("preview") or [None])[0]
-                allowed = public_live() or (given_token == preview_token())
+                # Loopback alone isn't enough to allow a read: nginx proxies the public WebRTC
+                # leg, so every public viewer also arrives as 127.0.0.1. RTSP is never proxied,
+                # so loopback+rtsp is only ever azuracast-live-record pulling the show.
+                local_rtsp = req.get("protocol") == "rtsp" and req.get("ip") in (
+                    "127.0.0.1",
+                    "::1",
+                )
+                allowed = (
+                    public_live() or given_token == preview_token() or local_rtsp
+                )
             self.send_response(200 if allowed else 401)
             self.end_headers()
             return

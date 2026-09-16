@@ -51,7 +51,7 @@ in {
     (config.lib.nixGL.wrap localsend)
     (config.lib.nixGL.wrap proton-authenticator)
     (config.lib.nixGL.wrap brave-origin)
-    (config.lib.nixGL.wrap inputs.openlogi.packages.${pkgs.system}.default)
+    (config.lib.nixGL.wrap inputs.openlogi.packages.${pkgs.stdenv.hostPlatform.system}.default)
   ];
 
   # FiiO EH11 keeps its a2dp-only codecs; hfp roles are back so headsets
@@ -120,7 +120,7 @@ in {
     };
 
     Service = {
-      ExecStart = "${inputs.openlogi.packages.${pkgs.system}.default}/bin/openlogi-agent";
+      ExecStart = "${inputs.openlogi.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/openlogi-agent";
       Restart = "on-failure";
       RestartSec = 5;
     };
@@ -168,7 +168,7 @@ in {
     ".cargo/env.nu".source = link "${dots}/.cargo/env.nu";
     ".config/hypr/devices/WS0277.conf".source =
       link "${dots}/.config/hypr/devices/WS0277.conf";
-    ".local/state/udev-rules/70-openlogi.rules".source = "${inputs.openlogi.packages.${pkgs.system}.default}/lib/udev/rules.d/70-openlogi.rules";
+    ".local/state/udev-rules/70-openlogi.rules".source = "${inputs.openlogi.packages.${pkgs.stdenv.hostPlatform.system}.default}/lib/udev/rules.d/70-openlogi.rules";
     ".config/xdg-desktop-portal/hyprland-portals.conf".source =
       link "${dots}/.config/xdg-desktop-portal/hyprland-portals.conf";
     ".mozilla/native-messaging-hosts/passff.json".source = "${pkgs.passff-host}/lib/mozilla/native-messaging-hosts/passff.json";

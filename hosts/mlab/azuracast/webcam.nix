@@ -27,7 +27,7 @@
         # which isn't in WebRTC's codec list (H264/H265/VP8/VP9/AV1). ultrafast/zerolatency keep
         # the encoder fast enough for real-time capture.
 
-        # -g/-keyint_min force a keyframe every 30 frames (~1s): this is a plain RTSP push, not
+        # -g/-keyint_min force a keyframe every 60 frames (~1s): this is a plain RTSP push, not
         # a live WebRTC publish, so mediamtx has no PLI path back to ffmpeg to request a keyframe
         # for a newly joining viewer - without a short GOP they wait for libx264's default
         # (~250 frames, i.e. up to several seconds of black screen depending on join timing).
@@ -38,9 +38,25 @@
         # directly (no shell), so "filter=$(...)" isn't parsed - it's treated as the program name.
         runOnInit = pkgs.writeShellScript "webcam-publish" ''
           filter="$(cat /var/lib/webcam-control/effect 2>/dev/null)"
+          # All three of -input_format/-video_size/-framerate are required. With none of them
+          # ffmpeg takes the driver's default, which is the first entry of the first format:
+          # YUYV 640x480. -input_format mjpeg is what buys the 60 specifically - the BRIO's
+          # YUYV and NV12 modes stop at 1080p30, only MJPG goes to 1080p60 (and 1440p30/
+          # 2160p30). Note the camera advertises none of this below SuperSpeed: on a USB 2.0
+          # port it caps at 1080p, and YUYV 1080p there is 5fps.
+          #
+          # 1080p60 over 2160p30 on purpose - a DJ cam is mostly motion, and this is a WebRTC
+          # webcam, so every extra pixel is paid for by every viewer (4K measures 16Mbit/s
+          # each, vs 5) and by azuracast-live-record, which stream-copies whatever's here.
+
+          # -maxrate/-bufsize: libx264 at -preset ultrafast is bitrate-hungry and there was no
+          # cap while this was 640x480. At 1080p60 an uncapped ultrafast stream runs into
+          # double digit Mbit/s - too much for viewers and for azuracast-live-record, which
+          # stream-copies this. 6M measures at 4.96Mbit/s actual, ~2.7GB/h recorded.
+
           # by-id (serial-pinned), not /dev/video0: device numbering shifts whenever any
           # UVC device is (un)plugged or on boot order changes.
-          exec ${lib.getExe pkgs.ffmpeg} -f v4l2 -i /dev/v4l/by-id/usb-046d_Logitech_BRIO_F67E04C5-video-index0 -an -vf "''${filter:-null}" -c:v libx264 -preset ultrafast -tune zerolatency -g 30 -keyint_min 30 -pix_fmt yuv420p -f rtsp rtsp://localhost:$RTSP_PORT/$RTSP_PATH
+          exec ${lib.getExe pkgs.ffmpeg} -f v4l2 -input_format mjpeg -video_size 1920x1080 -framerate 60 -i /dev/v4l/by-id/usb-046d_Logitech_BRIO_F67E04C5-video-index0 -an -vf "''${filter:-null}" -c:v libx264 -preset ultrafast -tune zerolatency -maxrate 6M -bufsize 12M -g 60 -keyint_min 60 -pix_fmt yuv420p -f rtsp rtsp://localhost:$RTSP_PORT/$RTSP_PATH
         '';
         runOnInitRestart = true;
       };

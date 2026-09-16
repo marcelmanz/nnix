@@ -10,7 +10,10 @@
     nixpkgsStable.url = "github:NixOS/nixpkgs/nixos-25.11";
     nixpkgs2405.url = "github:NixOS/nixpkgs/nixos-24.05";
     openlogi.url = "github:AprilNEA/OpenLogi";
-    nu-alias-converter.url = "github:marcelmanz/nu-alias-converter";
+    nu-alias-converter = {
+      url = "github:marcelmanz/nu-alias-converter";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nur.url = "github:nix-community/NUR";
     # rust-overlay = {
     #   url = "github:oxalica/rust-overlay";
@@ -103,7 +106,10 @@
         (import ./overlays/hyprland-glaze-fix.nix)
         (import ./overlays/myna-font.nix {inherit inputs;})
         (final: prev: {tmex = tmexPkg;})
-        pir.overlays.default
+        (final: prev: {
+          pir = pir.packages.${system}.pir;
+          pi-coding-agent = pir.packages.${system}.pi;
+        })
         (import ./overlays/pi-jiti-cache.nix)
         (final: prev: {nuit = nu-alias-converter.packages.${system}.default;})
         (import ./overlays/rust.nix {inherit pkgs crane;})
