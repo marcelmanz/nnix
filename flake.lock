@@ -100,7 +100,7 @@
         "rev": "16810aa8f4ad89ca480b1513774e8b6f485fe368",
         "revCount": 2708,
         "type": "tarball",
-        "url": "https://api.flakehub.com/f/pinned/nix-community/fenix/0.1.2708%2Brev-16810aa8f4ad89ca480b1513774e8b6f485fe368/019f1d68-8b55-7783-bed1-d5926f21ae52/source.tar.gz?rev=16810aa8f4ad89ca480b1513774e8b6f485fe368&revCount=2708"
+        "url": "https://api.flakehub.com/f/pinned/nix-community/fenix/0.1.2708%2Brev-16810aa8f4ad89ca480b1513774e8b6f485fe368/019f1d68-8b55-7783-bed1-d5926f21ae52/source.tar.gz"
       },
       "original": {
         "type": "tarball",
