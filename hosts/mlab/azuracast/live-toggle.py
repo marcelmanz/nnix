@@ -22,7 +22,13 @@ FFPROBE = sys.argv[4]
 STREAMCAM_URL = f"http://127.0.0.1:{sys.argv[5]}"
 # Same two inputs azuracast-live-record uses in live.nix - keep them in step if that changes.
 RTSP_URL = "rtsp://127.0.0.1:8554/webcam"
-FLAC_URL = f"http://127.0.0.1:{sys.argv[6]}/listen/radio_marcel/radio.flac"
+# Cable 1 of snd-aloop: the same Scarlett+mic mix darkice gets on cable 0, duplicated by
+# azuracast-live-mix so this page and the recorder can read it without fighting darkice.
+# One capture client per cable, so the meter and the tests each get their own - cable 1
+# belongs to azuracast-live-record and would be busy for the whole show.
+METER_DEVICE = "plughw:CARD=Loopback,DEV=1,2"
+MIX_DEVICE = "plughw:CARD=Loopback,DEV=1,3"
+LEVEL_MS = 250
 SYSTEMCTL = "/run/current-system/sw/bin/systemctl"
 SUDO = "/run/wrappers/bin/sudo"
 MIC_CONTROL = "Mic Capture Switch"
@@ -42,7 +48,7 @@ STALE_SECS = 30
 
 PAGE = """<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Live</title>{refresh}
+<title>Live</title>
 <style>
 * {{ box-sizing: border-box; }}
 body {{ font-family: sans-serif; background: #111; color: #eee; margin: 0;
@@ -79,29 +85,37 @@ label {{ font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spaci
 .err {{ color: #ef9a9a; font-size: 0.85rem; }}
 .sep {{ flex: 1; }}
 audio {{ height: 2.2rem; }}
+.meter {{ width: min(60vw, 260px); height: 0.9rem; background: #222; border-radius: 0.45rem;
+     overflow: hidden; border: 1px solid #333; }}
+.meter i {{ display: block; height: 100%; width: 0%; background: #2e7d32; transition: width .12s; }}
+.meter i.hot {{ background: #ef6c00; }}
+.meter i.clip {{ background: #b71c1c; }}
+#leveldb {{ font-variant-numeric: tabular-nums; color: #888; font-size: 0.8rem; min-width: 5.5rem; }}
 .deck video {{ width: min(90vw, 420px); border-radius: 0.4rem; }}
 </style></head>
 <body>
 <div class="stage">
   <video id="v" autoplay muted playsinline></video>
   <div class="overlay">
-    <span class="badge {live_badge}">{live_status}</span>
-    <span class="badge {rec_badge}">{rec_status}</span>
-    <span class="badge {pub_badge}">Public: {pub_status}</span>
+    <span class="badge {live_badge}" id="b-live">{live_status}</span>
+    <span class="badge {rec_badge}" id="b-rec">{rec_status}</span>
+    <span class="badge {pub_badge}" id="b-pub">Public: {pub_status}</span>
   </div>
 </div>
 
 <div class="deck">
   <div class="group">
-    <form method="post" action="/toggle"><button class="{live_button_class}">{live_action}</button></form>
-    <form method="post" action="/mic-toggle"><button>{mic_action}</button></form>
-    <span class="badge {mic_badge}">Mic {mic_status}</span>
+    <form method="post" action="/toggle"><button class="{live_button_class}" id="a-live">{live_action}</button></form>
+    <form method="post" action="/mic-toggle"><button id="a-mic">{mic_action}</button></form>
+    <span class="badge {mic_badge}" id="b-mic">Mic {mic_status}</span>
+    <div class="meter" title="desk mix level (Scarlett + mic)"><i id="levelbar"></i></div>
+    <span id="leveldb">--</span>
     <span class="sep"></span>
-    <form method="post" action="/cam/toggle"><button>{pub_action}</button></form>
+    <form method="post" action="/cam/toggle"><button id="a-pub">{pub_action}</button></form>
     <form method="post" action="/cam/text-mode"><button>{text_action}</button></form>
   </div>
 
-  <div class="group"><span class="detail">{rec_detail}</span></div>
+  <div class="group"><span class="detail" id="rec-detail">{rec_detail}</span></div>
 
   <div class="group">
     <form method="post" action="/offset">
@@ -111,6 +125,7 @@ audio {{ height: 2.2rem; }}
       <button>Save</button>
     </form>
     <form method="post" action="/test-sync"><button>Test sync ({sync_secs}s)</button></form>
+    {offset_msg}
     {sync_result}
   </div>
 
@@ -123,6 +138,41 @@ audio {{ height: 2.2rem; }}
 </div>
 
 <script>
+// -60dB floor, so silence reads empty and speech sits around half.
+(function poll() {{
+  fetch("/level").then(function (r) {{ return r.json(); }}).then(function (j) {{
+    var bar = document.getElementById("levelbar"), txt = document.getElementById("leveldb");
+    if (j.db === null || j.db === undefined || j.db <= -90) {{
+      bar.style.width = "0%"; bar.className = ""; txt.textContent = "silent";
+    }} else {{
+      bar.style.width = Math.max(0, Math.min(100, (j.db + 60) / 60 * 100)) + "%";
+      bar.className = j.db > -1 ? "clip" : (j.db > -6 ? "hot" : "");
+      txt.textContent = j.db.toFixed(1) + " dB";
+    }}
+  }}).catch(function () {{
+    document.getElementById("leveldb").textContent = "no signal";
+  }}).finally(function () {{ setTimeout(poll, 400); }});
+}})();
+
+(function pollStatus() {{
+  fetch("/status.json").then(function (r) {{ return r.json(); }}).then(function (j) {{
+    function badge(id, cls, text) {{
+      var e = document.getElementById(id);
+      if (e) {{ e.className = "badge " + cls; e.textContent = text; }}
+    }}
+    badge("b-live", j.live_badge, j.live_status);
+    badge("b-rec", j.rec_badge, j.rec_status);
+    badge("b-pub", j.pub_badge, "Public: " + j.pub_status);
+    badge("b-mic", j.mic_badge, "Mic " + j.mic_status);
+    var d = document.getElementById("rec-detail");
+    if (d) d.innerHTML = j.rec_detail;
+    var l = document.getElementById("a-live");
+    if (l) {{ l.textContent = j.live_action; l.className = j.live_button_class; }}
+    var m = document.getElementById("a-mic"); if (m) m.textContent = j.mic_action;
+    var p = document.getElementById("a-pub"); if (p) p.textContent = j.pub_action;
+  }}).catch(function () {{}}).finally(function () {{ setTimeout(pollStatus, 5000); }});
+}})();
+
 (async function () {{
   var pc = new RTCPeerConnection();
   pc.ontrack = function (e) {{ document.getElementById("v").srcObject = e.streams[0]; }};
@@ -328,14 +378,12 @@ def recording_state():
 
 
 class Handler(BaseHTTPRequestHandler):
-    def render(self, test_result="", sync_result=""):
+    def render(self, test_result="", sync_result="", offset_msg=""):
         live = is_active()
         mic = mic_on()
         cam = cam_state()
         rec_badge, rec_status, rec_detail = recording_state()
         html_page = PAGE.format(
-            # Only poll while something is moving; an idle page shouldn't respawn ffprobe.
-            refresh='\n<meta http-equiv="refresh" content="10">' if live else "",
             live_badge="live" if live else "offline",
             live_status="LIVE" if live else "OFFLINE",
             live_action="Stop streaming" if live else "Go live",
@@ -358,6 +406,7 @@ class Handler(BaseHTTPRequestHandler):
             offset_limit=f"{OFFSET_LIMIT:g}",
             sync_secs=SYNC_SECS,
             sync_result=sync_result,
+            offset_msg=offset_msg,
             test_secs=TEST_SECS,
             test_result=test_result,
         )
@@ -381,6 +430,62 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         route = self.path.split("?")[0]
+        if route == "/level":
+            # ffmpeg's volumedetect on a short grab. Cheap enough to poll, and it reads the
+            # desk mix rather than the raw mic so it works while darkice holds cable 0.
+            # A cable with no writer blocks the reader outright, so this must time out rather
+            # than hang the poll - that's the "azuracast-live-mix is down" case.
+            peak = None
+            try:
+                proc = subprocess.run(
+                    [FFMPEG, "-nostdin", "-hide_banner", "-f", "alsa", "-ar", "44100",
+                     "-ac", "2", "-i", METER_DEVICE, "-t", f"{LEVEL_MS / 1000:g}",
+                     "-af", "volumedetect", "-f", "null", "-"],
+                    capture_output=True, text=True, check=False, timeout=3,
+                )
+            except subprocess.TimeoutExpired:
+                proc = None
+            for line in (proc.stderr.splitlines() if proc else []):
+                if "max_volume:" in line:
+                    try:
+                        peak = float(line.split("max_volume:")[1].strip().split()[0])
+                    except (ValueError, IndexError):
+                        pass
+            body = json.dumps({"db": peak}).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        if route == "/status.json":
+            # Replaces the old meta-refresh. A full page reload tore down the WebRTC peer
+            # connection every 10s - mediamtx logged a new session each time and the video
+            # visibly stalled - so the page now updates these fields in place instead.
+            cam = cam_state()
+            rec_badge, rec_status, rec_detail = recording_state()
+            live = is_active()
+            mic = mic_on()
+            body = json.dumps({
+                "live": live, "live_status": "LIVE" if live else "OFFLINE",
+                "live_badge": "live" if live else "offline",
+                "live_action": "Stop streaming" if live else "Go live",
+                "live_button_class": "danger" if live else "primary",
+                "mic_badge": "on" if mic else "off",
+                "mic_status": "ON" if mic else "MUTED",
+                "mic_action": "Mute mic" if mic else "Unmute mic",
+                "pub_badge": "on" if cam and cam["live"] else "off",
+                "pub_status": "LIVE" if cam and cam["live"] else "hidden",
+                "pub_action": "Hide from public" if cam and cam["live"] else "Show on public",
+                "rec_badge": rec_badge, "rec_status": rec_status, "rec_detail": rec_detail,
+            }).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
+            return
+
         if route == "/test-mic.mp3":
             self.serve_clip(TEST_FILE, "audio/mpeg")
             return
@@ -404,17 +509,26 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/offset":
             length = int(self.headers.get("Content-Length", 0))
             body = parse_qs(self.rfile.read(length).decode())
-            write_offset((body.get("offset") or [""])[0].strip())
-            self.send_response(303)
-            self.send_header("Location", "/")
-            self.end_headers()
+            raw = (body.get("offset") or [""])[0].strip()
+            if write_offset(raw):
+                self.send_response(303)
+                self.send_header("Location", "/")
+                self.end_headers()
+                return
+            # Don't redirect on failure - a silent bounce back to an unchanged field looks
+            # exactly like a save that worked.
+            self.render(offset_msg=(
+                f'<span class="err">Could not save "{html.escape(raw)}" - '
+                f"must be a number between -{OFFSET_LIMIT:g} and {OFFSET_LIMIT:g}, "
+                "and /var/lib/azuracast-live-record/offset must be writable.</span>"
+            ))
             return
 
         if self.path == "/test-sync":
-            # The same two inputs, the same -itsoffset, a short clip: clap on camera and the
-            # recording tells you whether the current offset lines the two up. Re-encodes
-            # audio to AAC because browsers won't play FLAC-in-MP4, and the video is copied
-            # so this costs nothing the recorder wouldn't already cost.
+            # The same two inputs the recorder uses, the same -itsoffset: clap on camera and
+            # this tells you whether the offset lines them up. Reads the desk mix, so it works
+            # without going on air. AAC because browsers won't play FLAC-in-MP4; video is
+            # copied, so this costs nothing the recorder wouldn't already cost.
             offset = read_offset() or "0"
             # -itsoffset delays the video, so the clip's first `offset` seconds are audio-only.
             # Record that much extra or a 5s offset would leave 3s of usable overlap.
@@ -425,19 +539,14 @@ class Handler(BaseHTTPRequestHandler):
             proc = subprocess.run(
                 [FFMPEG, "-y", "-nostdin", "-hide_banner", "-loglevel", "error",
                  "-itsoffset", offset, "-rtsp_transport", "tcp", "-i", RTSP_URL,
-                 "-i", FLAC_URL,
+                 "-f", "alsa", "-ar", "44100", "-ac", "2", "-i", MIX_DEVICE,
                  "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "160k",
                  "-t", f"{duration:g}", "-movflags", "+faststart", str(SYNC_FILE)],
                 capture_output=True, check=False, timeout=duration + 30,
             )
             if proc.returncode == 0:
-                hint = "" if is_active() else (
-                    '<span class="err">Not live - the audio here is the auto-DJ, '
-                    "so it can't show you the offset. Go live first.</span>"
-                )
                 result = (
                     f'<video controls autoplay src="/test-sync.mp4?t={int(time.time())}"></video>'
-                    + hint
                 )
             else:
                 result = '<span class="err">Could not record - is the camera publishing?</span>'
@@ -452,9 +561,9 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if self.path == "/test-mic":
-            # Opens the raw mic device directly - fails if azuracast-live-mix already has it
-            # open (i.e. you're already live), which surfaces as a plain error below rather
-            # than fighting over the device.
+            # Reads the desk mix, not the raw mic device: azuracast-live-mix holds CARD=Mic
+            # permanently now, so opening it here would always fail - and the mix is the more
+            # useful thing to hear anyway, since it's what actually leaves the building.
             proc = subprocess.run(
                 [
                     FFMPEG,
@@ -464,9 +573,9 @@ class Handler(BaseHTTPRequestHandler):
                     "-ar",
                     "44100",
                     "-ac",
-                    "1",
+                    "2",
                     "-i",
-                    "plughw:CARD=Mic",
+                    MIX_DEVICE,
                     "-t",
                     str(TEST_SECS),
                     "-c:a",
@@ -485,7 +594,7 @@ class Handler(BaseHTTPRequestHandler):
                     + '"></audio>'
                 )
             else:
-                result = '<p class="err">Could not record - is the mic connected, and not already in use by a live broadcast?</p>'
+                result = '<p class="err">Could not record - is azuracast-live-mix running?</p>'
             self.render(test_result=result)
             return
 

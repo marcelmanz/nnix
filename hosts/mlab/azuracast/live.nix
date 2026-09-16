@@ -10,6 +10,13 @@
   # played into device 0's playback appears on device 1's capture. Used below to hand darkice a
   # single "device" that's actually the mix of the Scarlett 2i2 + the USB mic, without touching
   # darkice's (already-secure) Icecast leg at all.
+  # snd-aloop gives 8 independent cables, and ALSA allows exactly one capture client per
+  # cable - a second reader gets EBUSY. So every consumer of the mix gets its own:
+  #   cable 0  darkice (azuracast-live-capture)
+  #   cable 1  azuracast-live-record
+  #   cable 2  the level meter on live.marcel.cool (polls continuously)
+  #   cable 3  the sync test and mic test (brief, user-initiated)
+  # Verified that a cable with no reader doesn't stall its writer, so the unused ones are free.
   boot.kernelModules = ["snd-aloop"];
 
   # Mixes the Scarlett 2i2 (card USB) and the Amazon USB mic (card Mic) and plays the result into
@@ -17,9 +24,14 @@
   # aresample=async=1 on each leg: the two USB interfaces free-run on independent clocks, so
   # without it they'd slowly drift apart; this lets ffmpeg stretch/compress each leg a little to
   # stay in sync instead of glitching.
+  # Always on, not just during a show: the recorder, the sync test and the level meter all
+  # read cable 1 below, and they need to work before you go on air. An idle mixer is harmless
+  # on its own - it's darkice (azuracast-live-capture) that would put dead air over the
+  # auto-DJ, and that still only starts when you press the button.
   systemd.services.azuracast-live-mix = {
     description = "Mix Scarlett 2i2 + USB mic into the loopback device darkice reads from";
     after = ["sound.target"];
+    wantedBy = ["multi-user.target"];
     serviceConfig = {
       Type = "simple"; # ffmpeg's own alsa output negotiates a 128-frame (~3ms) period against Loopback's
       # 131072-frame buffer - impossible for a non-hard-realtime filter pipeline to service
@@ -32,7 +44,14 @@
           -f alsa -ar 44100 -ac 2 -i plughw:CARD=Mic \
           -filter_complex '[0:a]aresample=async=1:first_pts=0[a0];[1:a]aresample=async=1:first_pts=0[a1];[a0][a1]amix=inputs=2:duration=first:dropout_transition=0[aout]' \
           -map '[aout]' -f s16le - \
-          | ${pkgs.alsa-utils}/bin/aplay -D plughw:CARD=Loopback,DEV=0 -f S16_LE -r 44100 -c 2 \
+          | ${pkgs.coreutils}/bin/tee --output-error=warn-nopipe \
+              >(${pkgs.alsa-utils}/bin/aplay -D plughw:CARD=Loopback,DEV=0,1 -f S16_LE -r 44100 -c 2 \
+                  --buffer-time=200000 --period-time=50000 >/dev/null 2>&1) \
+              >(${pkgs.alsa-utils}/bin/aplay -D plughw:CARD=Loopback,DEV=0,2 -f S16_LE -r 44100 -c 2 \
+                  --buffer-time=200000 --period-time=50000 >/dev/null 2>&1) \
+              >(${pkgs.alsa-utils}/bin/aplay -D plughw:CARD=Loopback,DEV=0,3 -f S16_LE -r 44100 -c 2 \
+                  --buffer-time=200000 --period-time=50000 >/dev/null 2>&1) \
+          | ${pkgs.alsa-utils}/bin/aplay -D plughw:CARD=Loopback,DEV=0,0 -f S16_LE -r 44100 -c 2 \
               --buffer-time=200000 --period-time=50000
       '';
       Restart = "on-failure";
@@ -115,7 +134,7 @@
       Type = "simple";
       User = "azuracast-live-web";
       StateDirectory = "azuracast-live-web"; # holds the last test-mic.mp3 recording
-      ExecStart = "${pkgs.python3}/bin/python3 ${./live-toggle.py} ${toString services.livedj.port} ${pkgs.alsa-utils}/bin/amixer ${pkgs.ffmpeg}/bin/ffmpeg ${pkgs.ffmpeg}/bin/ffprobe ${toString services.streamcam.port} ${toString services.azuracast.port}";
+      ExecStart = "${pkgs.python3}/bin/python3 ${./live-toggle.py} ${toString services.livedj.port} ${pkgs.alsa-utils}/bin/amixer ${pkgs.ffmpeg}/bin/ffmpeg ${pkgs.ffmpeg}/bin/ffprobe ${toString services.streamcam.port}";
       Restart = "on-failure";
       RestartSec = "5s";
     };
@@ -132,8 +151,13 @@
   # this too, so there's one switch for the show, not two that can drift apart.
   # Owned by the web user, not the recorder: azuracast-live-web writes `offset` from the
   # live.marcel.cool deck, and the recorder (root) only ever reads it.
+  # The file as well as the directory: the recorder used to own this path via StateDirectory
+  # and left a root-owned `offset` behind, which the page then couldn't overwrite. `z` fixes
+  # an existing one, `f` creates it when absent.
   systemd.tmpfiles.rules = [
     "d /var/lib/azuracast-live-record 0755 azuracast-live-web azuracast-live-web -"
+    "f /var/lib/azuracast-live-record/offset 0644 azuracast-live-web azuracast-live-web -"
+    "z /var/lib/azuracast-live-record/offset 0644 azuracast-live-web azuracast-live-web -"
   ];
 
   systemd.services.azuracast-live-record = {
@@ -151,24 +175,32 @@
       Restart = "always";
       RestartSec = "10s";
       ExecStart = pkgs.writeShellScript "azuracast-live-record" ''
-        # The FLAC mount is the broadcast, so it runs a few seconds behind the mic (darkice's
-        # bufferSecs=5 above, plus liquidsoap). -itsoffset delays the *video* by that much to
-        # line the two back up. Measure it once by clapping on camera and reading the gap off
-        # the recording; write the number of seconds into the file below. No rebuild needed.
+        # Audio comes off the desk (loopback cable 1 = the Scarlett + mic mix), never the
+        # broadcast mount: the mount carries the auto-DJ whenever you're not live, and it
+        # trails the room by ~6s (liquidsoap's harbor buffer=5.00 plus icecast's burst), which
+        # is latency there's no reason to record and then undo. Straight off the desk the two
+        # legs are within a few hundred ms, so `offset` is a small trim, not a 6s correction.
         offset="$(cat /var/lib/azuracast-live-record/offset 2>/dev/null)"
-        out="/var/lib/media/shows/$(date +%F_%H%M%S).mkv"
+
+        # exec, so ffmpeg *is* the main process. Left as a child of this shell it gets the
+        # control-group SIGTERM while already shutting down, reads the second signal as
+        # "immediate exit", and abandons the Matroska trailer - the file then has no duration
+        # and players call it truncated. The small-file sweep this shell used to do afterwards
+        # moved to ExecStopPost for the same reason.
 
         # ?preview= is not needed: /authcheck lets loopback RTSP reads through (see
         # webcam-control.py) - nginx only ever proxies the WebRTC leg, never 8554.
-        ${pkgs.ffmpeg}/bin/ffmpeg -nostdin -hide_banner -loglevel warning \
+        exec ${pkgs.ffmpeg}/bin/ffmpeg -nostdin -hide_banner -loglevel warning \
           -itsoffset "''${offset:-0}" -rtsp_transport tcp -i rtsp://127.0.0.1:8554/webcam \
-          -i http://127.0.0.1:${toString services.azuracast.port}/listen/radio_marcel/radio.flac \
-          -map 0:v -map 1:a -c:v copy -c:a copy -f matroska "$out" || true
-
-        # Every restart above opens a new file; without this a camera-less show leaves one
-        # header-only mkv per retry sitting in the library.
-        [ "$(stat -c%s "$out")" -gt 1000000 ] || rm -f "$out"
+          -f alsa -ar 44100 -ac 2 -i plughw:CARD=Loopback,DEV=1,1 \
+          -map 0:v -map 1:a -c:v copy -c:a flac \
+          -f matroska "/var/lib/media/shows/$(date +%F_%H%M%S).mkv"
       '';
+      # Each restart opens a new file; without this sweep a camera-less show leaves one
+      # header-only mkv per retry in the library. Bounded to this directory, and a real
+      # recording is never under 1M (~2.7GB/h).
+      ExecStopPost = "${pkgs.findutils}/bin/find /var/lib/media/shows -maxdepth 1 -name '*.mkv' -size -1M -delete";
+      TimeoutStopSec = "30s"; # room for ffmpeg to write the trailer after SIGTERM
     };
   };
 
