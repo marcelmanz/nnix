@@ -92,13 +92,15 @@
   };
   users.groups.webcam-control = {};
 
-  # lets the control page apply a new -vf effect by restarting mediamtx (see webcam-control.py).
+  # lets the control page apply a new -vf effect by restarting the publisher above
+  # (see webcam-control.py). sudo matches the whole command line, so this string has to
+  # stay byte-identical to the one webcam-control.py runs.
   security.sudo.extraRules = [
     {
       users = ["webcam-control"];
       commands = [
         {
-          command = "/run/current-system/sw/bin/systemctl restart mediamtx";
+          command = "/run/current-system/sw/bin/pkill -f usb-046d_Logitech_BRIO_F67E04C5";
           options = ["NOPASSWD"];
         }
       ];

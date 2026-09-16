@@ -38,4 +38,14 @@
     devices = ["nixos"];
     type = "sendonly";
   };
+
+  # live show recordings (mkv, written by azuracast-live-record) shared to laptop.
+  # No extra permissions needed: the dir is 2775 root:media like dj above, and the
+  # syncthing user is already in media. A show still being recorded syncs as it grows.
+  services.syncthing.settings.folders."live-recordings" = {
+    path = "/var/lib/media/live-recordings";
+    id = "live-recordings";
+    devices = ["nixos"];
+    type = "sendonly";
+  };
 }

@@ -122,11 +122,18 @@ class Handler(BaseHTTPRequestHandler):
             effect = (body.get("effect") or [None])[0]
             if effect in EFFECTS:
                 EFFECT_FILE.write_text(EFFECTS[effect])
-                # ponytail: applies the new filter by restarting all of mediamtx (brief
-                # reconnect for any viewer); switch to signalling just the ffmpeg publisher
-                # if that drop ever becomes annoying.
+                # Kills only the runOnInit publisher - runOnInitRestart respawns it with the
+                # new filter. Restarting all of mediamtx worked too but took every viewer and
+                # the WHEP endpoint down with it. Matched on the camera id because the script
+                # execs ffmpeg (its own name is gone) and nothing else opens the BRIO; the
+                # rtsp URL would be equally unique but its ":" needs escaping in sudoers.
+                # -f matches any command line containing the id, so a shell command that
+                # merely mentions it gets killed too. Narrowing by user isn't possible:
+                # mediamtx runs under DynamicUser, so the publisher's uid is not stable.
+                # ponytail: the recorder's RTSP read still ends, so an effect change mid-show
+                # splits the recording; avoiding that needs mediamtx's HTTP API.
                 # /run/wrappers/bin: service PATH lacks it, bare "sudo" is FileNotFoundError.
-                subprocess.run(["/run/wrappers/bin/sudo", "/run/current-system/sw/bin/systemctl", "restart", "mediamtx"])
+                subprocess.run(["/run/wrappers/bin/sudo", "/run/current-system/sw/bin/pkill", "-f", "usb-046d_Logitech_BRIO_F67E04C5"])
             self.send_response(303)
             self.send_header("Location", "/")
             self.end_headers()

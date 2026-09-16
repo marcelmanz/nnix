@@ -21,6 +21,13 @@
         # mlab is the source of truth, don't send deletes back
         type = "receiveonly";
       };
+      folders."live-recordings" = {
+        id = "live-recordings";
+        path = "~/Sync/live-recordings";
+        devices = ["mlab"];
+        # mlab is the source of truth, don't send deletes back
+        type = "receiveonly";
+      };
     };
   };
 }

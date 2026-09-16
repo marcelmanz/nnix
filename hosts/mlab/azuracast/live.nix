@@ -194,12 +194,12 @@
           -itsoffset "''${offset:-0}" -rtsp_transport tcp -i rtsp://127.0.0.1:8554/webcam \
           -f alsa -ar 44100 -ac 2 -i plughw:CARD=Loopback,DEV=1,1 \
           -map 0:v -map 1:a -c:v copy -c:a flac \
-          -f matroska "/var/lib/media/shows/$(date +%F_%H%M%S).mkv"
+          -f matroska "/var/lib/media/live-recordings/$(date +%F_%H%M%S).mkv"
       '';
       # Each restart opens a new file; without this sweep a camera-less show leaves one
       # header-only mkv per retry in the library. Bounded to this directory, and a real
       # recording is never under 1M (~2.7GB/h).
-      ExecStopPost = "${pkgs.findutils}/bin/find /var/lib/media/shows -maxdepth 1 -name '*.mkv' -size -1M -delete";
+      ExecStopPost = "${pkgs.findutils}/bin/find /var/lib/media/live-recordings -maxdepth 1 -name '*.mkv' -size -1M -delete";
       TimeoutStopSec = "30s"; # room for ffmpeg to write the trailer after SIGTERM
     };
   };

@@ -40,7 +40,7 @@ SYNC_SECS = 8
 # Wider than any plausible darkice+liquidsoap lag; rejects fat-fingered input rather than
 # letting a nonsense value silently break every recording.
 OFFSET_LIMIT = 30.0
-SHOWS_DIR = Path("/var/lib/media/shows")
+SHOWS_DIR = Path("/var/lib/media/live-recordings")
 OFFSET_FILE = Path("/var/lib/azuracast-live-record/offset")
 # Anything older than this and the recorder isn't actually writing - it's in its restart loop
 # waiting for the camera to come back.
@@ -169,6 +169,10 @@ audio {{ height: 2.2rem; }}
     var l = document.getElementById("a-live");
     if (l) {{ l.textContent = j.live_action; l.className = j.live_button_class; }}
     var m = document.getElementById("a-mic"); if (m) m.textContent = j.mic_action;
+    var ef = document.getElementById("effect");
+    if (ef) ef.disabled = j.recording;
+    var en = document.getElementById("effect-note");
+    if (en) en.style.display = j.recording ? "inline" : "none";
     var p = document.getElementById("a-pub"); if (p) p.textContent = j.pub_action;
   }}).catch(function () {{}}).finally(function () {{ setTimeout(pollStatus, 5000); }});
 }})();
@@ -216,7 +220,8 @@ def set_mic(on: bool):
 CAM_CONTROLS = """
 <form method="post" action="/cam/effect">
   <label>Effect</label>
-  <select name="effect" onchange="this.form.submit()">{effect_options}</select>
+  <select id="effect" name="effect" onchange="this.form.submit()"{effect_disabled}>{effect_options}</select>
+  <span class="detail" id="effect-note" style="display:{effect_note_display}">locked while recording - a change would split the file</span>
 </form>
 <form method="post" action="/cam/offline-text">
   <label>Offline text</label>
@@ -235,7 +240,7 @@ def cam_state():
         return None
 
 
-def cam_controls(state) -> str:
+def cam_controls(state, recording: bool) -> str:
     if state is None:
         return '<span class="err">Webcam controls unavailable - is webcam-control-web running?</span>'
     options = "".join(
@@ -244,6 +249,8 @@ def cam_controls(state) -> str:
     )
     return CAM_CONTROLS.format(
         effect_options=options,
+        effect_disabled=" disabled" if recording else "",
+        effect_note_display="inline" if recording else "none",
         default_offline_text=html.escape(state["default_offline_text"]),
         max_offline_text_len=state["max_offline_text_len"],
         offline_text=html.escape(state["offline_text"]),
@@ -397,7 +404,7 @@ class Handler(BaseHTTPRequestHandler):
             text_action=(
                 "Resume video" if cam and cam["text_mode"] else "Show text instead"
             ),
-            cam_controls=cam_controls(cam),
+            cam_controls=cam_controls(cam, rec_badge == "rec"),
             whep_url=cam["whep_url"] if cam else "",
             rec_badge=rec_badge,
             rec_status=rec_status,
@@ -478,6 +485,7 @@ class Handler(BaseHTTPRequestHandler):
                 "pub_status": "LIVE" if cam and cam["live"] else "hidden",
                 "pub_action": "Hide from public" if cam and cam["live"] else "Show on public",
                 "rec_badge": rec_badge, "rec_status": rec_status, "rec_detail": rec_detail,
+                "recording": rec_badge == "rec",
             }).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
