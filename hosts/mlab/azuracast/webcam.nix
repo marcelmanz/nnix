@@ -34,6 +34,20 @@
         # ultrafast at 12M still only reaches 0.954. This ffmpeg has no QSV
         # (--disable-libmfx/--disable-libvpl), so VAAPI is the way onto the same iGPU.
 
+        # scale=in_range=pc:out_range=tv is load-bearing too: the BRIO's MJPEG is yuvj422p
+        # (full range) and a bare format=nv12 keeps that range, so the encoder emitted a
+        # full-range stream (ffprobe: pix_fmt=yuvj420p, color_range=pc). WebRTC decoders render
+        # H.264 as limited range regardless of the VUI flag, so full-range pixels came out
+        # washed out - which is what "lower quality since the vaapi switch" actually was.
+        # libx264 never showed it: -pix_fmt yuv420p did this conversion implicitly.
+
+        # hqdn3d denoises BEFORE the encoder, which is the only thing that actually removed the
+        # grain: raising the bitrate cap made it worse, not better (8M reproduces the camera's
+        # own noise more faithfully - measured frame-to-frame difference 0.592 vs 0.546 at 6M,
+        # while hqdn3d at 6M gives 0.400). CPU filter, so it runs before hwupload: ~+0.5 of a
+        # core (0.67 -> 1.16 total), still 2.1x realtime at 1080p60. 3:2:6:6 is the strength
+        # knob - 2:1.5:4:4 if it ever looks smeared.
+
         # -bf 0 is load-bearing: vaapi emits B-frames by default and WebRTC decoders choke on
         # them. Note this moves the stream from Constrained Baseline to High profile - any
         # encoder better than ultrafast does. If a browser ever refuses to play it, going back
@@ -68,7 +82,7 @@
 
           # by-id (serial-pinned), not /dev/video0: device numbering shifts whenever any
           # UVC device is (un)plugged or on boot order changes.
-          exec ${lib.getExe pkgs.ffmpeg} -f v4l2 -input_format mjpeg -video_size 1920x1080 -framerate 60 -i /dev/v4l/by-id/usb-046d_Logitech_BRIO_F67E04C5-video-index0 -an -vaapi_device /dev/dri/renderD128 -vf "''${filter:-null},format=nv12,hwupload" -c:v h264_vaapi -b:v 6M -maxrate 6M -bf 0 -g 60 -f rtsp rtsp://localhost:$RTSP_PORT/$RTSP_PATH
+          exec ${lib.getExe pkgs.ffmpeg} -f v4l2 -input_format mjpeg -video_size 1920x1080 -framerate 60 -i /dev/v4l/by-id/usb-046d_Logitech_BRIO_F67E04C5-video-index0 -an -vaapi_device /dev/dri/renderD128 -vf "''${filter:-null},hqdn3d=3:2:6:6,scale=in_range=pc:out_range=tv,format=nv12,hwupload" -c:v h264_vaapi -b:v 6M -maxrate 6M -bf 0 -g 60 -f rtsp rtsp://localhost:$RTSP_PORT/$RTSP_PATH
         '';
         runOnInitRestart = true;
       };
