@@ -232,12 +232,22 @@ html.az-bar .az-topstage {
   object-fit: cover;
   background: #000;
 }
+/* Portrait phone: the row is nearly square, so cover would crop most of a 16:9 cam away. */
+@media (max-width: 768px) {
+  .az-topstage-webcam .az-webcam {
+    object-fit: contain;
+  }
+}
 /* Fixed, viewport-scaled height (not a share of whatever's left) - a solid row that's always
    there and always the same size, live cam or not, rather than growing/shrinking around it. */
 .az-topstage-chat {
   flex: 0 0 clamp(200px, 40vh, 320px);
   min-width: 0;
   border-top: 1px solid rgba(var(--hud-accent-rgb), 0.4);
+}
+/* Minimized chat (the header button): the row shrinks to its header, giving the cam the space. */
+.az-topstage-chat:has(.az-chat-panel.az-min) {
+  flex: 0 0 auto;
 }
 /* Overrides the standalone (floating sidebar) .az-chat-panel rules - higher specificity wins
    regardless of source order, including over the max-width:1099px { display:none } rule. */
@@ -274,26 +284,6 @@ html.az-bar .az-topstage {
   position: static;
   inset: auto;
   transform: none;
-}
-
-/* Live webcam as the page background: the docked-bar/top-stage state a live webcam forces on
-   its own (waves toggle off) keeps .az-topstage-webcam empty and transparent (see
-   updateTopStage()'s bgMode in public.js, which reparents .az-webcam here instead), with the
-   video showing through the chat row's translucent background below it.
-   z-index -1: above the plain background image layer (-2) below, under everything else. */
-.az-webcam-bg {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  overflow: hidden;
-}
-.az-webcam-bg .az-webcam {
-  width: 100%;
-  height: 100%;
-  max-height: none;
-  margin-bottom: 0;
-  border-radius: 0;
-  object-fit: cover;
 }
 
 /* Player card background - lighter (transparent); html.az-light (Device -> light system theme,
@@ -2142,6 +2132,23 @@ html.az-calm .az-bg-pop-title {
   border-bottom: 1px solid rgba(var(--hud-accent-rgb), 0.4);
   color: rgb(var(--hud-accent-rgb));
   font-weight: 700;
+}
+.az-chat-panel.az-min .az-chat-messages,
+.az-chat-panel.az-min .az-chat-form {
+  display: none;
+}
+.az-chat-min {
+  border: none;
+  background: transparent;
+  color: rgb(var(--hud-accent-rgb));
+  font: inherit;
+  line-height: 1;
+  padding: 0 4px;
+  cursor: pointer;
+}
+.az-chat-min:hover,
+.az-chat-min:focus-visible {
+  color: rgb(var(--hud-accent-3-rgb));
 }
 .az-chat-messages {
   flex: 1;

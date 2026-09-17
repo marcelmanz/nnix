@@ -332,10 +332,33 @@
     clearInterval(autoplayPollId);
   }, 10000);
 
+  // The first gesture unbinds these, but on mobile that gesture often fails to land playback:
+  // AzuraCast's own play() runs in a Vue nextTick and the browser rejects it as gesture-less, so
+  // the page stayed silent forever with nothing left listening. Re-arm unless audio really played.
+  var everPlayed = false;
+  document.addEventListener(
+    "play",
+    function () {
+      everPlayed = true;
+    },
+    true,
+  );
+  function bindGestureListeners() {
+    ["pointerdown", "keydown", "touchstart", "wheel"].forEach(function (ev) {
+      window.addEventListener(ev, unmute, { capture: true, passive: true });
+    });
+  }
   function cleanupGestureListeners() {
     ["pointerdown", "keydown", "touchstart", "wheel"].forEach(function (ev) {
       window.removeEventListener(ev, unmute, true);
     });
+    setTimeout(function () {
+      var audio = getAudioEl();
+      if (!everPlayed && (!audio || audio.paused)) {
+        DBG("cleanupGestureListeners: playback never landed -> re-arm");
+        bindGestureListeners();
+      }
+    }, 1500);
   }
 
   // Trust the <audio> element's real state, NOT the play-button icon. On mobile, the autoplay
@@ -554,9 +577,7 @@
     },
     true,
   );
-  ["pointerdown", "keydown", "touchstart", "wheel"].forEach(function (ev) {
-    window.addEventListener(ev, unmute, { capture: true, passive: true });
-  });
+  bindGestureListeners();
 
   // Read play state from the real button's SVG icon (the store's isPlaying, locale-independent):
   // stop-circle icon (path has "H8V8") = playing; play-circle icon (triangle) = paused.
@@ -1299,9 +1320,7 @@
   // html.az-bar is the single flag the CSS (see html.az-bar / .az-topstage in public.css) keys
   // the docked bottom bar off, set here from EITHER the manual "≈" toggle below (desktop width
   // only) OR a live webcam forcing it, on any viewport (see the live-webcam poll further down).
-  // Within that docked bar, live video goes one of two places: the classic split topstage
-  // panel while waves is manually on, or the fullscreen background (webcamBgHost below) while
-  // it's just a live-triggered bar with waves off - see the bgMode check in updateTopStage.
+  // Within that docked bar, live video always goes to the same place: the split topstage panel.
   var DESKTOP_MQ = window.matchMedia ? window.matchMedia("(min-width: 769px)") : null;
   var liveOn = false;
   // Stacked, solid regions (navbar -> content -> chat -> bottom bar) instead of independently
@@ -1336,15 +1355,6 @@
       ? topStageBottom
       : document.body;
   }
-  var webcamBg;
-  function webcamBgHost() {
-    if (!webcamBg && document.body) {
-      webcamBg = document.createElement("div");
-      webcamBg.className = "az-webcam-bg";
-      document.body.appendChild(webcamBg);
-    }
-    return webcamBg;
-  }
   // Reparents the real .az-webcam and .az-chat-panel into the stage (or back to their normal
   // homes) rather than cloning them, so nothing needs to be kept in sync.
   function updateTopStage(on) {
@@ -1352,15 +1362,11 @@
     if (!topStage) return;
     var video = document.querySelector(".az-webcam");
     var chat = document.querySelector(".az-chat-panel");
-    // Live + waves off: the video IS the page background (webcamBgHost), leaving the content
-    // row empty (still solid/in-flow, just showing whatever's behind it). Waves on (regardless
-    // of live): the classic content-row panel.
-    var bgMode = on && liveOn && !bgwOn;
+    // Always the same slot - the content row. The old "video as fullscreen page background"
+    // variant meant the cam landed in a different place depending on the waves toggle and the
+    // chat floated over it on mobile.
     if (on) {
-      if (video) {
-        var target = bgMode ? webcamBgHost() : topStageWebcam;
-        if (video.parentElement !== target) target.appendChild(video);
-      }
+      if (video && video.parentElement !== topStageWebcam) topStageWebcam.appendChild(video);
       if (chat && chat.parentElement !== topStageChat) topStageChat.appendChild(chat);
     } else {
       var playerHost = document.querySelector(".radio-player-widget");
@@ -1922,6 +1928,14 @@
       var details = document.querySelector(".radio-player-widget .now-playing-details");
       if (!details) return;
       var isLive = !!(live && live.is_live && live.art);
+      // Vue rebuilds its own .now-playing-art as soon as song art exists again; with ours still
+      // in place that showed two covers stacked (very visible on mobile). Ours is the disposable
+      // one - drop it whenever a real node is back.
+      var arts = details.querySelectorAll(".now-playing-art");
+      if (arts.length > 1)
+        Array.prototype.forEach.call(arts, function (node) {
+          if (node._azLiveSynthetic) node.remove();
+        });
       var art = details.querySelector(".now-playing-art");
       if (isLive) {
         if (!art) {
@@ -2020,11 +2034,7 @@
     function mount() {
       if (mounted) return;
       mounted = true;
-      var host = document.querySelector(".radio-player-widget");
-      if (!host) {
-        mounted = false;
-        return;
-      }
+      var host = document.querySelector(".radio-player-widget") || document.body;
       videoEl = document.createElement("video");
       videoEl.className = "az-webcam";
       videoEl.autoplay = true;
@@ -2097,9 +2107,12 @@
           // it without waiting for the next poll.
           window.azWebcamLive = !!(data && data.live);
           liveOn = window.azWebcamLive;
-          updateBarMode();
-          if (data && data.live) mount();
+          // mount BEFORE updateBarMode: the layout switch reparents the video into the stage in
+          // the same tick it is created, instead of showing it in the player card for one whole
+          // poll interval first. The status flag alone drives the layout - no waiting on WHEP.
+          if (liveOn) mount();
           else unmount();
+          updateBarMode();
         })
         .catch(function () {});
     }
@@ -2898,7 +2911,8 @@
     var panel = document.createElement("div");
     panel.className = "az-chat-panel";
     panel.innerHTML =
-      '<div class="az-chat-header"><span class="az-chat-you"></span></div>' +
+      '<div class="az-chat-header"><span class="az-chat-you"></span>' +
+      '<button type="button" class="az-chat-min" aria-label="Minimize chat" title="Minimize chat">_</button></div>' +
       '<div class="az-chat-messages"></div>' +
       '<form class="az-chat-form"><input class="az-chat-input" maxlength="300" autocomplete="off" placeholder="Say something…">' +
       '<button type="submit" class="az-chat-send">Send</button></form>';
@@ -2907,6 +2921,16 @@
     var messagesEl = panel.querySelector(".az-chat-messages");
     var formEl = panel.querySelector(".az-chat-form");
     var inputEl = panel.querySelector(".az-chat-input");
+    var minBtn = panel.querySelector(".az-chat-min");
+
+    minBtn.addEventListener("click", function () {
+      var min = panel.classList.toggle("az-min");
+      minBtn.textContent = min ? "\u25A1" : "_";
+      var label = min ? "Maximize chat" : "Minimize chat";
+      minBtn.title = label;
+      minBtn.setAttribute("aria-label", label);
+      if (!min) messagesEl.scrollTop = messagesEl.scrollHeight;
+    });
 
     function addMessage(msg) {
       var row = document.createElement("p");
