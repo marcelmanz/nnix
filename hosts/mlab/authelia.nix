@@ -129,6 +129,11 @@
             policy = "two_factor";
             subject = ["group:admins"];
           }
+          {
+            domain = "tags.marcel.cool";
+            policy = "two_factor";
+            subject = ["group:admins"];
+          }
           # Replaces the old livedj/streamcam rules: those hostnames are plain 302s to
           # live.marcel.cool now (proxy.nix), and a redirect vhost has no auth_request, so
           # they never reach Authelia.

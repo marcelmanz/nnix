@@ -5,12 +5,18 @@
   ...
 }: {
   sops.secrets."tagr_secret_key" = {};
+  sops.secrets."tagr_user" = {};
+  sops.secrets."tagr_pass" = {};
 
+  # oci-containers reads this file at start; its contents changing does not
+  # change the unit, so without restartUnits a rotated password silently keeps
+  # the old value in the running container.
+  sops.templates."tagr.env".restartUnits = ["podman-tagr.service"];
   sops.templates."tagr.env".content = ''
     DATABASE_URL=file:/data/tagr.db
     AUTH_SECRET=${config.sops.placeholder.tagr_secret_key}
-    AUTH_USER=${config.sops.placeholder.web_user}
-    AUTH_PASSWORD=${config.sops.placeholder.web_pass}
+    AUTH_USER=${config.sops.placeholder.tagr_user}
+    AUTH_PASSWORD=${config.sops.placeholder.tagr_pass}
     AUTH_URL=${services.tagr.href}
     MUSIC_FOLDERS=/music
   '';
