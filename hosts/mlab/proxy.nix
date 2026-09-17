@@ -161,6 +161,11 @@
       href = "https://sonarr.marcel.cool";
       vpn = "pia";
     };
+    tagr = {
+      port = 3020;
+      href = "https://tags.marcel.cool";
+      protected = true;
+    };
     syncthing = {
       port = 8384;
       href = "https://sync.marcel.cool";

@@ -226,6 +226,13 @@
             };
           }
           {
+            Tagr = {
+              icon = "mdi-tag-multiple";
+              href = services.tagr.href;
+              description = "Tag & organize library";
+            };
+          }
+          {
             Soulbeet = {
               icon = "music";
               href = services.soulbeet.href;

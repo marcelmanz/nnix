@@ -50,6 +50,7 @@
     ./soulbeet.nix
     ./sway.nix
     ./syncthing.nix
+    ./tagr.nix
     ./uptime-kuma.nix
     ./vaultwarden.nix
     ./vpn.nix
