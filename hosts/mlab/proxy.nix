@@ -39,6 +39,11 @@
       port = 3005;
       href = "https://grafana.marcel.cool";
     };
+    files = {
+      port = 8086;
+      href = "https://files.marcel.cool";
+      protected = true;
+    };
     home = {
       port = 8082;
       href = "https://home.marcel.cool";
@@ -222,6 +227,10 @@
         ${lib.optionalString (service.protected or false) ''
           auth_request /internal/authelia/authz;
           error_page 401 = @authelia_login;
+          # Overwrites whatever the client sent, so it cannot be spoofed.
+          # Only apps configured to trust it (filebrowser) read it.
+          auth_request_set $authelia_user $upstream_http_remote_user;
+          proxy_set_header Remote-User $authelia_user;
         ''}
       '';
     };

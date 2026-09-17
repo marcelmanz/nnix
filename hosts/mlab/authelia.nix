@@ -110,6 +110,11 @@
             subject = ["group:admins"];
           }
           {
+            domain = "files.marcel.cool";
+            policy = "two_factor";
+            subject = ["group:admins"];
+          }
+          {
             domain = "sync.marcel.cool";
             policy = "two_factor";
             subject = ["group:admins"];

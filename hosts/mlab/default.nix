@@ -19,6 +19,7 @@
     ./brave-origin-bump.nix
     ./calibre.nix
     ./ddclient.nix
+    ./filebrowser.nix
     ./dropbox.nix
     ./graphana.nix
     ./homepage.nix

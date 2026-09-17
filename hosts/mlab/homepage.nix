@@ -143,7 +143,7 @@
           {
             "Live DJ" = {
               icon = "mdi-microphone";
-              href = services.livedj.href;
+              href = services.live.href;
               description = "Start/stop the live mixer stream";
             };
           }
@@ -311,6 +311,13 @@
             };
           }
           {
+            Files = {
+              icon = "filebrowser";
+              href = services.files.href;
+              description = "Browse dj + live recordings";
+            };
+          }
+          {
             Syncthing = {
               icon = "syncthing";
               href = services.syncthing.href;
@@ -341,6 +348,13 @@
               icon = "grafana";
               href = services.grafana.href;
               description = "Server Metrics";
+            };
+          }
+          {
+            OffTikTok = {
+              icon = "mdi-video";
+              href = services.offtiktok.href;
+              description = "TikTok Frontend";
             };
           }
           {
