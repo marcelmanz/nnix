@@ -288,6 +288,13 @@
         proxy_set_header X-Real-IP $remote_addr;
       '';
     };
+    # Playlist pointing at the RTSP feed, for players that keep a library rather than
+    # take a pasted URL (mpv-android has no bookmarks - this is the saveable handle).
+    # .m3u is not in nginx's mime.types, and without a type Android will not offer a
+    # player in the "open with" chooser.
+    "= /desk.m3u" = {
+      extraConfig = "default_type audio/x-mpegurl;";
+    };
     # The manifest is what makes this installable to a home screen, which is the whole
     # point: an installed app is its own task with its own lifecycle, not a browser tab
     # the OS freezes when the screen locks. .webmanifest is not in nginx's mime.types,

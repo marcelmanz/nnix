@@ -29,6 +29,8 @@
   }
   #play:active { transform:scale(.96); }
   #vol { width:min(70vw,320px); accent-color:var(--accent); }
+  #links { display:flex; gap:14px; font-size:.85rem; }
+  #links a { color:var(--dim); text-decoration:none; border-bottom:1px solid #333; }
   #state { color:var(--dim); font-size:.8rem; min-height:1.2em; }
 </style>
 </head>
@@ -41,6 +43,10 @@
   <button id="play" aria-label="Play">&#9654;</button>
   <input id="vol" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume">
   <div id="state"></div>
+  <div id="links">
+    <a href="rtsp://192.168.1.140:8554/livemix">open in mpv</a>
+    <a href="/desk.m3u">save playlist</a>
+  </div>
   <audio id="stream"></audio>
 
 <script>
