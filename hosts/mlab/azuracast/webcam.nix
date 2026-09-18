@@ -95,6 +95,20 @@
   };
   networking.firewall.allowedUDPPorts = [8189];
 
+  # RTSP (8554) opened to the LAN only, so a phone player can pull the desk monitor
+  # (path livemix, live.nix) at WebRTC-grade latency without a browser in the way.
+  # Deliberately NOT allowedTCPPorts: this host's IPv6 is globally routable with no NAT
+  # in front of it, so a plain open port would publish mediamtx to the internet - and
+  # /authcheck lets livemix reads through unconditionally. Scoped by source on both
+  # families instead. Inserted into nixos-fw rather than appended to INPUT: nixos-fw
+  # refuses at its end, so an INPUT rule after the jump is never reached.
+  # The webcam path is unaffected - its reads still need the public toggle or a token,
+  # and loopback RTSP (azuracast-live-record) still matches its own rule.
+  networking.firewall.extraCommands = ''
+    iptables -I nixos-fw -p tcp --dport 8554 -s 192.168.1.0/24 -j nixos-fw-accept
+    ip6tables -I nixos-fw -p tcp --dport 8554 -s 2a0c:5a83:550c:8300::/64 -j nixos-fw-accept
+  '';
+
   # services.mediamtx writes its config via pkgs.formats.yaml, which prepends a
   # "%YAML 1.1\n---\n" header that MediaMTX's own parser rejects. Strip those first two lines.
   environment.etc."mediamtx.yaml".source = lib.mkForce (

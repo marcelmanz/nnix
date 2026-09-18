@@ -269,21 +269,14 @@
     '';
   };
 
-  # Shared by both LAN players below: the plain-http one on the LAN address and the TLS
-  # one on radiolan.marcel.cool. Same page, same proxies - only the origin differs.
+  # Shared by both LAN desk monitors below: the plain-http one on the LAN address and
+  # the TLS one on radiolan.marcel.cool. Same page, same proxies - only the origin
+  # differs. The mp3 leg and the now-playing proxy are gone: this page is the desk feed
+  # only, the broadcast has its own page on radio.marcel.cool.
   radioLanLocations = {
     "/" = {
       index = "index.html";
       tryFiles = "$uri $uri/ =404";
-    };
-    "= /stream" = {
-      proxyPass = "http://127.0.0.1:${toString services.azuracast.port}/listen/radio_marcel/radio.mp3";
-      extraConfig = ''
-        proxy_buffering off;
-        proxy_request_buffering off;
-        proxy_read_timeout 1h;
-        proxy_send_timeout 1h;
-      '';
     };
     # WHEP leg for the desk monitor (mediamtx path livemix, published by
     # azuracast-live-monitor). Only the media itself is direct - the browser
@@ -295,9 +288,16 @@
         proxy_set_header X-Real-IP $remote_addr;
       '';
     };
-    # now-playing json and album art. AzuraCast 307s to https unless it
-    # sees its canonical host, so pin it rather than passing $host.
-    "/api/" = {
+    # The manifest is what makes this installable to a home screen, which is the whole
+    # point: an installed app is its own task with its own lifecycle, not a browser tab
+    # the OS freezes when the screen locks. .webmanifest is not in nginx's mime.types,
+    # and Chrome ignores a manifest served as octet-stream.
+    "= /app.webmanifest" = {
+      extraConfig = "default_type application/manifest+json;";
+    };
+    # Installability needs a >=192px icon. These are AzuraCast's own, proxied rather
+    # than copied so there is no binary blob in the repo to keep in sync.
+    "/static/icons/" = {
       proxyPass = "http://127.0.0.1:${toString services.azuracast.port}";
       extraConfig = ''
         proxy_set_header Host radio.marcel.cool;
