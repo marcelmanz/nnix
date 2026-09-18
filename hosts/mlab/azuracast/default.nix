@@ -196,11 +196,25 @@ in {
             fi
           fi
 
+          # Icecast hands every new listener burst-size bytes the moment it connects, so
+          # playback starts instantly but that far behind live: AzuraCast hardcodes 65535,
+          # which at 192kbps is ~2.7s. 16384 keeps the instant start (~0.7s of audio, more
+          # than any player needs to begin) and drops ~2s of lag. custom_config is merged
+          # recursively over the generated config (Radio/Frontend/Icecast.php), JSON or XML.
+          # Lower it further only if listeners on flaky links stop rebuffering.
+          BURST_CFG='{"limits":{"burst-size":16384}}'
+          if [ "$(mysql "SELECT JSON_UNQUOTE(JSON_EXTRACT(frontend_config, '\$.custom_config')) FROM station WHERE id=$SID;")" != "$BURST_CFG" ]; then
+            if mysql "UPDATE station SET frontend_config=JSON_SET(frontend_config, '\$.custom_config', '$BURST_CFG') WHERE id=$SID;"; then
+              RADIO_CHANGED=1
+              echo "azuracast-settings: icecast burst-size=16384"
+            fi
+          fi
+
           if [ "$RADIO_CHANGED" = "1" ]; then
             podman exec azuracast azuracast_cli azuracast:radio:restart radio_marcel 2>/dev/null \
-              && echo "azuracast-settings: radio restarted for hls"
+              && echo "azuracast-settings: radio restarted"
           else
-            echo "azuracast-settings: hls already configured, leaving radio alone"
+            echo "azuracast-settings: station already configured, leaving radio alone"
           fi
 
           exit 0

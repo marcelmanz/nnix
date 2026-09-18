@@ -24,6 +24,11 @@
     font-size:2rem; cursor:pointer; display:grid; place-items:center;
   }
   #play:active { transform:scale(.96); }
+  #src { display:flex; border:1px solid #333; border-radius:8px; overflow:hidden; }
+  #src button {
+    border:0; padding:8px 18px; background:#1a1a1f; color:var(--dim); font:inherit; cursor:pointer;
+  }
+  #src button.on { background:var(--accent); color:#fff; }
   #vol { width:min(70vw,320px); accent-color:var(--accent); }
   #state { color:var(--dim); font-size:.8rem; min-height:1.2em; }
 </style>
@@ -33,6 +38,9 @@
   <div>
     <div id="title">Radio Marcel</div>
     <div id="artist"></div>
+  </div>
+  <div id="src">
+    <button data-mode="radio" class="on">Radio</button><button data-mode="desk">Desk</button>
   </div>
   <button id="play" aria-label="Play">&#9654;</button>
   <input id="vol" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume">
@@ -44,20 +52,88 @@ audio.preload = "none";
 const play = document.getElementById("play");
 const state = document.getElementById("state");
 
+// "desk" is the Focusrite mix straight off mediamtx over WebRTC (mediamtx path livemix).
+// The radio leg is ~16s behind the room; this one is under a second, at the cost of being
+// the raw desk feed - no auto-DJ when nobody is playing, and it ignores the broadcast.
+let mode = "radio";
+let pc = null;
+
 function start() {
+  return mode === "desk" ? startDesk() : startRadio();
+}
+function startRadio() {
+  audio.srcObject = null;
   audio.src = "/stream?t=" + Date.now();
   audio.play().catch(e => state.textContent = e.message);
 }
+async function startDesk() {
+  state.textContent = "connecting";
+  pc = new RTCPeerConnection();
+  pc.ontrack = e => {
+    audio.removeAttribute("src");
+    audio.srcObject = e.streams[0];
+    audio.play().catch(err => state.textContent = err.message);
+  };
+  pc.addTransceiver("audio", {direction: "recvonly"});
+  try {
+    await pc.setLocalDescription(await pc.createOffer());
+    const res = await fetch("/livemix/whep", {
+      method: "POST",
+      headers: {"Content-Type": "application/sdp"},
+      body: pc.localDescription.sdp,
+    });
+    if (!res.ok) throw new Error("desk offline");
+    await pc.setRemoteDescription({type: "answer", sdp: await res.text()});
+  } catch (e) {
+    stop();
+    state.textContent = e.message;
+  }
+}
 function stop() {
   audio.pause();
+  if (pc) { pc.close(); pc = null; }
+  audio.srcObject = null;
   audio.removeAttribute("src");
   audio.load();
 }
-play.onclick = () => audio.paused ? start() : stop();
+function playing() {
+  return !audio.paused || pc !== null;
+}
+play.onclick = () => playing() ? stop() : start();
+
+document.getElementById("src").onclick = e => {
+  const picked = e.target.dataset.mode;
+  if (!picked || picked === mode) return;
+  const wasPlaying = playing();
+  stop();
+  mode = picked;
+  for (const b of document.querySelectorAll("#src button")) {
+    b.classList.toggle("on", b.dataset.mode === mode);
+  }
+  if (mode === "desk") {
+    document.getElementById("title").textContent = "Desk";
+    document.getElementById("artist").textContent = "live off the Focusrite";
+    document.getElementById("art").removeAttribute("src");
+  } else {
+    nowPlaying();
+  }
+  if (wasPlaying) start();
+};
 audio.onplaying = () => { play.innerHTML = "&#10074;&#10074;"; state.textContent = ""; };
 audio.onpause = () => { play.innerHTML = "&#9654;"; state.textContent = ""; };
 audio.onwaiting = () => state.textContent = "buffering";
 audio.onerror = () => state.textContent = "stream error";
+
+// A phone that sleeps, roams APs or just buffers ahead keeps the audio it already
+// pulled and falls further behind live every time. Nudge playback 3% faster to eat
+// the drift (pitch-preserved, inaudible); past 5s reconnect instead, which is a
+// fresh burst and an instant resync.
+setInterval(() => {
+  if (mode === "desk" || audio.paused || !audio.buffered.length) return;
+  const drift = audio.buffered.end(audio.buffered.length - 1) - audio.currentTime;
+  if (drift > 5) start();
+  else audio.playbackRate = drift > 1.5 ? 1.03 : 1;
+}, 3000);
 
 const vol = document.getElementById("vol");
 vol.value = localStorage.getItem("vol") ?? 1;
@@ -65,6 +141,7 @@ audio.volume = vol.value;
 vol.oninput = () => { audio.volume = vol.value; localStorage.setItem("vol", vol.value); };
 
 async function nowPlaying() {
+  if (mode === "desk") return;
   try {
     const np = await (await fetch("/api/nowplaying/radio_marcel", {cache:"no-store"})).json();
     const song = np.now_playing.song;

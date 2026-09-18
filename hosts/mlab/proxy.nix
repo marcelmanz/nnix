@@ -656,9 +656,24 @@ in {
                 proxy_send_timeout 1h;
               '';
             };
-            # now-playing json and album art
+            # WHEP leg for the desk monitor (mediamtx path livemix, published by
+            # azuracast-live-monitor). Only the media itself is direct - the browser
+            # reaches mediamtx on UDP 8189 over the LAN, this proxies the signalling.
+            "/livemix/" = {
+              proxyPass = "http://127.0.0.1:8889/livemix/";
+              extraConfig = ''
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+              '';
+            };
+            # now-playing json and album art. AzuraCast 307s to https unless it
+            # sees its canonical host, so pin it rather than passing $host.
             "/api/" = {
               proxyPass = "http://127.0.0.1:${toString services.azuracast.port}";
+              extraConfig = ''
+                proxy_set_header Host radio.marcel.cool;
+                proxy_set_header X-Forwarded-Proto https;
+              '';
             };
           };
         };

@@ -185,6 +185,12 @@ class Handler(BaseHTTPRequestHandler):
                 allowed = (
                     public_live() or given_token == preview_token() or local_rtsp
                 )
+                # livemix is the desk monitor (live.nix). It carries no webcam and is not
+                # gated on the public toggle: the only nginx location that proxies it is the
+                # radio-lan vhost, which binds 192.168.1.140, and mediamtx's own WebRTC
+                # listener is loopback - so reaching this path at all means a LAN client.
+                if req.get("path") == "livemix":
+                    allowed = True
             self.send_response(200 if allowed else 401)
             self.end_headers()
             return

@@ -16,6 +16,7 @@
   #   cable 1  azuracast-live-record
   #   cable 2  the level meter on live.marcel.cool (polls continuously)
   #   cable 3  the sync test and mic test (brief, user-initiated)
+  #   cable 4  azuracast-live-monitor (the WebRTC desk monitor, see below)
   # Verified that a cable with no reader doesn't stall its writer, so the unused ones are free.
   boot.kernelModules = ["snd-aloop"];
 
@@ -50,6 +51,8 @@
               >(${pkgs.alsa-utils}/bin/aplay -D plughw:CARD=Loopback,DEV=0,2 -f S16_LE -r 44100 -c 2 \
                   --buffer-time=200000 --period-time=50000 >/dev/null 2>&1) \
               >(${pkgs.alsa-utils}/bin/aplay -D plughw:CARD=Loopback,DEV=0,3 -f S16_LE -r 44100 -c 2 \
+                  --buffer-time=200000 --period-time=50000 >/dev/null 2>&1) \
+              >(${pkgs.alsa-utils}/bin/aplay -D plughw:CARD=Loopback,DEV=0,4 -f S16_LE -r 44100 -c 2 \
                   --buffer-time=200000 --period-time=50000 >/dev/null 2>&1) \
           | ${pkgs.alsa-utils}/bin/aplay -D plughw:CARD=Loopback,DEV=0,0 -f S16_LE -r 44100 -c 2 \
               --buffer-time=200000 --period-time=50000
@@ -201,6 +204,36 @@
       # recording is never under 1M (~2.7GB/h).
       ExecStopPost = "${pkgs.findutils}/bin/find /var/lib/media/live-recordings -maxdepth 1 -name '*.mkv' -size -1M -delete";
       TimeoutStopSec = "30s"; # room for ffmpeg to write the trailer after SIGTERM
+    };
+  };
+
+  # The desk monitor: the same mix, but out over WebRTC instead of down the radio chain.
+  # The broadcast leg trails the room by ~16s (darkice bufferSecs=5, liquidsoap's harbor
+  # buffer=5.00, icecast's burst, then whatever the listening phone buffers on top), which
+  # is useless for following the desk from another room. This pushes cable 4 into mediamtx
+  # as Opus and lets WebRTC's jitter buffer be the only thing in the way - under a second on
+  # the LAN. Publishing to loopback RTSP, which /authcheck already allows (webcam-control.py).
+  # Always on for the same reason the mixer is: nothing here reaches the broadcast, and a
+  # monitor you have to go and start is a monitor you find out is off mid-show.
+  systemd.services.azuracast-live-monitor = {
+    description = "Publish the live mix to mediamtx for sub-second LAN monitoring";
+    after = ["sound.target" "azuracast-live-mix.service" "mediamtx.service"];
+    bindsTo = ["azuracast-live-mix.service"];
+    wantedBy = ["multi-user.target"];
+    serviceConfig = {
+      Type = "simple";
+      Restart = "on-failure";
+      RestartSec = "5s";
+      # libopus only encodes at 8/12/16/24/48k, so the output rate is set explicitly rather
+      # than left to ffmpeg's implicit resample off the loopback's 44100.
+      # exec, so ffmpeg is the main process and gets the stop signal directly.
+      ExecStart = pkgs.writeShellScript "azuracast-live-monitor" ''
+        exec ${pkgs.ffmpeg}/bin/ffmpeg -nostdin -hide_banner -loglevel warning \
+          -fflags nobuffer -flags low_delay \
+          -f alsa -ar 44100 -ac 2 -i plughw:CARD=Loopback,DEV=1,4 \
+          -c:a libopus -ar 48000 -b:a 128k -application lowdelay -frame_duration 20 \
+          -rtsp_transport tcp -f rtsp rtsp://127.0.0.1:8554/livemix
+      '';
     };
   };
 

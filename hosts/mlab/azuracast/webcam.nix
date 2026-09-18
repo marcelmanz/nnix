@@ -22,6 +22,11 @@
       authMethod = "http";
       authHTTPAddress = "http://127.0.0.1:${toString services.streamcam.port}/authcheck";
 
+      # Audio-only path published by azuracast-live-monitor (live.nix): the desk mix as
+      # Opus, read over WebRTC from the LAN-only player on 192.168.1.140:8091. No public
+      # nginx location proxies it, and webrtcAddress is loopback, so LAN is the only way in.
+      paths.livemix = {};
+
       paths.webcam = {
         # H.264 is required, not cosmetic: ffmpeg's RTSP default encoder is MPEG-4 Part 2,
         # which isn't in WebRTC's codec list (H264/H265/VP8/VP9/AV1).

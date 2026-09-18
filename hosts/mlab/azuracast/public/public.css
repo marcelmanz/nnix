@@ -372,6 +372,65 @@ body.page-minimal .public-page .card-body {
   }
 }
 
+/* Mobile docked bar: at phone width the 56px art can't carry legible PLAY/PAUSE letters, and
+   the hover-zoom that made them readable on desktop has no equivalent on touch - so the bar
+   shows AzuraCast's own play button instead (un-hidden from the controls row, which the base
+   rule hides everywhere else) as a real 48px touch target. The volume pill goes with it: a
+   360px row can't hold art + marquee + button + slider, and phones have hardware volume keys
+   (iOS ignores audio.volume outright). The art still toggles play on tap. */
+@media (max-width: 768px) {
+  html.az-bar body.page-minimal .public-page .card-body {
+    padding: 6px 10px;
+  }
+  html.az-bar .radio-player-widget .now-playing-art,
+  html.az-bar .radio-player-widget .now-playing-art img {
+    width: 44px;
+    height: 44px;
+  }
+  html.az-bar .radio-player-widget .now-playing-art {
+    margin-right: 10px;
+  }
+  html.az-bar .radio-player-widget .now-playing-main {
+    padding-right: 72px; /* the play button's slot (48px + its 12px right offset) */
+  }
+  html.az-bar .radio-player-widget .now-playing-title {
+    font-size: 1rem !important;
+  }
+  html.az-bar .radio-player-widget .now-playing-artist {
+    font-size: 0.8rem !important;
+  }
+  html.az-bar .radio-player-widget .az-eq {
+    height: 18px;
+  }
+  html.az-bar .radio-player-widget .radio-control-volume {
+    display: none;
+  }
+  html.az-bar .radio-player-widget .radio-controls .radio-control-play-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border-radius: 50%;
+    border: 2px solid rgb(var(--hud-accent-3-rgb));
+    background: rgba(30, 64, 255, 0.85);
+    color: #fff;
+  }
+  html.az-bar .radio-player-widget .radio-controls .radio-control-play-button svg {
+    width: 26px;
+    height: 26px;
+  }
+  /* Letters at 44px are a smear, and the button beside them is the visible control now. */
+  html.az-bar .radio-player-widget .now-playing-art .az-overlay-play {
+    display: none;
+  }
+  /* Hover-zoom is a pointer affordance - on touch it sticks after the tap that started play. */
+  html.az-bar .radio-player-widget .now-playing-art:hover {
+    transform: none;
+  }
+}
+
 /* --- stream quality selector: the built-in #btn-select-stream dropdown --- */
 /* Shows once the station has 2+ public mounts; item titles are the mounts' display_name
    (format + bitrate, from each mount's display_name in azuracast/default.nix; the player itself
@@ -2200,3 +2259,51 @@ html.az-calm .az-bg-pop-title {
 /* Mobile live-webcam takeover now shares the desktop docked-bar/top-stage mechanism above
    (html.az-bar / .az-topstage) instead of its own copy - see updateBarMode()/updateTopStage()
    in public.js. */
+
+/* Mobile "Click to play..." hint: a centered tap target, up while the stream is stopped
+   (html.az-stopped - the same flag the card border reads, see public.js). Phone only: on
+   desktop the album art's own PLAY overlay is already big and hover-reachable. Deliberately a
+   pill and not a full-screen scrim, so the HUD, chat and docked bar stay tappable behind it -
+   and in the undocked layout it lands right over the album art, where the art's own PLAY text
+   would otherwise read as a second, competing label (hidden below). */
+.az-tap-play {
+  display: none;
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1002; /* above the docked bar (1001) - it is the thing to press */
+  padding: 14px 22px;
+  border: 2px solid rgb(var(--hud-accent-3-rgb));
+  border-radius: 999px;
+  background: var(--hud-bg-strong);
+  color: rgb(var(--hud-text-rgb));
+  font-family: "Arial Black", "Arial Bold", sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+  box-shadow: 0 0 18px rgba(var(--hud-accent-rgb), 0.5);
+  cursor: pointer;
+  animation: az-tap-pulse 1.6s ease-in-out infinite;
+}
+@media (max-width: 768px) {
+  html.az-stopped .az-tap-play {
+    display: block;
+  }
+  html.az-stopped .radio-player-widget .now-playing-art .az-overlay-play {
+    display: none;
+  }
+}
+@keyframes az-tap-pulse {
+  50% {
+    transform: translate(-50%, -50%) scale(1.06);
+  }
+}
+/* Calm (anti-seizure) mode and reduced motion both drop the pulse - the pill stays, still. */
+html.az-calm .az-tap-play {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .az-tap-play {
+    animation: none;
+  }
+}

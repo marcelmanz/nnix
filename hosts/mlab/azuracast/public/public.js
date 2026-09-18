@@ -603,6 +603,21 @@
     document.documentElement.classList.toggle("az-stopped", !isPlaying());
   }, 300);
 
+  // Mobile "Click to play..." hint. Visibility is CSS-only (html.az-stopped from the poller
+  // above, plus the phone media query - see .az-tap-play in public.css), so this only builds
+  // the node once and wires it to the same togglePlayPause() the album art uses.
+  function addTapPlay() {
+    if (!document.body || document.querySelector(".az-tap-play")) return;
+    var tap = document.createElement("button");
+    tap.type = "button";
+    tap.className = "az-tap-play";
+    tap.textContent = "Click to play...";
+    tap.addEventListener("click", togglePlayPause);
+    document.body.appendChild(tap);
+  }
+  if (document.body) addTapPlay();
+  else document.addEventListener("DOMContentLoaded", addTapPlay);
+
   // Arrow keys adjust volume by setting the range input's value and dispatching an 'input' event,
   // which Vue's v-model picks up, updates the store, and persists to localStorage. If muted,
   // unmute on up so the change is audible; down on a muted stream does nothing (already silent).
