@@ -136,7 +136,7 @@
           {
             "Radio LAN" = {
               icon = "azuracast";
-              href = "http://192.168.1.140:8091";
+              href = "https://radiolan.marcel.cool";
               description = "Radio Marcel, LAN only";
             };
           }

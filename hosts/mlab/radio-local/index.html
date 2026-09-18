@@ -124,6 +124,16 @@ audio.onpause = () => { play.innerHTML = "&#9654;"; state.textContent = ""; };
 audio.onwaiting = () => state.textContent = "buffering";
 audio.onerror = () => state.textContent = "stream error";
 
+// What the AzuraCast public page does and this one did not: register a media session.
+// A tab with one is a media player to the OS - notification, lock screen controls, and the
+// background playback that comes with them. Without it a locked phone sees a silent
+// background tab and is free to freeze it, which is why this stopped and that page didn't.
+if ("mediaSession" in navigator) {
+  navigator.mediaSession.setActionHandler("play", start);
+  navigator.mediaSession.setActionHandler("pause", stop);
+  navigator.mediaSession.setActionHandler("stop", stop);
+}
+
 // A phone that sleeps, roams APs or just buffers ahead keeps the audio it already
 // pulled and falls further behind live every time. Nudge playback 3% faster to eat
 // the drift (pitch-preserved, inaudible); past 5s reconnect instead, which is a
@@ -147,8 +157,17 @@ async function nowPlaying() {
     const song = np.now_playing.song;
     document.getElementById("title").textContent = song.title || np.station.name;
     document.getElementById("artist").textContent = song.artist || "";
-    document.getElementById("art").src = song.art.replace(/^https?:\/\/[^/]+/, "");
+    const art = song.art.replace(/^https?:\/\/[^/]+/, "");
+    document.getElementById("art").src = art;
     document.title = song.artist ? song.artist + " - " + song.title : "Radio Marcel";
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: song.title || np.station.name,
+        artist: song.artist || "",
+        album: song.album || "",
+        artwork: [{src: art, sizes: "512x512", type: "image/jpeg"}],
+      });
+    }
   } catch {}
 }
 nowPlaying();

@@ -269,6 +269,43 @@
     '';
   };
 
+  # Shared by both LAN players below: the plain-http one on the LAN address and the TLS
+  # one on radiolan.marcel.cool. Same page, same proxies - only the origin differs.
+  radioLanLocations = {
+    "/" = {
+      index = "index.html";
+      tryFiles = "$uri $uri/ =404";
+    };
+    "= /stream" = {
+      proxyPass = "http://127.0.0.1:${toString services.azuracast.port}/listen/radio_marcel/radio.mp3";
+      extraConfig = ''
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_read_timeout 1h;
+        proxy_send_timeout 1h;
+      '';
+    };
+    # WHEP leg for the desk monitor (mediamtx path livemix, published by
+    # azuracast-live-monitor). Only the media itself is direct - the browser
+    # reaches mediamtx on UDP 8189 over the LAN, this proxies the signalling.
+    "/livemix/" = {
+      proxyPass = "http://127.0.0.1:8889/livemix/";
+      extraConfig = ''
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+      '';
+    };
+    # now-playing json and album art. AzuraCast 307s to https unless it
+    # sees its canonical host, so pin it rather than passing $host.
+    "/api/" = {
+      proxyPass = "http://127.0.0.1:${toString services.azuracast.port}";
+      extraConfig = ''
+        proxy_set_header Host radio.marcel.cool;
+        proxy_set_header X-Forwarded-Proto https;
+      '';
+    };
+  };
+
   serviceVirtualHosts = lib.mapAttrs mkProxyHost services;
 in {
   _module.args.services = services;
@@ -642,40 +679,32 @@ in {
             }
           ];
           root = "${./radio-local}";
-          locations = {
-            "/" = {
-              index = "index.html";
-              tryFiles = "$uri $uri/ =404";
-            };
-            "= /stream" = {
-              proxyPass = "http://127.0.0.1:${toString services.azuracast.port}/listen/radio_marcel/radio.mp3";
-              extraConfig = ''
-                proxy_buffering off;
-                proxy_request_buffering off;
-                proxy_read_timeout 1h;
-                proxy_send_timeout 1h;
-              '';
-            };
-            # WHEP leg for the desk monitor (mediamtx path livemix, published by
-            # azuracast-live-monitor). Only the media itself is direct - the browser
-            # reaches mediamtx on UDP 8189 over the LAN, this proxies the signalling.
-            "/livemix/" = {
-              proxyPass = "http://127.0.0.1:8889/livemix/";
-              extraConfig = ''
-                proxy_set_header Host $host;
-                proxy_set_header X-Real-IP $remote_addr;
-              '';
-            };
-            # now-playing json and album art. AzuraCast 307s to https unless it
-            # sees its canonical host, so pin it rather than passing $host.
-            "/api/" = {
-              proxyPass = "http://127.0.0.1:${toString services.azuracast.port}";
-              extraConfig = ''
-                proxy_set_header Host radio.marcel.cool;
-                proxy_set_header X-Forwarded-Proto https;
-              '';
-            };
-          };
+          locations = radioLanLocations;
+        };
+
+        # The same player over TLS. Not a nicety: Media Session (what keeps audio alive
+        # behind a phone's lock screen, and what the AzuraCast public page uses) is a
+        # secure-context API, so on http://192.168.1.140 navigator.mediaSession simply
+        # does not exist and the page is a silent background tab the OS is free to freeze.
+        # A private IP is not a trustworthy origin, only localhost is - so it needs a name
+        # and a real cert, which the *.marcel.cool wildcard already covers.
+        # radiolan.marcel.cool resolves to 192.168.1.140, so it is only findable on the LAN;
+        # the allow/deny is the second lock, for anyone who reaches :443 by the public IP
+        # and sets the Host header by hand. Both families are listed because LAN devices
+        # have no private v6 address - they reach this over the ISP-delegated global prefix,
+        # so an IPv4-only allow list 403s every one of them that resolves an AAAA.
+        # ponytail: the v6 prefix is hardcoded; if the ISP ever rotates it this 403s until
+        # the new /64 is pasted in. A prefix lookup at build time is not worth the machinery.
+        "radiolan.marcel.cool" = {
+          forceSSL = true;
+          useACMEHost = "marcel.cool";
+          root = "${./radio-local}";
+          extraConfig = ''
+            allow 192.168.1.0/24;
+            allow 2a0c:5a83:550c:8300::/64;
+            deny all;
+          '';
+          locations = radioLanLocations;
         };
 
         # Catch-all static host for *.marcel.cool subdomains not listed above.
