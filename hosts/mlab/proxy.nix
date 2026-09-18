@@ -630,6 +630,39 @@ in {
           };
         };
 
+        # LAN-only player: plain HTTP, one static file, and a direct proxy to the
+        # mp3 mount. No TLS handshake and none of the AzuraCast Vue bundle, so it
+        # starts as soon as icecast's burst buffer lands. Bound to the LAN address
+        # rather than 0.0.0.0 so it is not reachable over the public IPv6.
+        "radio-lan" = {
+          listen = [
+            {
+              addr = "192.168.1.140";
+              port = 8091;
+            }
+          ];
+          root = "${./radio-local}";
+          locations = {
+            "/" = {
+              index = "index.html";
+              tryFiles = "$uri $uri/ =404";
+            };
+            "= /stream" = {
+              proxyPass = "http://127.0.0.1:${toString services.azuracast.port}/listen/radio_marcel/radio.mp3";
+              extraConfig = ''
+                proxy_buffering off;
+                proxy_request_buffering off;
+                proxy_read_timeout 1h;
+                proxy_send_timeout 1h;
+              '';
+            };
+            # now-playing json and album art
+            "/api/" = {
+              proxyPass = "http://127.0.0.1:${toString services.azuracast.port}";
+            };
+          };
+        };
+
         # Catch-all static host for *.marcel.cool subdomains not listed above.
         # Serves /var/www/pages/<sub>/index.html — used by `pir report --page`
         # (and anything else that drops a self-contained HTML file there).

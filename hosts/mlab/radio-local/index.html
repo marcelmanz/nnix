@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Radio Marcel (LAN)</title>
+<style>
+  :root { color-scheme: dark; --bg:#0d0d0f; --fg:#f2f2f2; --dim:#8a8a92; --accent:#2196F3; }
+  * { box-sizing: border-box; }
+  body {
+    margin:0; min-height:100dvh; background:var(--bg); color:var(--fg);
+    font:16px/1.4 system-ui, sans-serif;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding:24px;
+  }
+  #art {
+    width:min(70vw,320px); aspect-ratio:1; border-radius:12px; background:#1a1a1f;
+    object-fit:cover; box-shadow:0 8px 40px #0008;
+  }
+  #title { font-size:1.25rem; font-weight:600; text-align:center; }
+  #artist { color:var(--dim); text-align:center; }
+  #play {
+    width:88px; height:88px; border:0; border-radius:50%; background:var(--accent); color:#fff;
+    font-size:2rem; cursor:pointer; display:grid; place-items:center;
+  }
+  #play:active { transform:scale(.96); }
+  #vol { width:min(70vw,320px); accent-color:var(--accent); }
+  #state { color:var(--dim); font-size:.8rem; min-height:1.2em; }
+</style>
+</head>
+<body>
+  <img id="art" alt="">
+  <div>
+    <div id="title">Radio Marcel</div>
+    <div id="artist"></div>
+  </div>
+  <button id="play" aria-label="Play">&#9654;</button>
+  <input id="vol" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume">
+  <div id="state"></div>
+
+<script>
+const audio = new Audio();
+audio.preload = "none";
+const play = document.getElementById("play");
+const state = document.getElementById("state");
+
+function start() {
+  audio.src = "/stream?t=" + Date.now();
+  audio.play().catch(e => state.textContent = e.message);
+}
+function stop() {
+  audio.pause();
+  audio.removeAttribute("src");
+  audio.load();
+}
+play.onclick = () => audio.paused ? start() : stop();
+audio.onplaying = () => { play.innerHTML = "&#10074;&#10074;"; state.textContent = ""; };
+audio.onpause = () => { play.innerHTML = "&#9654;"; state.textContent = ""; };
+audio.onwaiting = () => state.textContent = "buffering";
+audio.onerror = () => state.textContent = "stream error";
+
+const vol = document.getElementById("vol");
+vol.value = localStorage.getItem("vol") ?? 1;
+audio.volume = vol.value;
+vol.oninput = () => { audio.volume = vol.value; localStorage.setItem("vol", vol.value); };
+
+async function nowPlaying() {
+  try {
+    const np = await (await fetch("/api/nowplaying/radio_marcel", {cache:"no-store"})).json();
+    const song = np.now_playing.song;
+    document.getElementById("title").textContent = song.title || np.station.name;
+    document.getElementById("artist").textContent = song.artist || "";
+    document.getElementById("art").src = song.art.replace(/^https?:\/\/[^/]+/, "");
+    document.title = song.artist ? song.artist + " - " + song.title : "Radio Marcel";
+  } catch {}
+}
+nowPlaying();
+setInterval(nowPlaying, 10000);
+</script>
+</body>
+</html>

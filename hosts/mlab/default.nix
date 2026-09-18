@@ -244,6 +244,7 @@
         53 # DNS (dnsmasq), LAN only - see local-service below
         80 # nginx catch-all / http to https redirects
         443 # Nginx HTTPS
+        8091 # local radio page, LAN only - nginx binds 192.168.1.140
         50300 # Soulseek peer port
       ];
       allowedUDPPorts = [53];

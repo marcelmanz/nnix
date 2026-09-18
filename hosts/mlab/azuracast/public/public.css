@@ -239,10 +239,13 @@ html.az-bar .az-topstage {
   }
 }
 /* Fixed, viewport-scaled height (not a share of whatever's left) - a solid row that's always
-   there and always the same size, live cam or not, rather than growing/shrinking around it. */
+   there and always the same size, live cam or not, rather than growing/shrinking around it.
+   min-height:0 is what makes that basis actually hold: a column flex item's automatic minimum
+   size is its content, and a chat with a screenful of messages blew past 320px, squeezing the
+   webcam row above it to zero height (mobile, where the stage is short, lost the video entirely). */
 .az-topstage-chat {
   flex: 0 0 clamp(200px, 40vh, 320px);
-  min-width: 0;
+  min-height: 0;
   border-top: 1px solid rgba(var(--hud-accent-rgb), 0.4);
 }
 /* Minimized chat (the header button): the row shrinks to its header, giving the cam the space. */
