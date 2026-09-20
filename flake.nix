@@ -114,6 +114,7 @@
         (final: prev: {nuit = nu-alias-converter.packages.${system}.default;})
         (import ./overlays/rust.nix {inherit pkgs crane;})
         (final: prev: {haralyzer = import ./packages/haralyzer/package.nix {inherit pkgs;};})
+        (final: prev: {pinentry-rbw = import ./packages/pinentry-rbw/package.nix {inherit pkgs;};})
         (final: prev: {discogs2xlsx = import ./packages/discogs2xlsx/package.nix {inherit pkgs;};})
         (final: prev: {"nitter-session" = import ./packages/nitter-session/package.nix {inherit pkgs;};})
         (final: prev: {zuban = inputs.zuban.packages.${system}.default;})

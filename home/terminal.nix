@@ -47,24 +47,7 @@ in {
       email = "vaultwarden@marcel.cool";
       base_url = "https://vault.marcel.cool";
       lock_timeout = 3600;
-      pinentry = pkgs.writeShellApplication {
-        name = "pinentry-rbw";
-        runtimeInputs = [pkgs.libsecret pkgs.pinentry-qt];
-        text = ''
-          # auto-fills the rbw master password from the gnome login keyring
-          pass=$(secret-tool lookup application rbw 2>/dev/null)
-          [ -n "$pass" ] || exec pinentry-qt "$@"
-
-          printf 'OK Pleased to meet you\n'
-          while IFS= read -r line; do
-            case "$line" in
-              GETPIN) printf 'D %s\nOK\n' "''${pass//'%'/'%25'}" ;;
-              BYE) printf 'OK\n'; exit 0 ;;
-              *) printf 'OK\n' ;;
-            esac
-          done
-        '';
-      };
+      pinentry = pkgs.pinentry-rbw;
     };
   };
 
