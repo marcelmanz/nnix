@@ -47,6 +47,7 @@ in {
       email = "vaultwarden@marcel.cool";
       base_url = "https://vault.marcel.cool";
       lock_timeout = 3600;
+      sync_interval = 3600;
       pinentry = pkgs.pinentry-rbw;
     };
   };

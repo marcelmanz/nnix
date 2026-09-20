@@ -38,6 +38,7 @@ in {
 
   virtualisation.oci-containers.containers.invidious-companion = {
     image = "quay.io/invidious/invidious-companion:latest";
+    pull = "newer";
     environmentFiles = [
       config.sops.templates."invidious-companion.env".path
     ];
@@ -50,5 +51,17 @@ in {
     volumes = [
       "invidious-companion-cache:/var/tmp/youtubei.js:rw"
     ];
+  };
+
+  # PO token logic changes often upstream; the default pull policy ("missing")
+  # left this image untouched for 5 months. "newer" + a weekly restart keeps it
+  # current without pinning a digest that would have to be bumped by hand.
+  systemd.services.invidious-companion-update = {
+    description = "Restart invidious-companion so it pulls a newer image";
+    startAt = "weekly";
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "/run/current-system/sw/bin/systemctl restart podman-invidious-companion.service";
+    };
   };
 }
