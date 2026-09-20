@@ -27,6 +27,41 @@
         host = "0.0.0.0";
         port = services.sabnzbd.port;
       };
+      # Credentials stay in the runtime ini: the merge is recursive and runs
+      # nix-last, so these keys win while username/password survive untouched.
+      # Measured off-tunnel (see vpn.nix), 15s per run over alt.binaries.boneless:
+      #   eweka    20 conns 166 MB/s | 40 conns 332 MB/s | 50 conns 347 MB/s
+      #   giganews 20 conns 9.5 MB/s | 40 conns  21 MB/s
+      # so eweka at its 50-connection account cap saturates the 2.8 Gbit line
+      # and giganews is provider-limited whatever we do - hence backup only.
+      servers = {
+        "news.eweka.nl" = {
+          name = "news.eweka.nl";
+          displayname = "Eweka";
+          host = "news.eweka.nl";
+          # 563/TLS, not 119/plaintext: same throughput, and the tunnel was
+          # the only reason plaintext ever looked faster.
+          port = 563;
+          ssl = true;
+          connections = 50;
+          priority = 0;
+          # the module's null default renders as the literal "None"; SAB wants
+          # an empty string for "no expiry", which is what it already has.
+          expire_date = "";
+        };
+        "news.giganews.com" = {
+          name = "news.giganews.com";
+          displayname = "Giganews";
+          host = "news.giganews.com";
+          port = 443;
+          ssl = true;
+          # account allows 100; 50 is enough for a fill server that only ever
+          # sees what eweka is missing.
+          connections = 50;
+          priority = 12;
+          expire_date = "";
+        };
+      };
     };
     allowConfigWrite = true;
   };

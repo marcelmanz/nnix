@@ -263,8 +263,11 @@
         # the namespace; this is the host's half of that pair - without it the
         # SYN is dropped here and Sonarr/Radarr silently can't send to SAB.
         # Scoped to the bridge's own source address so it is not a general
-        # open door on 8080.
-        iptables -A INPUT -s ${config.vpnNamespaces.pia.namespaceAddress} -p tcp --dport ${toString services.sabnzbd.port} -j ACCEPT
+        # open door on 8080. Guarded with -C because extraCommands appends to
+        # INPUT directly, not to a chain the reload flushes, so an unguarded
+        # -A stacks one more copy of this rule on every firewall reload.
+        iptables -C INPUT -s ${config.vpnNamespaces.pia.namespaceAddress} -p tcp --dport ${toString services.sabnzbd.port} -j ACCEPT 2>/dev/null \
+          || iptables -A INPUT -s ${config.vpnNamespaces.pia.namespaceAddress} -p tcp --dport ${toString services.sabnzbd.port} -j ACCEPT
       '';
       trustedInterfaces = ["podman0"];
     };
