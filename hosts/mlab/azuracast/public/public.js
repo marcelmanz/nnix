@@ -2041,9 +2041,16 @@
   (function () {
     var STATUS_URL = "/webcam-status";
     var WHEP_URL = "https://radio.marcel.cool/webcam/whep";
+    var HLS_URL = "/webcam-hls/index.m3u8";
+    var HLSJS_URL = "/hls.js";
     var POLL_MS = 5000;
+    // How long WHEP gets to produce a picture before the HLS fallback takes over. ICE does
+    // eventually report "failed" on its own, but only after tens of seconds of black video.
+    var WHEP_TIMEOUT_MS = 6000;
     var pc = null,
       videoEl = null,
+      hls = null,
+      whepTimer = null,
       mounted = false;
 
     function mount() {
@@ -2073,6 +2080,16 @@
       });
       host.insertBefore(videoEl, host.firstChild);
 
+      // WebRTC only works on the LAN: the WHEP exchange below is proxied over 443 and succeeds
+      // from anywhere, but the media itself is a direct UDP flow to mediamtx on 8189, which is
+      // not reachable from outside (no port forward, no STUN/TURN). So the fallback is armed on
+      // "no picture", not on a failed request - the request is exactly the part that works.
+      whepTimer = setTimeout(startHls, WHEP_TIMEOUT_MS);
+      videoEl.addEventListener("playing", function () {
+        clearTimeout(whepTimer);
+        whepTimer = null;
+      });
+
       pc = new RTCPeerConnection();
       pc.ontrack = function (e) {
         videoEl.srcObject = e.streams[0];
@@ -2096,12 +2113,64 @@
           return pc.setRemoteDescription({ type: "answer", sdp: answer });
         })
         .catch(function () {
-          unmount();
+          startHls();
         });
+    }
+
+    // LL-HLS off the same mediamtx path (see webcam.nix / the /webcam-hls/ proxy). A few
+    // seconds behind the WebRTC leg, but it reaches viewers the UDP one cannot.
+    function startHls() {
+      if (whepTimer) {
+        clearTimeout(whepTimer);
+        whepTimer = null;
+      }
+      if (pc) {
+        pc.close();
+        pc = null;
+      }
+      if (!videoEl || hls) return;
+      videoEl.srcObject = null;
+      // MSE is the discriminator, not canPlayType: Chromium answers "maybe" for
+      // application/vnd.apple.mpegurl and then does not play it (the element reaches
+      // readyState 4 and currentTime never leaves 0), so trusting that hands every Chrome
+      // viewer a frozen frame. hls.js needs MSE; the only players without it are iOS's,
+      // which are also the only ones that really do play HLS from a plain src. Everywhere
+      // else the library is fetched only at this point, so a LAN viewer never downloads it.
+      if (!window.MediaSource && videoEl.canPlayType("application/vnd.apple.mpegurl")) {
+        videoEl.src = HLS_URL;
+        videoEl.play().catch(function () {});
+        return;
+      }
+      loadHlsJs(function () {
+        if (!videoEl || !window.Hls || !window.Hls.isSupported()) return;
+        hls = new window.Hls({ lowLatencyMode: true });
+        hls.loadSource(HLS_URL);
+        hls.attachMedia(videoEl);
+        // autoplay does not re-fire for a source attached this late
+        hls.on(window.Hls.Events.MANIFEST_PARSED, function () {
+          videoEl.play().catch(function () {});
+        });
+      });
+    }
+
+    function loadHlsJs(cb) {
+      if (window.Hls) return cb();
+      var s = document.createElement("script");
+      s.src = HLSJS_URL;
+      s.onload = cb;
+      document.head.appendChild(s);
     }
 
     function unmount() {
       mounted = false;
+      if (whepTimer) {
+        clearTimeout(whepTimer);
+        whepTimer = null;
+      }
+      if (hls) {
+        hls.destroy();
+        hls = null;
+      }
       if (pc) {
         pc.close();
         pc = null;

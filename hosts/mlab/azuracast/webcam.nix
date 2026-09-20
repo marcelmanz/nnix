@@ -9,9 +9,18 @@
     enable = true;
     allowVideoAccess = true; # grants the "video" group so /dev/video0 is readable
     settings = {
-      # WebRTC only - rtsp stays on (internal-only, used by the ffmpeg push below); hls/rtmp are
-      # unused and hls's default port collides with an existing container on this host.
-      hls = false;
+      # WebRTC for the LAN, LL-HLS for everyone else. The WHEP handshake is proxied over 443,
+      # but WebRTC's media leg is a direct UDP flow to 8189 - not forwarded on the router, and
+      # with no STUN/TURN behind it - so off the LAN the negotiation succeeds and no frame ever
+      # arrives. HLS rides the same nginx 443 as the signalling, which is the whole point: it
+      # reaches every viewer (including UDP-blocking networks and iOS) without opening a port,
+      # and it goes through the same /authcheck, so the go-live toggle still gates it.
+      # 8890, not mediamtx's default 8888: that one is seadoc's (see proxy.nix).
+      # lowLatency pairs with the publisher's -g 60 below - a 1s GOP against 1s segments.
+      # rtsp stays on (internal-only, used by the ffmpeg push below); rtmp is unused.
+      hls = true;
+      hlsAddress = "127.0.0.1:8890";
+      hlsVariant = "lowLatency";
       rtmp = false;
       webrtcAdditionalHosts = ["radio.marcel.cool"];
       webrtcAddress = "127.0.0.1:8889";

@@ -52,7 +52,7 @@ in {
     description = "Apply declarative AzuraCast settings";
     after = ["podman-azuracast.service"];
     wantedBy = ["multi-user.target"];
-    path = [pkgs.podman pkgs.coreutils];
+    path = [pkgs.podman pkgs.coreutils pkgs.gnused];
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
@@ -65,11 +65,12 @@ in {
         if podman exec azuracast azuracast_cli azuracast:settings:set homepage_redirect_url /public/radio_marcel 2>/dev/null; then
           echo "azuracast-settings: homepage_redirect_url=/public/radio_marcel"
 
-          podman exec azuracast azuracast_cli azuracast:settings:set public_custom_css "$(cat "$CSS_FILE")" 2>/dev/null \
-            && echo "azuracast-settings: public_custom_css (from $CSS_FILE)"
-
-          podman exec azuracast azuracast_cli azuracast:settings:set public_custom_js "$(cat "$JS_FILE")" 2>/dev/null \
-            && echo "azuracast-settings: public_custom_js (from $JS_FILE)"
+          # Deliberately not `... && echo`: this used to be two azuracast_cli calls with
+          # their stderr dropped, so when the value outgrew the argv limit they failed
+          # without a word and the page kept serving the old file. Run bare, a failure
+          # aborts the unit and says so.
+          ${pkgs.runtimeShell} ${./public-assets.sh} "$CSS_FILE" "$JS_FILE"
+          echo "azuracast-settings: public_custom_css/js (from $CSS_FILE, $JS_FILE)"
 
           # HLS delivery. The plain mp3 mount is a single endless TCP connection, so any blip on
           # the listener's side kills it outright and nothing server-side can prevent that. HLS

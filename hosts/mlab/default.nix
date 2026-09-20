@@ -452,6 +452,7 @@
     lsof
     mysql84
     neovim
+    pi-coding-agent
     ripgrep
     starship
     sysz
@@ -566,6 +567,22 @@
         file."scripts".source = "${inputs.dots}/scripts";
         file.".bash_aliases".source = "${inputs.dots}/.bash_aliases";
         file.".config/btop".source = "${inputs.dots}/.config/btop";
+        file.".pi/agent/settings.json" = {
+          source = "${inputs.dots}/.pi/agent/settings.json";
+          force = true;
+        };
+        file.".pi/agent/models.json" = {
+          source = "${inputs.dots}/.pi/agent/models.json";
+          force = true;
+        };
+        file.".pi/agent/mcp.json" = {
+          source = "${inputs.dots}/.pi/agent/mcp.json";
+          force = true;
+        };
+        file.".agents/skills/" = {
+          source = "${inputs.dots}/.agents/skills";
+          force = true;
+        };
       };
     };
     users.dev = {

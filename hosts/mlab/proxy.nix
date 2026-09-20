@@ -1,6 +1,6 @@
 {
   config,
-  _pkgs,
+  pkgs,
   lib,
   ...
 }: let
@@ -313,6 +313,16 @@
     };
   };
 
+  # Pinned and self-hosted rather than pulled from a CDN: the public page is the one thing
+  # here every listener loads, and a third-party script tag on it is both a supply-chain hole
+  # and a third party watching who listens. Only fetched by a viewer whose WebRTC leg failed.
+  # The light build (354K vs 542K): it drops alt-audio, subtitles and EME, none of which a
+  # muted single-track camera feed has, and keeps the low-latency path, which it needs.
+  hlsJs = pkgs.fetchurl {
+    url = "https://cdn.jsdelivr.net/npm/hls.js@1.6.15/dist/hls.light.min.js";
+    hash = "sha256-lGe5oyeLznQHc+WUI0CaAvvLuNxmg3HxcZixjCoaszY=";
+  };
+
   serviceVirtualHosts = lib.mapAttrs mkProxyHost services;
 in {
   _module.args.services = services;
@@ -567,6 +577,44 @@ in {
                     proxy_set_header X-Real-IP $remote_addr;
                     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                     proxy_set_header X-Forwarded-Proto https;
+                  '';
+                };
+                # The same camera over LL-HLS (mediamtx, see webcam.nix), which is what every
+                # viewer off the LAN actually gets: the WHEP leg above negotiates fine from
+                # anywhere, but its media is a direct UDP flow to 8189 that only the LAN can
+                # reach. This one is plain HTTP over the 443 that is already open, so nothing
+                # new is exposed, and mediamtx still runs it through /authcheck.
+                # No limit_req: the webcam zone is 10r/m and an HLS player asks for a playlist
+                # once per segment, so that rate would 503 a legitimate viewer within seconds.
+                # limit_conn stays - it is the one that caps a single client's fan-out.
+                # proxy_buffering off: low-latency HLS ships partial segments as they are
+                # produced, and buffering them puts back exactly the delay it removes.
+                "/webcam-hls/" = {
+                  proxyPass = "http://127.0.0.1:8890/webcam/";
+                  extraConfig = ''
+                    limit_conn webcam_conn 10;
+                    proxy_set_header Host $host;
+                    proxy_buffering off;
+                    # mediamtx bounces the first playlist request through a ?cookieCheck=1
+                    # redirect (it probes for partitioned-cookie support before handing out
+                    # its hlsSession cookie), and it builds that Location from its own path -
+                    # "/webcam/", which on this vhost is the WebRTC leg on 8889. Without this
+                    # the player follows the redirect straight into the wrong backend and gets
+                    # no playlist. Everything else in the playlist is relative and needs nothing.
+                    proxy_redirect /webcam/ /webcam-hls/;
+                  '';
+                };
+                # Loaded lazily by public.js only once the WebRTC leg has failed, so a LAN
+                # viewer never downloads it. Exact match so the base "/" location (AzuraCast)
+                # does not swallow it.
+                "= /hls.js" = {
+                  alias = "${hlsJs}";
+                  extraConfig = ''
+                    # This server has no gzip on by default and the file is 354K; on the fly
+                    # takes it to ~105K, which for a once-per-viewer immutable asset is free.
+                    gzip on;
+                    gzip_types text/javascript application/javascript;
+                    add_header Cache-Control "public, max-age=31536000, immutable";
                   '';
                 };
                 # Public, unauthenticated: whether the admin has toggled the webcam visible on

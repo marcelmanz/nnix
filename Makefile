@@ -45,14 +45,16 @@ nixos-nixbuild-mlab:
 		--option max-jobs 0
 
 # push only the azuracast public custom css/js to the live box, no full nixos rebuild.
-# the css/js live in azuracast's settings db (applied via azuracast_cli in default.nix), so this
-# just cats the local files into `azuracast:settings:set` over ssh. no container or radio restart
-# needed - the public page picks the new css/js up on next load.
+# the css/js live in azuracast's settings db, so this scps the local files over and runs the same
+# public-assets.sh the azuracast-settings unit uses (see the header there for why it writes the
+# settings table rather than calling azuracast_cli). no container or radio restart needed - the
+# public page picks the new css/js up on next load.
 azuracast-deploy:
 	@if ssh -q -o ConnectTimeout=5 root@mlab-local exit 2>/dev/null; then HOST=root@mlab-local; else HOST=root@mlab; fi; \
 	echo "Pushing azuracast css/js to $$HOST..."; \
 	scp hosts/mlab/azuracast/public/public.css hosts/mlab/azuracast/public/public.js $$HOST:/tmp/ && \
-	ssh $$HOST 'podman exec azuracast azuracast_cli azuracast:settings:set public_custom_css "$$(cat /tmp/public.css)" && podman exec azuracast azuracast_cli azuracast:settings:set public_custom_js "$$(cat /tmp/public.js)" && rm -f /tmp/public.css /tmp/public.js' && \
+	ssh $$HOST 'sh -s -- /tmp/public.css /tmp/public.js && rm -f /tmp/public.css /tmp/public.js' \
+		< hosts/mlab/azuracast/public-assets.sh && \
 	echo "azuracast css/js updated on $$HOST."
 
 # two commands, both thin wrappers over the scripts in hosts/mlab/azuracast/:

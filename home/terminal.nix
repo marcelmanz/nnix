@@ -41,6 +41,33 @@ in {
       playwright-driver.browsers
     ]);
 
+  programs.rbw = {
+    enable = true;
+    settings = {
+      email = "vaultwarden@marcel.cool";
+      base_url = "https://vault.marcel.cool";
+      lock_timeout = 3600;
+      pinentry = pkgs.writeShellApplication {
+        name = "pinentry-rbw";
+        runtimeInputs = [pkgs.libsecret pkgs.pinentry-qt];
+        text = ''
+          # auto-fills the rbw master password from the gnome login keyring
+          pass=$(secret-tool lookup application rbw 2>/dev/null)
+          [ -n "$pass" ] || exec pinentry-qt "$@"
+
+          printf 'OK Pleased to meet you\n'
+          while IFS= read -r line; do
+            case "$line" in
+              GETPIN) printf 'D %s\nOK\n' "''${pass//'%'/'%25'}" ;;
+              BYE) printf 'OK\n'; exit 0 ;;
+              *) printf 'OK\n' ;;
+            esac
+          done
+        '';
+      };
+    };
+  };
+
   programs.ssh = {
     enable = true;
     enableDefaultConfig = false;
@@ -139,10 +166,6 @@ in {
       ".bash_aliases".source = link "${dots}/.bash_aliases";
       ".bash-preexec.sh".source = link "${dots}/.bash-preexec.sh";
       ".config/starship.toml".source = link "${dots}/.config/starship.toml";
-      ".config/rbw/config.json" = {
-        source = link "${dots}/.config/rbw/config.json";
-        force = true;
-      };
       ".config/shellcheckrc".source = link "${dots}/.config/shellcheckrc";
       ".local/bin/clipfile" = {
         source = link "${dots}/scripts/clipfile";
