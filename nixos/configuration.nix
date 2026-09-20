@@ -233,7 +233,8 @@
   ];
 
   services.slskd = {
-    enable = true;
+    # mlab runs slskd now; the soulseek account allows only one session.
+    enable = false;
     openFirewall = true;
     domain = null;
     user = username;
