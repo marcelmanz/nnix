@@ -4,7 +4,95 @@
   pkgs,
   services,
   ...
-}: {
+}: let
+  # The v4 LAN is static, but the v6 prefix is ISP-delegated and has rotated
+  # three times in five months, so pinning it would silently stop matching.
+  # Read it off the on-link route instead; lanNetworks prints the group that
+  # overrides the placeholder in settings.access_control.networks below.
+  lanInterface = "enp1s0";
+  lanIPv4 = "192.168.1.0/24";
+  lanNetworksPath = "/var/lib/authelia-main/lan.yml";
+
+  # Prints yaml, touches nothing; the unit below owns the writing. It cannot
+  # run from authelia's own preStart: that service is confined to
+  # RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX, and `ip` needs
+  # AF_NETLINK, so it would silently yield the v4-only fallback.
+  lanNetworks = pkgs.writeShellScript "authelia-lan-networks" ''
+    set -euo pipefail
+    prefix=$(${pkgs.iproute2}/bin/ip -6 route show dev ${lanInterface} proto kernel \
+      | ${pkgs.coreutils}/bin/cut -d" " -f1 \
+      | ${pkgs.gnugrep}/bin/grep -v "^fe80::" \
+      | ${pkgs.coreutils}/bin/head -1 || true)
+    echo "access_control:"
+    echo "  networks:"
+    echo "    - name: lan"
+    echo "      networks:"
+    echo "        - ${lanIPv4}"
+    if [ -n "$prefix" ]; then
+      echo "        - $prefix"
+    fi
+  '';
+
+  # Every `protected` vhost in proxy.nix needs an entry here; without one
+  # default_policy = "deny" returns 403 instead of the login page.
+  # live.marcel.cool replaces the old livedj/streamcam entries: those hostnames
+  # are plain 302s to it now (proxy.nix), and a redirect vhost has no
+  # auth_request, so they never reach Authelia.
+  protectedServices = [
+    {
+      domain = "home.marcel.cool";
+      subject = ["group:admins"];
+    }
+    {
+      domain = "qbit.marcel.cool";
+      subject = ["group:admins"];
+    }
+    {
+      domain = "sabnzbd.marcel.cool";
+      subject = ["group:admins"];
+    }
+    {
+      domain = "yt.marcel.cool";
+      subject = ["group:youtube"];
+    }
+    {
+      domain = "bailatube.marcel.cool";
+      subject = ["group:youtube"];
+    }
+    {
+      domain = "search.marcel.cool";
+      subject = ["group:admins"];
+    }
+    {
+      domain = "pinchflat.marcel.cool";
+      subject = ["group:admins"];
+    }
+    {
+      domain = "files.marcel.cool";
+      subject = ["group:admins"];
+    }
+    {
+      domain = "sync.marcel.cool";
+      subject = ["group:admins"];
+    }
+    {
+      domain = "bcsync.marcel.cool";
+      subject = ["group:admins"];
+    }
+    {
+      domain = "nitter.marcel.cool";
+      subject = ["group:admins"];
+    }
+    {
+      domain = "tags.marcel.cool";
+      subject = ["group:admins"];
+    }
+    {
+      domain = "live.marcel.cool";
+      subject = ["group:admins"];
+    }
+  ];
+in {
   sops.secrets."authelia_jwt_secret" = {owner = "authelia-main";};
   sops.secrets."authelia_session_secret" = {owner = "authelia-main";};
   sops.secrets."authelia_storage_encryption_key" = {owner = "authelia-main";};
@@ -47,7 +135,9 @@
     enable = true;
     secrets.manual = true;
 
-    settingsFiles = ["/var/lib/authelia-main/jwks.yml"];
+    # Both are written by preStart. settingsFiles are passed after the
+    # generated config, so lan.yml is what actually sets the `lan` group.
+    settingsFiles = ["/var/lib/authelia-main/jwks.yml" lanNetworksPath];
 
     settings = {
       theme = "dark";
@@ -74,80 +164,31 @@
 
       access_control = {
         # Deny by default; every protected service gets an explicit rule below.
-        # To protect a new subdomain, add a rule here too or it will 401.
+        # To protect a new subdomain, add it to protectedServices or it will 401.
         default_policy = "deny";
-        rules = [
-          # Every `protected` vhost in proxy.nix needs a rule here; without one
-          # default_policy = "deny" returns 403 instead of the login page.
+        # Placeholder: lan.yml replaces this list at startup with the same v4
+        # range plus whatever v6 prefix the link currently has. If that file is
+        # missing or stale the worst case is a v4-only match, i.e. the normal
+        # two_factor prompt - it can never widen the group.
+        networks = [
           {
-            domain = "home.marcel.cool";
-            policy = "two_factor";
-            subject = ["group:admins"];
-          }
-          {
-            domain = "qbit.marcel.cool";
-            policy = "two_factor";
-            subject = ["group:admins"];
-          }
-          {
-            domain = "sabnzbd.marcel.cool";
-            policy = "two_factor";
-            subject = ["group:admins"];
-          }
-          {
-            domain = "yt.marcel.cool";
-            policy = "two_factor";
-            subject = ["group:youtube"];
-          }
-          {
-            domain = "bailatube.marcel.cool";
-            policy = "two_factor";
-            subject = ["group:youtube"];
-          }
-          {
-            domain = "search.marcel.cool";
-            policy = "two_factor";
-            subject = ["group:admins"];
-          }
-          {
-            domain = "pinchflat.marcel.cool";
-            policy = "two_factor";
-            subject = ["group:admins"];
-          }
-          {
-            domain = "files.marcel.cool";
-            policy = "two_factor";
-            subject = ["group:admins"];
-          }
-          {
-            domain = "sync.marcel.cool";
-            policy = "two_factor";
-            subject = ["group:admins"];
-          }
-          {
-            domain = "bcsync.marcel.cool";
-            policy = "two_factor";
-            subject = ["group:admins"];
-          }
-          {
-            domain = "nitter.marcel.cool";
-            policy = "two_factor";
-            subject = ["group:admins"];
-          }
-          {
-            domain = "tags.marcel.cool";
-            policy = "two_factor";
-            subject = ["group:admins"];
-          }
-          # Replaces the old livedj/streamcam rules: those hostnames are plain 302s to
-          # live.marcel.cool now (proxy.nix), and a redirect vhost has no auth_request, so
-          # they never reach Authelia.
-          {
-            domain = "live.marcel.cool";
-            policy = "two_factor";
-            subject = ["group:admins"];
+            name = "lan";
+            networks = [lanIPv4];
           }
         ];
+        # First match wins, so the lan copies go first: they only match clients
+        # on the server's own link, and everyone else falls through to the
+        # two_factor copies. Same domains and same group checks either way -
+        # being on the LAN drops the TOTP code, not the password or the group.
+        rules =
+          (map (svc:
+            svc
+            // {
+              policy = "one_factor";
+              networks = ["lan"];
+            })
+          protectedServices)
+          ++ (map (svc: svc // {policy = "two_factor";}) protectedServices);
       };
 
       notifier = {
@@ -177,6 +218,10 @@
   };
 
   systemd.services.authelia-main = {
+    # lan.yml is a settingsFile, so it has to exist before authelia reads it.
+    wants = ["authelia-lan-networks.service"];
+    after = ["authelia-lan-networks.service"];
+
     serviceConfig = {
       EnvironmentFile = [config.sops.templates."authelia-env".path];
     };
@@ -194,5 +239,34 @@
       ${pkgs.gnused}/bin/sed 's/^/          /' ${config.sops.secrets.authelia_oidc_issuer_key.path} >> /var/lib/authelia-main/jwks.yml
       ${pkgs.coreutils}/bin/chmod 600 /var/lib/authelia-main/jwks.yml
     '';
+  };
+
+  # The prefix only changes when the ISP re-delegates, which is rare and gives
+  # no notice, so poll for it rather than chase every address-change event on
+  # an interface that gets a new temporary address all day. The comparison
+  # means a steady prefix restarts nothing.
+  systemd.services.authelia-lan-networks = {
+    description = "Track the LAN IPv6 prefix Authelia treats as local";
+    serviceConfig.Type = "oneshot";
+    script = ''
+      current=$(${lanNetworks})
+      if [ "$current" = "$(${pkgs.coreutils}/bin/cat ${lanNetworksPath} 2>/dev/null)" ]; then
+        exit 0
+      fi
+      printf '%s\n' "$current" > ${lanNetworksPath}
+      ${pkgs.coreutils}/bin/chown authelia-main:authelia-main ${lanNetworksPath}
+      ${pkgs.coreutils}/bin/chmod 600 ${lanNetworksPath}
+      # --no-block because authelia-main is ordered after this unit: a
+      # blocking restart would wait for a job that waits for us.
+      ${pkgs.systemd}/bin/systemctl --no-block try-restart authelia-main.service
+    '';
+  };
+
+  systemd.timers.authelia-lan-networks = {
+    wantedBy = ["timers.target"];
+    timerConfig = {
+      OnBootSec = "5min";
+      OnUnitActiveSec = "15min";
+    };
   };
 }
