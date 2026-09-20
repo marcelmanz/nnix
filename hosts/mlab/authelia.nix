@@ -90,6 +90,11 @@
             subject = ["group:admins"];
           }
           {
+            domain = "sabnzbd.marcel.cool";
+            policy = "two_factor";
+            subject = ["group:admins"];
+          }
+          {
             domain = "yt.marcel.cool";
             policy = "two_factor";
             subject = ["group:youtube"];

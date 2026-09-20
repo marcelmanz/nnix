@@ -135,6 +135,7 @@
       port = 8080;
       href = "https://sabnzbd.marcel.cool";
       vpn = "pia";
+      protected = true;
     };
     seafile = {
       port = 8008;
