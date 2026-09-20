@@ -25,7 +25,6 @@
     ./homepage.nix
     ./immich.nix
     ./invidious
-    ./ipv6-rotator.nix
     ./jellyfin.nix
     ./livekit.nix
     ./matrix.nix

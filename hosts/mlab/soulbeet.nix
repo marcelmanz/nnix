@@ -9,7 +9,7 @@
 
   sops.templates."soulbeet.env".content = ''
     SLSKD_URL=http://127.0.0.1:${toString services.slskd.port}
-    # SLSKD_API_KEY=${config.sops.placeholder.slskd_api_key}
+    SLSKD_API_KEY=${config.sops.placeholder.slskd_api_key}
     NAVIDROME_URL=http://127.0.0.1:${toString services.navidrome.port}
     NAVIDROME_USERNAME=${config.sops.placeholder.web_user}
     NAVIDROME_PASSWORD=${config.sops.placeholder.web_pass}

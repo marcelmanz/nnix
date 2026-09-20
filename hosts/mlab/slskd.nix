@@ -3,7 +3,28 @@
   lib,
   services,
   ...
-}: {
+}: let
+  slskdSettings = {
+    directories = {
+      downloads = "/var/lib/slskd/music/downloads";
+      incomplete = "/var/lib/slskd/music/incompleted";
+    };
+    shares = {
+      directories = ["/var/lib/slskd/music/share"];
+    };
+    soulseek = {
+      listen_port = 50300;
+    };
+    web = {
+      port = services.slskd.port;
+      address = "127.0.0.1"; # nginx fronts the web UI
+    };
+    transfers = {
+      upload.slots = 10;
+      download.slots = 10;
+    };
+  };
+in {
   sops.secrets."slsk_pass" = {};
   sops.secrets."slsk_user" = {};
   sops.secrets."slskd_api_key" = {};
@@ -24,6 +45,19 @@
     owner = "slskd";
   };
 
+  # api_keys can only come from the config file, so render the whole file with
+  # sops instead of letting the module leave it world-readable in the nix store.
+  sops.templates."slskd-mlab.yml" = {
+    content = builtins.toJSON (lib.recursiveUpdate slskdSettings {
+      web.authentication.api_keys.soulbeet = {
+        key = config.sops.placeholder.slskd_api_key;
+        role = "readwrite";
+        cidr = "127.0.0.1/32,::1/128";
+      };
+    });
+    owner = "slskd";
+  };
+
   systemd.tmpfiles.rules = [
     "d /var/lib/slskd 0755 slskd slskd -"
     "d /var/lib/slskd/music 0755 slskd slskd -"
@@ -33,35 +67,14 @@
     "d /var/lib/slskd/music/share 0775 slskd media -"
   ];
 
-  # Disabled. Before re-enabling, supply the API key via the `slskd_api_key` sops
-  # secret and environmentFile - `settings` lands world-readable in the nix store.
   services.slskd = {
-    enable = false;
-    openFirewall = false;
+    enable = true;
+    openFirewall = true;
     domain = null;
     user = "slskd";
     group = "slskd";
     environmentFile = config.sops.templates."slskd-mlab.env".path;
-    settings = {
-      directories = {
-        downloads = "/var/lib/slskd/music/downloads";
-        incomplete = "/var/lib/slskd/music/incompleted";
-      };
-      shares = {
-        directories = ["/var/lib/slskd/music/share"];
-      };
-      soulseek = {
-        listen_port = 50300;
-      };
-      web = {
-        port = services.slskd.port;
-        address = "127.0.0.1"; # nginx fronts the web UI
-      };
-      global = {
-        upload.slots = 10;
-        download.slots = 10;
-      };
-    };
+    settings = slskdSettings;
   };
 
   users.users.slskd = {
@@ -73,6 +86,7 @@
   users.groups.slskd = {};
 
   systemd.services.slskd.serviceConfig = {
+    ExecStart = lib.mkForce "${config.services.slskd.package}/bin/slskd --app-dir /var/lib/slskd --config ${config.sops.templates."slskd-mlab.yml".path}";
     Restart = lib.mkForce "always";
     RestartSec = "5s";
     StateDirectory = "slskd";
