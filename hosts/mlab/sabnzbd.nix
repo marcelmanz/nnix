@@ -18,8 +18,10 @@
     settings = {
       misc = {
         host_whitelist = "sabnzbd.marcel.cool, mlab, 127.0.0.1";
-        # web UI bind address - sabnzbd is vpn-confined (vpn.nix), so nginx
-        # and homepage reach it via the netns bridge address, not loopback.
+        # web UI bind address. sabnzbd is NOT vpn-confined (see vpn.nix), so
+        # nginx and homepage reach it on host loopback. It still binds 0.0.0.0
+        # because the confined *arr apps reach it over the pia bridge address;
+        # the firewall only accepts that port from the bridge, not the LAN.
         # (there is no top-level "server" option - that key silently wrote a
         # dead [server] ini section instead of ever setting this.)
         host = "0.0.0.0";

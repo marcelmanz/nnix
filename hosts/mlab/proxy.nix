@@ -134,7 +134,8 @@
     sabnzbd = {
       port = 8080;
       href = "https://sabnzbd.marcel.cool";
-      vpn = "pia";
+      # no `vpn` tag: sabnzbd runs on the host network, not in the pia
+      # namespace (see vpn.nix for the throughput measurement behind that).
       protected = true;
     };
     seafile = {

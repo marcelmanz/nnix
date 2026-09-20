@@ -242,6 +242,14 @@ in {
     namespaceAddress = piaAddress;
     bridgeAddress = piaBridgeAddress;
     wireguardConfigFile = "/run/pia/wg.conf";
+    # sabnzbd runs on the HOST network (see the vpnConfinement list below), so
+    # the confined *arr apps reach it over the bridge rather than loopback.
+    # allowedEgress is the module's supported path for exactly this: it adds a
+    # bridge route, exempts the destination from the netns kill switch
+    # ("-A OUTPUT -o veth-pia -m conntrack --ctstate NEW -j DROP"), and
+    # masquerades it - so no hand-rolled iptables needed here. Host side is
+    # opened in default.nix's firewall.extraCommands.
+    allowedEgress = [piaBridgeAddress];
     # One portMapping per proxy.nix service tagged `vpn = "pia"` - keeps the
     # port list in one place instead of duplicating it here.
     portMappings = lib.pipe services [
@@ -254,7 +262,11 @@ in {
   };
 
   systemd.services.qbittorrent.vpnConfinement = piaConfined;
-  systemd.services.sabnzbd.vpnConfinement = piaConfined;
+  # sabnzbd is deliberately NOT confined - see pia-escape-route for the
+  # throughput measurement that justified it. Only qbittorrent actually
+  # needs PIA (its forwarded port is what makes seeding work); the rest of
+  # the stack is on the tunnel for indexer-privacy reasons, and Usenet
+  # doesn't need it at all.
   systemd.services.sonarr.vpnConfinement = piaConfined;
   systemd.services.radarr.vpnConfinement = piaConfined;
   systemd.services.lidarr.vpnConfinement = piaConfined;

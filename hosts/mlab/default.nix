@@ -257,6 +257,14 @@
         # Allow traffic from Podman containers to the host
         iptables -A INPUT -i podman+ -p tcp --dport ${toString services.slskd.port} -j ACCEPT
         iptables -A INPUT -i podman+ -p tcp --dport ${toString services.navidrome.port} -j ACCEPT
+        # sabnzbd runs on the host network (vpn.nix) while the *arr apps stay
+        # in the pia namespace, so they submit downloads over the bridge
+        # instead of loopback. vpn.nix's allowedEgress gets the packet out of
+        # the namespace; this is the host's half of that pair - without it the
+        # SYN is dropped here and Sonarr/Radarr silently can't send to SAB.
+        # Scoped to the bridge's own source address so it is not a general
+        # open door on 8080.
+        iptables -A INPUT -s ${config.vpnNamespaces.pia.namespaceAddress} -p tcp --dport ${toString services.sabnzbd.port} -j ACCEPT
       '';
       trustedInterfaces = ["podman0"];
     };

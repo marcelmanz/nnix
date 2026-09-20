@@ -275,7 +275,9 @@
               href = services.sabnzbd.href;
               widget = {
                 type = "sabnzbd";
-                url = "http://${config.vpnNamespaces.pia.namespaceAddress}:${toString services.sabnzbd.port}";
+                # host loopback, not the pia bridge - sabnzbd is not confined
+                # (see vpn.nix); every other widget above still uses the bridge.
+                url = "http://127.0.0.1:${toString services.sabnzbd.port}";
                 key = "{{HOMEPAGE_VAR_SABNZBD_API}}";
               };
             };
