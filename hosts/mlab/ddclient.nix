@@ -16,10 +16,13 @@
     zone = "marcel.cool";
     username = "token";
     passwordFile = config.sops.secrets.cloudflare_ddclient_token.path;
-    # single source of truth = ssh.marcel.cool (A only - this host has no working IPv6 route,
-    # so usev6 just timed out on api6.ipify.org every run, ~4min+ per cycle across all domains)
+    # single source of truth = ssh.marcel.cool. A only: the module's usev6 default asks
+    # api6.ipify.org for the outbound source address, which IPv6PrivacyExtensions makes a
+    # rotating temporary address - publishing it churns the AAAA daily and leaks the exact
+    # address privacy extensions exist to hide. Rotation itself stays on for invidious egress.
     domains = ["ssh.marcel.cool" "marcel.cool"];
     usev4 = "webv4, webv4=ifconfig.me";
+    usev6 = "";
     ssl = true;
   };
 
