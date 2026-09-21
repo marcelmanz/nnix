@@ -167,6 +167,7 @@ in {
         source = link "${dots}/.agents/skills";
         force = true;
       };
+      ".agents/AGENTS.md".source = link "${dots}/.agents/AGENTS.md";
       ".config/btop/btop.conf".source = link "${dots}/.config/btop/btop.conf";
       ".codex/AGENTS.md".source = link "${dots}/.codex/AGENTS.md";
       ".claude/AGENTS.md".source = link "${dots}/.codex/AGENTS.md";
