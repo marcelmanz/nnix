@@ -296,6 +296,13 @@
               description = "YouTube Downloader";
             };
           }
+          {
+            MeTube = {
+              icon = "metube";
+              href = services.metube.href;
+              description = "Merged A/V Downloader";
+            };
+          }
         ];
       }
       {
