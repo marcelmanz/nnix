@@ -13,11 +13,6 @@
       DOWNLOAD_DIR = "/downloads";
       STATE_DIR = "/downloads/.metube";
       TEMP_DIR = "/downloads/.tmp";
-      # iOS will not play webm/mkv, and the phone is the reason this exists.
-      YTDL_OPTIONS = builtins.toJSON {
-        format = "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b";
-        merge_output_format = "mp4";
-      };
     };
     volumes = ["/var/lib/media/metube:/downloads"];
   };
