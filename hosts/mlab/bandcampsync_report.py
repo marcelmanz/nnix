@@ -160,7 +160,11 @@ def generate():
         "td a{color:#0066cc;text-decoration:underline}td a:visited{color:#551a8b}"
         "</style>"
     )
-    o.append("<h1>bandcampsync</h1>")
+    o.append(
+        "<h1>bandcampsync "
+        "<form method=post action=/sync style='display:inline'><button>Sync now</button></form>"
+        "</h1>"
+    )
     cls = "ok" if auth == "OK" else "fail"
     o.append(
         f"<p><b>Auth:</b> <span class={cls}>{auth}</span> (exit {esc(exit_code)})"

@@ -6,6 +6,7 @@
 }: let
   htmlDir = "/var/lib/bandcampsync-status";
   reportPy = ./bandcampsync_report.py;
+  controlPort = 8292;
 in {
   # bandcamp cookies arrive via syncthing from laptop (see syncthing.nix)
 
@@ -88,6 +89,39 @@ in {
     };
   };
 
+  # "Sync now" button on the status page (see bandcampsync-control.py). Unprivileged
+  # user + a single NOPASSWD sudo rule, same pattern as webcam-control.py.
+  users.users.bandcampsync-control = {
+    isSystemUser = true;
+    group = "bandcampsync-control";
+  };
+  users.groups.bandcampsync-control = {};
+
+  security.sudo.extraRules = [
+    {
+      users = ["bandcampsync-control"];
+      commands = [
+        {
+          command = "/run/current-system/sw/bin/systemctl start --no-block bandcampsync.service";
+          options = ["NOPASSWD"];
+        }
+      ];
+    }
+  ];
+
+  systemd.services.bandcampsync-control = {
+    description = "Manual bandcamp sync trigger (bcsync.marcel.cool sync button)";
+    after = ["network.target"];
+    wantedBy = ["multi-user.target"];
+    serviceConfig = {
+      Type = "simple";
+      User = "bandcampsync-control";
+      ExecStart = "${pkgs.python3}/bin/python3 ${./bandcampsync-control.py} ${toString controlPort}";
+      Restart = "on-failure";
+      RestartSec = "5s";
+    };
+  };
+
   systemd.services.bandcampsync-report = {
     description = "Generate bandcampsync status html";
     serviceConfig = {
@@ -99,16 +133,51 @@ in {
     script = "${pkgs.python313}/bin/python3 ${reportPy} generate";
   };
 
-  # static status page at https://bcsync.marcel.cool (added to proxy.nix)
+  # static status page at https://bcsync.marcel.cool, gated to group:admins (see
+  # authelia.nix). links.json is the one exception: the azuracast public page
+  # (different origin, no login) fetches it to turn now-playing artist names into
+  # bandcamp links, so it stays public with its own CORS header.
   services.nginx.virtualHosts."bcsync.marcel.cool" = {
     forceSSL = true;
     useACMEHost = "marcel.cool";
     root = htmlDir;
-    # autoindex off, and CORS so the azuracast public page (different origin) can
-    # fetch links.json to turn now-playing artist names into bandcamp links.
+    locations."= /links.json" = {
+      extraConfig = ''
+        autoindex off;
+        add_header Access-Control-Allow-Origin * always;
+      '';
+    };
+    locations."= /sync" = {
+      proxyPass = "http://127.0.0.1:${toString controlPort}/sync";
+      extraConfig = ''
+        limit_except POST { deny all; }
+        auth_request /internal/authelia/authz;
+        error_page 401 = @authelia_login;
+      '';
+    };
+    locations."/" = {
+      extraConfig = ''
+        autoindex off;
+        auth_request /internal/authelia/authz;
+        error_page 401 = @authelia_login;
+      '';
+    };
     extraConfig = ''
-      autoindex off;
-      add_header Access-Control-Allow-Origin * always;
+      location /internal/authelia/authz {
+        internal;
+        proxy_pass http://127.0.0.1:${toString services.auth.port}/api/verify;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_set_header X-Original-URL $scheme://$http_host$request_uri;
+        proxy_set_header X-Forwarded-Method $request_method;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $http_host;
+        proxy_set_header X-Forwarded-URI $request_uri;
+        proxy_set_header X-Forwarded-For $remote_addr;
+      }
+      location @authelia_login {
+        return 302 https://auth.marcel.cool/?rd=$scheme://$http_host$request_uri&rm=$request_method;
+      }
     '';
   };
 
