@@ -13,8 +13,15 @@
       DOWNLOAD_DIR = "/downloads";
       STATE_DIR = "/downloads/.metube";
       TEMP_DIR = "/downloads/.tmp";
+      # yt-dlp scans every PYTHONPATH entry for a yt_dlp_plugins namespace dir.
+      # YTDL_OPTIONS cannot do this: plugin_dirs is a yt_dlp.globals module
+      # global, not a YoutubeDL() parameter.
+      PYTHONPATH = "/plugins";
     };
-    volumes = ["/var/lib/media/metube:/downloads"];
+    volumes = [
+      "/var/lib/media/metube:/downloads"
+      "${./metube-plugins}:/plugins:ro"
+    ];
   };
 
   # Same reasoning as invidious-companion: yt-dlp rots as YouTube changes, and
