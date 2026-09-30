@@ -10,9 +10,14 @@
     nixpkgsStable.url = "github:NixOS/nixpkgs/nixos-25.11";
     nixpkgs2405.url = "github:NixOS/nixpkgs/nixos-24.05";
     openlogi.url = "github:AprilNEA/OpenLogi";
+    fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nu-alias-converter = {
       url = "github:marcelmanz/nu-alias-converter";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.fenix.follows = "fenix";
     };
     nur.url = "github:nix-community/NUR";
     # rust-overlay = {
