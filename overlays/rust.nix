@@ -11,4 +11,5 @@ in
     rff = call "rff";
     pulseaudio-next-output = call "pulseaudio-next-output";
     git-commit-search = call "git-commit-search";
+    reedline-bash = call "reedline-bash";
   }
