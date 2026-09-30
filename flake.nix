@@ -149,6 +149,7 @@
       lsv = pkgs.lsv;
       "audio-select" = pkgs."audio-select";
       rff = pkgs.rff;
+      "reedline-bash" = pkgs."reedline-bash";
       "pulseaudio-next-output" = pkgs."pulseaudio-next-output";
       "git-commit-search" = pkgs."git-commit-search";
       "nitter-session" = pkgs."nitter-session";

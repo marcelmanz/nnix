@@ -4,11 +4,12 @@
 }:
 craneLib.buildPackage {
   pname = "reedline-bash";
-  version = "";
+  version = "unstable-2026-09-30";
   src = pkgs.fetchgit {
     url = "https://github.com/maxomatic458/reedline-bash";
-    rev = "d7f6a909f26439ef1c44d4a1e1241353a26c3d65";
-    sha256 = "sha256-zXqXCL0pswtGnoQwE4Kmt8LSI4LIuMny3T0+o3+bmtU=";
+    rev = "47cf61f14e97bfd1c4893ff1ec0151fe8b18d809";
+    fetchSubmodules = false;
+    sha256 = "sha256-6XLzHU/A1uUv1pBvwxy08y/ctYE/Velt28BG/EdYaIo=";
   };
   cargoVendorHash = pkgs.lib.fakeHash;
 }
