@@ -80,6 +80,11 @@
       href = "https://streamcam.marcel.cool";
       protected = true;
     };
+    metube = {
+      port = 8093;
+      href = "https://metube.marcel.cool";
+      protected = true;
+    };
     miniflux = {
       port = 8085;
       href = "https://rss.marcel.cool";

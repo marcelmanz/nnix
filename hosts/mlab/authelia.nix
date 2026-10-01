@@ -56,7 +56,7 @@
       subject = ["group:youtube"];
     }
     {
-      domain = "bailatube.marcel.cool";
+      domain = "metube.marcel.cool";
       subject = ["group:youtube"];
     }
     {
@@ -123,7 +123,7 @@ in {
             - youtube
         metube:
           displayname: "metube"
-          password: "${config.sops.placeholder.ytify_user_password}"
+          password: "${config.sops.placeholder.metube_user_password}"
           email: "metube@marcel.cool"
           groups:
             - youtube

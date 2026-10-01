@@ -1,8 +1,9 @@
 """bandcampsync status page generator.
 
-Two modes:
+Three modes:
   generate    scan filesystem + last-run journal + urls.json -> index.html  (stdlib only)
   fetch-urls  hit bandcamp collection API -> urls.json  (needs bandcampsync importable)
+  check       cheap poll (1 request) for a new purchase; exit 2 if collection changed
 
 ponytail: note - run via python3, not shebang
 """
@@ -231,9 +232,37 @@ def fetch_urls():
     print(f"wrote {len(urls)} urls")
 
 
+LAST_ITEM_ID = HTML_DIR / "last_item_id.txt"
+
+
+def check():
+    """Fetch only the newest collection page (1 request) and compare its
+    first item against the last seen one, so polling often stays cheap."""
+    from bandcampsync.bandcamp import Bandcamp
+
+    cookies = Path("/run/bandcamp_cookies_filtered.txt").read_text().strip()
+    b = Bandcamp(cookies=cookies)
+    b.verify_authentication()
+    b.load_purchases(stop_when=lambda item: True)
+    if not b.collection_items:
+        print("empty collection")
+        return
+    newest_id = str(b.collection_items[0].item_id)
+    last_id = LAST_ITEM_ID.read_text().strip() if LAST_ITEM_ID.exists() else None
+    HTML_DIR.mkdir(parents=True, exist_ok=True)
+    LAST_ITEM_ID.write_text(newest_id)
+    if newest_id == last_id:
+        print("unchanged")
+        return
+    print(f"new item id:{newest_id} (was {last_id})")
+    sys.exit(2)
+
+
 if __name__ == "__main__":
     mode = sys.argv[1] if len(sys.argv) > 1 else "generate"
     if mode == "fetch-urls":
         fetch_urls()
+    elif mode == "check":
+        check()
     else:
         generate()

@@ -28,6 +28,7 @@
     ./jellyfin.nix
     ./livekit.nix
     ./matrix.nix
+    ./metube.nix
     ./mautrix-whatsapp.nix
     ./miniflux.nix
     ./navidrome.nix
@@ -99,7 +100,7 @@
       };
       "ms01_admin_hash" = {neededForUsers = true;};
       "ms01_dev_hash" = {neededForUsers = true;};
-      "ytify_user_password" = {};
+      "metube_user_password" = {};
       "azuracast_dj_password" = {};
     };
 
@@ -232,7 +233,7 @@
     ];
     # Use dnsmasq as a DNS forwarder to bypass ISP DNS that DHCP may return
     hosts = {
-      "127.0.0.1" = ["marcel.cool"];
+      "192.168.1.140" = ["marcel.cool"];
     };
     tempAddresses = "enabled";
     firewall = {
@@ -337,6 +338,7 @@
     bind-interfaces = true;
     # Answer only queries from directly-attached subnets.
     local-service = true;
+    address = "/marcel.cool/192.168.1.140";
   };
 
   boot = {

@@ -51,6 +51,43 @@ in {
     '';
   };
 
+  # cheap poll (1-2 bandcamp requests) so a new purchase gets synced within
+  # minutes instead of waiting for the next 8h-apart full-sync slot
+  systemd.services.bandcampsync-check = {
+    description = "Poll bandcamp collection for a new purchase, trigger sync on change";
+    after = ["network-online.target"];
+    wants = ["network-online.target"];
+    serviceConfig = {
+      Type = "oneshot";
+      User = "root";
+    };
+    path = [pkgs.bash pkgs.coreutils pkgs.systemd pkgs.python313Packages.pipx];
+    script = ''
+      set -e
+      grep bandcamp /var/lib/syncthing/bandcamp-cookies/cookies.txt > /run/bandcamp_cookies_filtered.txt
+      chmod 400 /run/bandcamp_cookies_filtered.txt
+      set +e
+      pipx run --spec bandcampsync python3 ${reportPy} check
+      rc=$?
+      set -e
+      rm -f /run/bandcamp_cookies_filtered.txt
+      if [ "$rc" -eq 2 ]; then
+        systemctl start bandcampsync.service
+      elif [ "$rc" -ne 0 ]; then
+        exit "$rc"
+      fi
+    '';
+  };
+
+  systemd.timers.bandcampsync-check = {
+    wantedBy = ["timers.target"];
+    timerConfig = {
+      OnBootSec = "5m";
+      OnUnitActiveSec = "15m";
+      RandomizedDelaySec = "1m";
+    };
+  };
+
   systemd.services.bandcampsync-report = {
     description = "Generate bandcampsync status html";
     serviceConfig = {
