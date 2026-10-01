@@ -7,11 +7,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789477262,
-        "narHash": "sha256-5+GKg6sXF6JA04mMIKQ/IZIQ6kNjdOGZAY+nNx6psI0=",
+        "lastModified": 1790830828,
+        "narHash": "sha256-NXz3b8gpK8d2KJjdscClJCfBUxQpcR1qMCBdo8fVH2g=",
         "ref": "refs/heads/main",
-        "rev": "c390082ae41b5b0d7653e8b1447a56b036ad496d",
-        "revCount": 160,
+        "rev": "c70286cdc9fb3697e2cb048a7199ccdb1902edc6",
+        "revCount": 207,
         "type": "git",
         "url": "https://codeberg.org/marcelmanz/brave-origin-channels"
       },

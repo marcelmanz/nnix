@@ -128,6 +128,7 @@ in {
       ".config/erdtree"
       ".config/fish"
       ".config/nushell"
+      ".config/reedline-bash"
       ".config/tmux"
       ".config/cbfmt"
       ".config/eza"
