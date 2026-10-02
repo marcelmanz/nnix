@@ -71,7 +71,7 @@ in {
     dots = "${clonesOwn}/dots";
   in {
     ".config/kanshi/config".source = link "${dots}/.config/kanshi/config";
-    ".config/hypr/devices/nixos.conf".source = link "${dots}/.config/hypr/devices/nixos.conf";
+    ".config/hypr/devices/nixos.lua".source = link "${dots}/.config/hypr/devices/nixos.lua";
     ".local/share/applications/brave-origin-nightly.desktop".text = ''
       [Desktop Entry]
       Version=1.0

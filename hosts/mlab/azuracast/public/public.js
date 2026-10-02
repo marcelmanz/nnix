@@ -384,11 +384,18 @@
       unmuteAfterPlay();
       return;
     }
+    // Guard against a duplicate gesture (e.g. a re-armed 'wheel' listener firing again mid-scroll)
+    // re-clicking the play button while the first click is still landing: AzuraCast toggles on
+    // that button, so a second click here would stop the stream it just started.
+    if (started) return;
     DBG("ensurePlaying: no src -> applyPickOrPlay() start");
     started = true;
     clearInterval(autoplayPollId);
     applyPickOrPlay(); // no stream loaded -> the picked item or play button loads+plays it
     unmuteAfterPlay();
+    setTimeout(function () {
+      if (!getAudioEl()) started = false; // click never landed -> allow the next gesture to retry
+    }, 700);
   }
 
   function unmute(e) {
@@ -805,34 +812,47 @@
   // AzuraCast's play() runs unmuted and gets blocked). Instead wait for the <audio> to be
   // inserted (a MutationObserver microtask fires before the 'play' event task), then attach the
   // unmute listener so the store flips only after muted play() succeeds.
+  // A freshly connected live MP3 stream decodes roughly its first UNMUTE_SETTLE_S seconds
+  // unstably (frame/bitrate sync, jitter-buffer fill) - inaudible while still muted, but an
+  // audible pop/stutter if we unmute the instant playback starts. Wait out whatever's left of
+  // that window (0 if the element's already past it) before actually flipping mute off.
+  var UNMUTE_SETTLE_S = 1.5;
+  function settleThenUnmute(audio) {
+    function goQuiet() {
+      setTimeout(function () {
+        if (isMuted()) {
+          var muteBtn = getMuteButton();
+          if (muteBtn) muteBtn.click();
+        }
+      }, UNMUTE_SETTLE_S * 1000);
+    }
+    // Gate the wall-clock wait on the 'playing' event, not audio.currentTime: currentTime sits
+    // at 0 through the whole initial network buffering wait (readyState 0-2), so a countdown
+    // computed from it at schedule time mostly burns down DURING buffering and leaves almost no
+    // real settle time once frames actually start decoding - which is what let the stall right
+    // after unmuting through audibly.
+    if (audio.readyState >= 3 /* HAVE_FUTURE_DATA: already decoding */) goQuiet();
+    else audio.addEventListener("playing", goQuiet, { once: true });
+  }
   function doUnmute(audio) {
     if (!audio.paused) {
       // already playing (muted) -> unmute now, no new play()
       DBG("doUnmute: playing -> unmute now");
-      if (isMuted()) {
-        var muteBtn = getMuteButton();
-        if (muteBtn) muteBtn.click();
-      }
+      settleThenUnmute(audio);
       return;
     }
     var onPlay = function () {
       // muted play() will land -> unmute the store then
       audio.removeEventListener("play", onPlay);
       DBG("doUnmute: play event -> unmute");
-      if (isMuted()) {
-        var muteBtn = getMuteButton();
-        if (muteBtn) muteBtn.click();
-      }
+      settleThenUnmute(audio);
     };
     audio.addEventListener("play", onPlay, { once: true });
     setTimeout(function () {
       // safety: if 'play' never fires (load stall), unmute after 2s
       audio.removeEventListener("play", onPlay);
       DBG("doUnmute: 2s safety", "isMuted=" + isMuted());
-      if (isMuted()) {
-        var muteBtn = getMuteButton();
-        if (muteBtn) muteBtn.click();
-      }
+      settleThenUnmute(audio);
     }, 2000);
   }
   function unmuteAfterPlay() {
@@ -986,6 +1006,7 @@
   var eqCtx,
     eqAn,
     eqSrc,
+    eqGain,
     eqData,
     eqTime,
     eqRAF,
@@ -1170,7 +1191,16 @@
       eqAn = eqCtx.createAnalyser();
       eqAn.fftSize = 512; // 256 bins -> enough detail for the grainy top line
       eqAn.smoothingTimeConstant = 0; // raw -> per-track smoothing in JS (each line its own feel)
-      eqAn.connect(eqCtx.destination);
+      // Per spec, a node not connected (even indirectly) to context.destination is not
+      // guaranteed to be processed at all - browsers are free to skip it, which reads as the
+      // analyser going dead/flat. So the analyser still routes to destination, but through a
+      // gain=0 node: the graph stays "live" for the analyser without ever making a sound. The
+      // real audio comes from the <audio> element's own native output, untouched (see
+      // attachEqSource's captureStream tap) - this path is silent on purpose.
+      eqGain = eqCtx.createGain();
+      eqGain.gain.value = 0;
+      eqAn.connect(eqGain);
+      eqGain.connect(eqCtx.destination);
       eqData = new Uint8Array(eqAn.frequencyBinCount);
       eqTime = new Uint8Array(eqAn.fftSize); // raw waveform - feeds the fullscreen wave background
     } catch (e) {
@@ -1185,21 +1215,40 @@
       eqBoundEl = audio;
       return;
     } // already bound -> just record
+    // captureStream() on a freshly created element (readyState 0, no decoded frames yet) hands
+    // back a stream with zero audio tracks - createMediaStreamSource then throws. Retry on later
+    // eqFrame ticks (don't mark audio._azEqSrc/eqBoundEl yet) until real frames exist, instead of
+    // giving up on the visualizer for the whole session over one too-early attempt.
+    if (audio.readyState < 2 /* HAVE_CURRENT_DATA */) return;
     audio._azEqSrc = 1;
     try {
       if (new URL(audio.src || "", location.href).origin !== location.origin) {
         eqBoundEl = audio;
         return;
       } // cross-origin -> skip (would silence)
-      eqSrc = eqCtx.createMediaElementSource(audio);
+      // captureStream(), not createMediaElementSource(): the latter silently rips the element's
+      // audio out of the normal output pipeline and requires reconnecting it (eqAn->destination)
+      // to keep playing at all - the source of the start-of-playback glitch and ongoing
+      // resampling grain this used to cause. A captured MediaStream is a passive tap; the
+      // element keeps playing through its own native path the whole time, glitch-free.
+      var capture = audio.captureStream || audio.mozCaptureStream;
+      if (!capture) {
+        DBG("attachEqSource: no captureStream support -> no viz");
+        eqBoundEl = audio;
+        return;
+      } // no support -> skip the decorative viz, never touch native playback
+      var stream = capture.call(audio);
+      DBG("attachEqSource: captureStream tracks=" + stream.getAudioTracks().length);
+      eqSrc = eqCtx.createMediaStreamSource(stream);
       eqSrc.connect(eqAn);
       audio.addEventListener("play", function () {
         if (eqCtx && eqCtx.state === "suspended") eqCtx.resume();
       });
+      eqBoundEl = audio;
     } catch (e) {
-      /* already bound to another context / unavailable -> no viz */
+      DBG("attachEqSource: threw, will retry", e && e.message);
+      audio._azEqSrc = 0; // transient (e.g. captureStream briefly still 0 tracks) -> retry next tick
     }
-    eqBoundEl = audio;
   }
   function eqFrame() {
     eqRAF = requestAnimationFrame(eqFrame);

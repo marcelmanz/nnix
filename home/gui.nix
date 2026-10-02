@@ -1093,11 +1093,13 @@ in {
     dots = "${clonesOwn}/dots";
   in {
     # GUI-specific config files only
-    ".config/hypr/hyprland.conf".source = link "${dots}/.config/hypr/hyprland.conf";
+    ".config/hypr/hyprland.lua".source = link "${dots}/.config/hypr/hyprland.lua";
+    # device.lua is required by hyprland.lua; resolve it statically per host (was a runtime exec-once symlink)
+    ".config/hypr/device.lua".source = link "${dots}/.config/hypr/devices/nixos.lua";
     ".config/hypr/hypridle.conf".source = link "${dots}/.config/hypr/hypridle.conf";
     ".config/hypr/hyprlock.conf".source = link "${dots}/.config/hypr/hyprlock.conf";
     ".config/hypr/hyprpaper.conf".source = link "${dots}/.config/hypr/hyprpaper.conf";
-    ".config/hypr/keybinds.conf".source = link "${dots}/.config/hypr/keybinds.conf";
+    ".config/hypr/keybinds.lua".source = link "${dots}/.config/hypr/keybinds.lua";
     ".config/hypr/monitors.conf".source = link "${dots}/.config/hypr/monitors.conf";
     ".config/pypr/config.toml".source = link "${dots}/.config/pypr/config.toml";
     ".config/hypr/workspaces.conf".source = link "${dots}/.config/hypr/workspaces.conf";

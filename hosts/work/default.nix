@@ -166,8 +166,9 @@ in {
     ".cargo/env".source = link "${dots}/.cargo/env";
     ".cargo/env.fish".source = link "${dots}/.cargo/env.fish";
     ".cargo/env.nu".source = link "${dots}/.cargo/env.nu";
-    ".config/hypr/devices/WS0277.conf".source =
-      link "${dots}/.config/hypr/devices/WS0277.conf";
+    ".config/hypr/devices/WS0277.lua".source =
+      link "${dots}/.config/hypr/devices/WS0277.lua";
+    ".config/hypr/device.lua".source = link "${dots}/.config/hypr/devices/WS0277.lua";
     ".local/state/udev-rules/70-openlogi.rules".source = "${inputs.openlogi.packages.${pkgs.stdenv.hostPlatform.system}.default}/lib/udev/rules.d/70-openlogi.rules";
     ".config/xdg-desktop-portal/hyprland-portals.conf".source =
       link "${dots}/.config/xdg-desktop-portal/hyprland-portals.conf";
