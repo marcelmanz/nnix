@@ -151,6 +151,7 @@ with pkgs; [
   pulseaudioFull
   pwgen
   rabbitmqadmin-ng
+  reedline-bash
   rbw
   rofi-rbw
   android-tools

@@ -128,6 +128,7 @@ in {
       ".config/erdtree"
       ".config/fish"
       ".config/nushell"
+      ".config/reedline-bash"
       ".config/tmux"
       ".config/cbfmt"
       ".config/eza"
@@ -169,10 +170,9 @@ in {
       };
       ".agents/AGENTS.md".source = link "${dots}/.agents/AGENTS.md";
       ".config/btop/btop.conf".source = link "${dots}/.config/btop/btop.conf";
-      ".codex/AGENTS.md".source = link "${dots}/.codex/AGENTS.md";
-      ".claude/AGENTS.md".source = link "${dots}/.codex/AGENTS.md";
-      # ".claude/CLAUDE.md".source = link "${dots}/.claude/CLAUDE.md";
-      ".claude/CLAUDE.md".source = link "${dots}/.codex/AGENTS.md";
+      ".codex/AGENTS.md".source = link "${dots}/.agents/AGENTS.md";
+      ".claude/AGENTS.md".source = link "${dots}/.agents/AGENTS.md";
+      ".claude/CLAUDE.md".source = link "${dots}/.agents/AGENTS.md";
 
       ".tasks" = {
         source = link "${dots}/.tasks";

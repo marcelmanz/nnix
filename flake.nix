@@ -10,9 +10,14 @@
     nixpkgsStable.url = "github:NixOS/nixpkgs/nixos-25.11";
     nixpkgs2405.url = "github:NixOS/nixpkgs/nixos-24.05";
     openlogi.url = "github:AprilNEA/OpenLogi";
+    fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nu-alias-converter = {
       url = "github:marcelmanz/nu-alias-converter";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.fenix.follows = "fenix";
     };
     nur.url = "github:nix-community/NUR";
     # rust-overlay = {
@@ -144,6 +149,7 @@
       lsv = pkgs.lsv;
       "audio-select" = pkgs."audio-select";
       rff = pkgs.rff;
+      "reedline-bash" = pkgs."reedline-bash";
       "pulseaudio-next-output" = pkgs."pulseaudio-next-output";
       "git-commit-search" = pkgs."git-commit-search";
       "nitter-session" = pkgs."nitter-session";
