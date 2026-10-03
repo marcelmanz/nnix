@@ -7,6 +7,21 @@
   htmlDir = "/var/lib/bandcampsync-status";
   reportPy = ./bandcampsync_report.py;
   controlPort = 8292;
+
+  # bpm + key tags after every sync; idempotent (skips already-tagged files),
+  # so `dj-enrich` also works as a backfill on the existing library.
+  djEnrich = pkgs.writeShellApplication {
+    name = "dj-enrich";
+    runtimeInputs = [
+      (pkgs.python313.withPackages (ps: [ps.mutagen ps.aubio-ledfx]))
+      pkgs.keyfinder-cli pkgs.ffmpeg-headless pkgs.rsgain pkgs.coreutils
+    ];
+    text = ''
+      if [ "$#" -eq 0 ]; then set -- /var/lib/media/dj /var/lib/media/music; fi
+      python3 ${./dj-enrich.py} "$@" || true  # tagger crash must not block rsgain/navidrome rescan
+      rsgain easy "$@" || true  # replaygain; tolerate unsupported files
+    '';
+  };
 in {
   # bandcamp cookies arrive via syncthing from laptop (see syncthing.nix)
 
@@ -47,6 +62,8 @@ in {
         find "$tree" -type d -exec chmod 2775 {} +
         find "$tree" -type f -exec chmod 0664 {} +
       done
+      # tag new files with bpm + key + replaygain (skips already-tagged ones)
+      ${djEnrich}/bin/dj-enrich
       # trigger a navidrome full scan so new tracks show up right away
       curl -fsS "http://127.0.0.1:${toString services.navidrome.port}/rest/startScan.view?u=$(cat ${config.sops.secrets.web_user.path})&t=$(cat ${config.sops.secrets.navidrome_token.path})&s=$(cat ${config.sops.secrets.navidrome_salt.path})&v=1.16.1&c=bandcampsync&f=json&fullScan=true" > /dev/null
     '';
@@ -180,6 +197,8 @@ in {
       }
     '';
   };
+
+  environment.systemPackages = [djEnrich];
 
   systemd.timers.bandcampsync = {
     wantedBy = ["timers.target"];
