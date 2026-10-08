@@ -26,6 +26,7 @@
     ./immich.nix
     ./invidious
     ./jellyfin.nix
+    ./kittygram.nix
     ./livekit.nix
     ./matrix.nix
     ./metube.nix

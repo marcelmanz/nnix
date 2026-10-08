@@ -53,6 +53,10 @@
       port = 2283;
       href = "https://img.marcel.cool";
     };
+    insta = {
+      port = 3022;
+      href = "https://insta.marcel.cool";
+    };
     jellyfin = {
       port = 8096;
       href = "https://jellyfin.marcel.cool";

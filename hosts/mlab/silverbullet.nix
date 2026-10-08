@@ -11,7 +11,7 @@ in
   # Proxied via proxy.nix (services.notes -> notes.marcel.cool, behind Authelia).
   # Port 3000 is open-webui's, hence 3021.
   virtualisation.oci-containers.containers.silverbullet = {
-    image = "zefhemel/silverbullet:latest";
+    image = "ghcr.io/silverbulletmd/silverbullet:latest";
     ports = [ "127.0.0.1:3021:3000" ];
     volumes = [ "${notesDir}:/space" ];
   };
@@ -29,14 +29,14 @@ in
     };
 
     script = ''
-      export GIT_SSH_COMMAND="ssh -i ${config.sops.secrets.github_ssh_key.path} -o StrictHostKeyChecking=no"
+      export GIT_SSH_COMMAND="ssh -i ${config.sops.secrets.codeberg_dev_ssh_key.path} -o StrictHostKeyChecking=no"
 
       git config --global user.name "SilverBullet (mlab)"
       git config --global user.email "bot@marcel.cool"
       git config --global pull.rebase true
 
       if [ ! -d ".git" ]; then
-        git clone git@github.com:marcelmanz/notes.git .
+        git clone git@codeberg.org:marcelmanz/notes.git .
       fi
 
       git add .

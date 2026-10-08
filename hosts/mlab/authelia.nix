@@ -88,6 +88,10 @@
       subject = ["group:admins"];
     }
     {
+      domain = "notes.marcel.cool";
+      subject = ["group:admins"];
+    }
+    {
       domain = "live.marcel.cool";
       subject = ["group:admins"];
     }
