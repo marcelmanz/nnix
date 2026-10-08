@@ -331,7 +331,8 @@ in {
     serviceConfig = {
       Type = "oneshot";
       User = "root";
-      TimeoutStartSec = "30s";
+      # headroom for the self-heal restart path (drags the arr stack along)
+      TimeoutStartSec = "120s";
     };
     path = [pkgs.iproute2 pkgs.wireguard-tools pkgs.curl pkgs.jq pkgs.coreutils pkgs.gawk];
     script = ''
@@ -347,6 +348,20 @@ in {
       esc() { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' <<< "$1"; }
       fmt_age() { printf '%dm %02ds' $(($1 / 60)) $(($1 % 60)); }
 
+      # Restart pia-wg-config + pia at most once per 10 min: if pia was
+      # (re)started < 600s ago, assume a heal is already in flight and skip.
+      heal() {
+        local reason=$1 pia_ts
+        pia_ts=$(systemctl show -p ActiveEnterTimestamp --value pia.service 2>/dev/null || true)
+        [ -n "$pia_ts" ] || return 0
+        if [ $(( $(date +%s) - $(date -d "$pia_ts" +%s) )) -lt 600 ]; then
+          echo "vpn-status: $reason but pia.service restarted <10min ago, skipping self-heal" >&2
+          return 1
+        fi
+        echo "vpn-status: self-healing VPN tunnel ($reason): restarting pia-wg-config + pia" >&2
+        systemctl try-restart pia-wg-config.service pia.service || true
+      }
+
       state=DOWN; state_color="#ef4444"; state_msg="netns pia not found"
       hs_age=-1; endpoint="-"; public_key="-"; rows=""
       wg_out="(netns pia not found)"
@@ -358,12 +373,21 @@ in {
         public_key=$(awk '/^peer:/{print $2; exit}' <<< "$wg_out")
         if [ "$hs_age" -gt 180 ]; then
           state_msg="handshake ''${hs_age}s old (stale; expected < 180s)"
+          # Self-heal: a stale handshake means PIA dropped the ephemeral key
+          # server-side (see 2026-10-08 incident: TX>0/RX=0, dead tunnel).
+          # Only a fresh key registration (pia-wg-config) + tunnel restart
+          # fixes it, so do that here - bounded to once per 10 min by
+          # don't-touch-if-pia-just-(re)started, and "pia" restarting drags
+          # the confined arr stack along via BindsTo, which is exactly what
+          # a dead tunnel made useless anyway.
+          if heal pia-stale-handshake; then state_msg="$state_msg (self-heal restart issued)"; fi
         else
           exit_ip=$(ip netns exec pia curl -s --max-time 8 'https://api.ipify.org?format=json' | jq -r '.ip // empty' || true)
           if [ -n "$exit_ip" ]; then
             state=UP; state_color="#22c55e"; state_msg="tunnel up, egress reachable"
           else
             state=DEGRADED; state_color="#f59e0b"; state_msg="handshake fresh but egress check failed"
+            if heal pia-egress-dead; then state_msg="$state_msg (self-heal restart issued)"; fi
           fi
           server=$(cat /run/pia/gateway_hostname 2>/dev/null || echo "-")
           # forwarded port is the reason pia exists; pia-portfwd keeps it
