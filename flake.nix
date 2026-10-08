@@ -127,7 +127,15 @@
         (final: prev: {
           protonmail-desktop = inputs.my-nixpkgs.legacyPackages.${system}.protonmail-desktop;
         })
-        (final: prev: {"brave-origin" = inputs.brave-origin-channels.packages.${system}.nightly;})
+        (final: prev: {
+          # Block DataDome's bot-check bundle (stable subdomain) at the resolver.
+          # Vinted's initial load is JS-bound; this script alone was ~25% of it.
+          # Inner "..." is deliberate: makeWrapper splices flags unquoted, so
+          # this must stay a single argv.
+          "brave-origin" = (prev.callPackage "${inputs.brave-origin-channels}/make-brave.nix" {
+            commandLineArgs = ''"--host-resolver-rules=MAP k7v3q2.vinted.com ~NOTFOUND"'';
+          }) (import "${inputs.brave-origin-channels}/release.nix");
+        })
         (final: prev: {psysonic = inputs.psysonic.packages.${system}.psysonic;})
         (final: prev: {
           offtiktok = pkgs.callPackage ./packages/offtiktok/frontend.nix {};
