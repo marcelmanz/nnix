@@ -42,7 +42,9 @@
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
-      ExecStart = "${pkgs.bash}/bin/bash -c '${pkgs.podman}/bin/podman network inspect kittygram-net >/dev/null 2>&1 || ${pkgs.podman}/bin/podman network create kittygram-net'";
+      # --subnet keeps the gateway IP stable so SEARXNG_URL/RESOLVER below
+      # survive a network recreate.
+      ExecStart = "${pkgs.bash}/bin/bash -c '${pkgs.podman}/bin/podman network inspect kittygram-net >/dev/null 2>&1 || ${pkgs.podman}/bin/podman network create --subnet=10.89.2.0/24 kittygram-net'";
     };
   };
 
@@ -58,7 +60,10 @@
       environment = {
         REDIS_HOST = "kittygram-valkey";
         REDIS_PORT = "6379";
-        SEARXNG_URL = "http://host.containers.internal:8084";
+        # Gateway IP, not host.containers.internal: openresty's resolver
+        # appends the dns.podman search domain to it and aardvark NXDOMAINs.
+        SEARXNG_URL = "http://10.89.2.1:8084";
+        RESOLVER = "10.89.2.1";
         ABOUT_MESSAGE = "Muerte al capitalismo ostias ya";
       };
       extraOptions = [ "--network=kittygram-net" ];
