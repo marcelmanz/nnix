@@ -285,6 +285,9 @@
         routes = [{Gateway = "192.168.1.1";}];
         networkConfig = {
           DHCP = "ipv6"; # SLAAC/DHCPv6 only; static IPv4 (was dhcpcd noipv4)
+          LLDP = false; # LLDP client socket fails here ("Address family not
+          # supported by protocol"), which trips networkd's failed-state
+          # throttle and stops it from ever applying the static address/route.
           IPv6LinkLocalAddressGenerationMode = "stable-privacy";
           # networkd's IPv6PrivacyExtensions overrides networking.tempAddresses on
           # interfaces it manages; "yes" prefers a temporary address for outbound.
@@ -306,6 +309,7 @@
         routes = [{Gateway = "192.168.1.1";}];
         networkConfig = {
           DHCP = "ipv6";
+          LLDP = false; # see 10-lan10g above
           IPv6LinkLocalAddressGenerationMode = "stable-privacy";
           IPv6PrivacyExtensions = "yes"; # see 10-lan10g above
         };
@@ -316,6 +320,7 @@
         matchConfig.MACAddress = "38:05:25:35:30:08";
         networkConfig = {
           DHCP = "yes";
+          LLDP = false; # see 10-lan10g above
           IPv6LinkLocalAddressGenerationMode = "stable-privacy";
         };
         ipv6AcceptRAConfig.Token = "prefixstable";
@@ -325,6 +330,7 @@
         matchConfig.MACAddress = "38:05:25:35:30:09";
         networkConfig = {
           DHCP = "yes";
+          LLDP = false; # see 10-lan10g above
           IPv6LinkLocalAddressGenerationMode = "stable-privacy";
         };
         ipv6AcceptRAConfig.Token = "prefixstable";

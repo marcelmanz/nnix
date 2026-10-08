@@ -12,6 +12,12 @@
     exec ${pkgs.cinny-desktop}/bin/cinny "$@"
   '';
 in {
+  # GDM's systemd-user session (Hyprland included) only reads environment.d, never .bashrc,
+  # so without this, hm-installed programs are invisible to anything launched outside a bash shell.
+  xdg.configFile."environment.d/20-nix-path.conf".text = ''
+    PATH=${homeDir}/.nix-profile/bin:/nix/var/nix/profiles/default/bin''${PATH:+:}$PATH
+  '';
+
   programs.firefox = {
     package = config.lib.nixGL.wrap pkgs.firefox;
   };

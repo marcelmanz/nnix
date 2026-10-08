@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   pkgs,
   inputs,
   pkgsStable,
@@ -1095,7 +1096,7 @@ in {
     # GUI-specific config files only
     ".config/hypr/hyprland.lua".source = link "${dots}/.config/hypr/hyprland.lua";
     # device.lua is required by hyprland.lua; resolve it statically per host (was a runtime exec-once symlink)
-    ".config/hypr/device.lua".source = link "${dots}/.config/hypr/devices/nixos.lua";
+    ".config/hypr/device.lua".source = lib.mkDefault (link "${dots}/.config/hypr/devices/nixos.lua");
     ".config/hypr/hypridle.conf".source = link "${dots}/.config/hypr/hypridle.conf";
     ".config/hypr/hyprlock.conf".source = link "${dots}/.config/hypr/hyprlock.conf";
     ".config/hypr/hyprpaper.conf".source = link "${dots}/.config/hypr/hyprpaper.conf";
