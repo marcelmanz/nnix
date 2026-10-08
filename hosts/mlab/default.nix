@@ -46,6 +46,7 @@
     ./searxng.nix
     ./seerr.nix
     ./shoko.nix
+    ./silverbullet.nix
     ./slskd.nix
     ./soulbeet.nix
     ./sway.nix

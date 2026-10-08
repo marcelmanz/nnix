@@ -98,6 +98,11 @@
       href = "https://nitter.marcel.cool";
       protected = true;
     };
+    notes = {
+      port = 3021;
+      href = "https://notes.marcel.cool";
+      protected = true;
+    };
     offtiktok = {
       port = 3010;
       href = "https://offtiktok.marcel.cool";
