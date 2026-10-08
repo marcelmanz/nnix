@@ -3,8 +3,7 @@
 {
   # Proxied via proxy.nix (services.insta -> insta.marcel.cool, port 3022).
 
-  # Upstream (codeberg.org/irelephant/kittygram) publishes no container
-  # image, so build it from a checkout in /var/lib/kittygram. podman build is
+  # Built from marcelmanz's fork (SearXNG-backed search), no image published upstream. podman build is
   # layer-cached; a no-change rebuild costs seconds. To force an update:
   # `systemctl start kittygram-image` then restart podman-kittygram.
   systemd.tmpfiles.rules = [ "d /var/lib/kittygram 0755 root root -" ];
@@ -18,7 +17,7 @@
     script = ''
       src=/var/lib/kittygram
       if [ ! -d "$src/.git" ]; then
-        git clone --depth=1 https://codeberg.org/irelephant/kittygram.git "$src"
+        git clone --depth=1 https://codeberg.org/marcelmanz/kittygram.git "$src"
       else
         git -C "$src" pull --ff-only
       fi
@@ -59,6 +58,8 @@
       environment = {
         REDIS_HOST = "kittygram-valkey";
         REDIS_PORT = "6379";
+        SEARXNG_URL = "http://host.containers.internal:8084";
+        ABOUT_MESSAGE = "Muerte al capitalismo ostias ya";
       };
       extraOptions = [ "--network=kittygram-net" ];
     };
