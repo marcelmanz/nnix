@@ -110,6 +110,7 @@
         (import ./overlays/mautrix-whatsapp.nix)
         (import ./overlays/hyprland-glaze-fix.nix)
         (import ./overlays/myna-font.nix {inherit inputs;})
+        (import ./overlays/authelia-pnpm-hash.nix)
         (final: prev: {tmex = tmexPkg;})
         (final: prev: {
           pir = pir.packages.${system}.pir;

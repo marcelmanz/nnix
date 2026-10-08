@@ -36,13 +36,6 @@
     stall on an unreachable resolver first. Wants systemd-resolved split DNS
     routing only ~marcel.cool to 192.168.1.140, scoped to the home connection.
 
-- [ ] Fix the ssh-ng://mlab build machine entry (nixos/configuration.nix:26)
-  - Every nixos-rebuild prints "cannot build on 'ssh-ng://mlab': Could not
-    resolve hostname mlab" and falls back to building locally. The mlab alias
-    only exists in ~/.ssh/config and the nix daemon runs as root.
-  - Either point the entry at ssh.marcel.cool or add the Host alias to root's
-    ssh config.
-
 - [x] Setup a radio
 
 - [x] Setup an auto sync of bandcamp buys

@@ -31,7 +31,7 @@
 
   pia-wg-config = pkgs.writeShellApplication {
     name = "pia-wg-config";
-    runtimeInputs = with pkgs; [curl jq wireguard-tools];
+    runtimeInputs = with pkgs; [bash curl findutils gawk iputils jq wireguard-tools];
     text = ''
       umask 077
 
@@ -58,12 +58,21 @@
         echo "pia-wg-config: could not reach the PIA server list" >&2
         exit 1
       }
-      wgHost=$(echo "$regions" | jq -r '[.regions[] | select(.port_forward==true)][0].servers.wg[0].cn')
-      wgIp=$(echo "$regions" | jq -r '[.regions[] | select(.port_forward==true)][0].servers.wg[0].ip')
-      if [ -z "$wgHost" ] || [ "$wgHost" = "null" ]; then
-        echo "pia-wg-config: no port-forward-capable region found" >&2
+      # Pick the port-forward region with the lowest measured RTT instead of
+      # the first one in PIA's list (which was always CA Montreal - 100ms+
+      # from ES on every single API call out of the netns).
+      # shellcheck disable=SC2016
+      best=$(echo "$regions" | jq -r '.regions[] | select(.port_forward==true) | [.id, .servers.wg[0].ip] | @tsv' \
+        | xargs -P 32 -L 1 sh -c 'rtt=$(ping -c 2 -W 1 -q "$1" | awk -F/ "END {print \$5}"); echo "''${rtt:-9999} $1"' \
+        | sort -n | head -1 || true)
+      bestIp=$(echo "$best" | awk '{print $2}')
+      if [ -z "$bestIp" ]; then
+        echo "pia-wg-config: no reachable port-forward region found" >&2
         exit 1
       fi
+      wgHost=$(echo "$regions" | jq -r --arg ip "$bestIp" '[.regions[] | select(.servers.wg[0].ip == $ip)][0].servers.wg[0].cn')
+      wgIp="$bestIp"
+      echo "pia-wg-config: selected $wgHost (rtt $(echo "$best" | awk '{print $1}')ms)"
 
       privKey=$(wg genkey)
       pubKey=$(echo "$privKey" | wg pubkey)
@@ -382,7 +391,10 @@ in {
           # a dead tunnel made useless anyway.
           if heal pia-stale-handshake; then state_msg="$state_msg (self-heal restart issued)"; fi
         else
-          exit_ip=$(ip netns exec pia curl -s --max-time 8 'https://api.ipify.org?format=json' | jq -r '.ip // empty' || true)
+          # ifconfig.me, not ipify: ipify blocks/cloudflare-challenges PIA exit IPs,
+          # which produced permanent false-DEGRADED statuses while the tunnel
+          # was fine (2026-10-08).
+          exit_ip=$(ip netns exec pia curl -s --max-time 8 'https://ifconfig.me' || true)
           if [ -n "$exit_ip" ]; then
             state=UP; state_color="#22c55e"; state_msg="tunnel up, egress reachable"
           else

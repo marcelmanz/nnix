@@ -38,6 +38,7 @@
 
   programs.ssh.extraConfig = ''
     Host mlab ssh.marcel.cool
+      HostName ssh.marcel.cool
       User root
       IdentityFile /etc/nix/keys/mlab_key
       IdentitiesOnly yes

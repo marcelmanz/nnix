@@ -20,6 +20,7 @@
     ./calibre.nix
     ./ddclient.nix
     ./filebrowser.nix
+    ./flaresolverr.nix
     ./dropbox.nix
     ./graphana.nix
     ./homepage.nix
