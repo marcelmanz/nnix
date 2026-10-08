@@ -24,6 +24,12 @@
       fi
       git -C "$src" lfs install --local
       git -C "$src" lfs pull
+      # ponytail: lapis >=1.17 dropped types.id from its sqlite schema, so
+      # upstream's own Dockerfile fails at 'lapis migrate'. Swap in integer -
+      # both tables it touches declare their own PRIMARY KEYs explicitly, so
+      # the column type is cosmetic. Delete this once upstream upstream fixes
+      # migrations.lua.
+      sed -i 's/types\.id/types.integer/g' "$src/migrations.lua"
       podman build -t localhost/kittygram:latest "$src"
     '';
   };
