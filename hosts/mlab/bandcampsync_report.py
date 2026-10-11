@@ -13,6 +13,9 @@ import json
 import re
 import subprocess
 import sys
+import urllib.error
+import urllib.parse
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -224,6 +227,22 @@ def generate():
     )
 
 
+def reachable_url(url):
+    """The purchase's url, or its artist page if bandcamp has since taken the release down."""
+    if not url:
+        return url
+    req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "Mozilla/5.0"})
+    try:
+        urllib.request.urlopen(req, timeout=10)
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            parts = urllib.parse.urlsplit(url)
+            return f"{parts.scheme}://{parts.netloc}"
+    except OSError:
+        pass
+    return url
+
+
 def fetch_urls():
     from bandcampsync.bandcamp import Bandcamp
 
@@ -231,7 +250,7 @@ def fetch_urls():
     b = Bandcamp(cookies=cookies)
     b.verify_authentication()
     b.load_purchases()
-    urls = {str(it.item_id): it._data.get("item_url") for it in b.purchases}
+    urls = {str(it.item_id): reachable_url(it._data.get("item_url")) for it in b.purchases}
     URLS_JSON.write_text(json.dumps(urls, indent=2))
     print(f"wrote {len(urls)} urls")
 
