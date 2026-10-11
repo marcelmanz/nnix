@@ -240,15 +240,23 @@ def cam_state():
         return None
 
 
-def set_cam_published(published: bool):
-    state = cam_state()
-    if state is None or state["live"] == published:
-        return
+def post_cam(path: str):
     try:
-        urllib.request.urlopen(urllib.request.Request(f"{STREAMCAM_URL}/toggle", method="POST"), timeout=3)
+        urllib.request.urlopen(urllib.request.Request(f"{STREAMCAM_URL}{path}", method="POST"), timeout=3)
     except Exception:
         # its 303 lands on a 404 here; the toggle itself already happened
         pass
+
+
+def set_cam_published(published: bool):
+    state = cam_state()
+    if state is None:
+        return
+    if state["live"] != published:
+        post_cam("/toggle")
+    # text-mode left on from an earlier show would hide the cam
+    if published and state["text_mode"]:
+        post_cam("/text-mode")
 
 
 def cam_controls(state, recording: bool) -> str:
