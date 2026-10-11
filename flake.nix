@@ -69,10 +69,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     vpn-confinement.url = "github:Maroka-chan/VPN-Confinement";
-    resona = {
-      url = "git+https://codeberg.org/marcelmanz/resona";
-      flake = false;
-    };
+    resona.url = "git+https://codeberg.org/marcelmanz/resona";
   };
 
   outputs = {
@@ -204,6 +201,7 @@
         inputs.sops-nix.nixosModules.sops
         inputs.openlogi.nixosModules.default
         inputs.vpn-confinement.nixosModules.default
+        inputs.resona.nixosModules.default
         {
           programs.openlogi.enable = true;
         }

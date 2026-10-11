@@ -3,15 +3,7 @@
   pkgs,
   services,
   ...
-}: let
-  # loopback-only; referenced by the "= /listen-time" nginx location in proxy.nix.
-  # Kept OUT of the shared `services` attrset on purpose: that attrset feeds the firewall's
-  # allowedTCPPorts, and this port must stay loopback-only.
-  listenTimePort = 8320;
-  # loopback-only; referenced by the "/chat/" nginx location in proxy.nix. Same reasoning as
-  # listenTimePort above - kept out of the shared `services` attrset.
-  chatPort = 8321;
-in {
+}: {
   imports = [./radio-bot ./live.nix ./webcam.nix];
 
   systemd.tmpfiles.rules = [
@@ -47,7 +39,6 @@ in {
   };
 
   # declarative azuracast settings, applied via the app's own cli so they survive fresh installs and resist ui drift.
-  # public_custom_css / public_custom_js are loaded from standalone files (see ./public/public.{css,js}).
   systemd.services.azuracast-settings = {
     description = "Apply declarative AzuraCast settings";
     after = ["podman-azuracast.service"];
@@ -58,19 +49,9 @@ in {
       RemainAfterExit = true;
     };
     script = ''
-      CSS_FILE=${./public/public.css}
-      JS_FILE=${./public/public.js}
-
       for i in $(seq 1 60); do
         if podman exec azuracast azuracast_cli azuracast:settings:set homepage_redirect_url /public/radio_marcel 2>/dev/null; then
           echo "azuracast-settings: homepage_redirect_url=/public/radio_marcel"
-
-          # Deliberately not `... && echo`: this used to be two azuracast_cli calls with
-          # their stderr dropped, so when the value outgrew the argv limit they failed
-          # without a word and the page kept serving the old file. Run bare, a failure
-          # aborts the unit and says so.
-          ${pkgs.runtimeShell} ${./public-assets.sh} "$CSS_FILE" "$JS_FILE"
-          echo "azuracast-settings: public_custom_css/js (from $CSS_FILE, $JS_FILE)"
 
           # HLS delivery. The plain mp3 mount is a single endless TCP connection, so any blip on
           # the listener's side kills it outright and nothing server-side can prevent that. HLS
@@ -280,45 +261,10 @@ in {
     };
   };
 
-  # Per-visitor listen-time endpoint for the public radio page: tracks each visitor's all-time
-  # total, keyed by a client-generated id (not IP - IPv6 privacy addresses rotate too often for
-  # that to accumulate, see listen-time.py) persisted to StateDirectory. Serves GET /listen-time
-  # on 127.0.0.1; nginx fronts it as same-origin /listen-time (proxy.nix).
-  systemd.services.azuracast-listen-time = {
-    description = "Per-visitor listen-time endpoint for the radio public page";
-    after = ["network.target"];
-    wantedBy = ["multi-user.target"];
-    serviceConfig = {
-      Type = "simple";
-      DynamicUser = true;
-      StateDirectory = "azuracast-listen-time";
-      ExecStart = "${pkgs.python3}/bin/python3 ${./listen-time.py} ${toString listenTimePort}";
-      Restart = "on-failure";
-      RestartSec = "5s";
-    };
-  };
 
-  # Live chat for the public radio page: random per-visitor name, no accounts. History and the
-  # live-text override persist to StateDirectory across restarts/deploys (connections and
-  # per-IP throttle state don't - see chat.py). Nginx fronts it as same-origin /chat/ (proxy.nix)
-  # with proxy_buffering off for the SSE stream. See chat.py for the protocol.
-  systemd.services.azuracast-chat = {
-    description = "Live chat for the radio public page";
-    after = ["network.target"];
-    wantedBy = ["multi-user.target"];
-    serviceConfig = {
-      Type = "simple";
-      DynamicUser = true;
-      StateDirectory = "azuracast-chat";
-      ExecStart = "${pkgs.python3}/bin/python3 ${./chat.py} ${toString chatPort}";
-      # Owner recognition goes through Authelia (auth.marcel.cool, see authelia.nix) instead of an
-      # IP allowlist - see chat.py's is_owner().
-      Environment = [
-        "AUTH_VERIFY_URL=http://127.0.0.1:${toString services.auth.port}/api/verify"
-        "AUTH_CHECK_DOMAIN=home.marcel.cool"
-      ];
-      Restart = "on-failure";
-      RestartSec = "5s";
-    };
+  # Public page at radio.marcel.cool: radio, live video+desk audio, chat (codeberg.org/marcelmanz/resona).
+  services.resona = {
+    enable = true;
+    domain = "radio.marcel.cool";
   };
 }
