@@ -240,6 +240,17 @@ def cam_state():
         return None
 
 
+def set_cam_published(published: bool):
+    state = cam_state()
+    if state is None or state["live"] == published:
+        return
+    try:
+        urllib.request.urlopen(urllib.request.Request(f"{STREAMCAM_URL}/toggle", method="POST"), timeout=3)
+    except Exception:
+        # its 303 lands on a 404 here; the toggle itself already happened
+        pass
+
+
 def cam_controls(state, recording: bool) -> str:
     if state is None:
         return '<span class="err">Webcam controls unavailable - is webcam-control-web running?</span>'
@@ -509,6 +520,7 @@ class Handler(BaseHTTPRequestHandler):
                 set_mic(True)
             action = "stop" if live else "start"
             subprocess.run([SUDO, SYSTEMCTL, action, UNIT], check=False)
+            set_cam_published(not live)
             self.send_response(303)
             self.send_header("Location", "/")
             self.end_headers()

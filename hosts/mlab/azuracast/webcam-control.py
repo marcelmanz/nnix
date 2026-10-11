@@ -16,6 +16,8 @@ TEXT_MODE_FILE = STATE_FILE.parent / "text-mode"
 DEFAULT_OFFLINE_TEXT = "Off air"
 MAX_OFFLINE_TEXT_LEN = 100
 WHEP_PATH = "/webcam/whep"
+# azuracast-live-capture's RuntimeDirectory (live.nix): exists exactly while you're on air.
+ON_AIR_MARKER = Path("/run/azuracast-live-capture")
 
 # ffmpeg -vf filter per effect name; webcam.nix's runOnInit reads EFFECT_FILE's
 # raw value straight into -vf, so this is the single source of truth for both.
@@ -41,6 +43,10 @@ def text_mode_on() -> bool:
 # recording, but text-mode substitutes the offline text for the video without touching it.
 def public_live() -> bool:
     return is_live() and not text_mode_on()
+
+
+def on_air() -> bool:
+    return ON_AIR_MARKER.exists()
 
 
 def preview_token() -> str:
@@ -91,7 +97,8 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if self.path == "/status":
-            body = json.dumps({"live": public_live(), "offline_text": current_offline_text()}).encode()
+            # resona plays webcamav, which /authcheck only serves while on air
+            body = json.dumps({"live": public_live() and on_air(), "offline_text": current_offline_text()}).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Access-Control-Allow-Origin", "*")
@@ -193,6 +200,10 @@ class Handler(BaseHTTPRequestHandler):
                 # and v6 prefix - see the source-scoped rules in webcam.nix.
                 if req.get("path") == "livemix":
                     allowed = True
+                # webcamav carries the desk mic (resona's module), so it stays shut off air even
+                # with the camera published.
+                if req.get("path") == "webcamav":
+                    allowed = allowed and on_air()
             self.send_response(200 if allowed else 401)
             self.end_headers()
             return
