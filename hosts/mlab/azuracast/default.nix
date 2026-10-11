@@ -49,26 +49,14 @@
       RemainAfterExit = true;
     };
     script = ''
-      for i in $(seq 1 60); do
-        if podman exec azuracast azuracast_cli azuracast:settings:set homepage_redirect_url /public/radio_marcel 2>/dev/null; then
-          echo "azuracast-settings: homepage_redirect_url=/public/radio_marcel"
+      mysql() { podman exec azuracast mariadb -N -B -u azuracast -p${config.virtualisation.oci-containers.containers.azuracast.environment.MYSQL_PASSWORD} azuracast -e "$1" 2>/dev/null; }
 
-          # HLS delivery. The plain mp3 mount is a single endless TCP connection, so any blip on
-          # the listener's side kills it outright and nothing server-side can prevent that. HLS
-          # ships the same audio as short segments the player fetches ahead and retries
-          # individually, so a brief outage costs one segment instead of the whole stream.
-          #
-          # Both knobs live in the DB with no azuracast_cli setter: enable_hls is a station
-          # column, and the actual output needs at least one row in station_hls_streams -
-          # enable_hls on its own leaves liquidsoap with nothing to encode and the hls dir empty,
-          # which nginx then serves as a 404 (its location does try_files $uri =404).
-          #
+      for i in $(seq 1 60); do
+        SID=$(mysql "SELECT id FROM station WHERE short_name='radio_marcel';") || true
+        if [ -n "$SID" ]; then
           # Everything is guarded on current state and the radio is restarted at most once,
           # because azuracast:radio:restart disconnects every listener - unguarded, each
           # nixos-rebuild would drop the whole audience.
-          mysql() { podman exec azuracast mariadb -N -B -u azuracast -p${config.virtualisation.oci-containers.containers.azuracast.environment.MYSQL_PASSWORD} azuracast -e "$1" 2>/dev/null; }
-
-          SID=$(mysql "SELECT id FROM station WHERE short_name='radio_marcel';")
           RADIO_CHANGED=0
 
           # avoid_duplicates makes the queue builder skip any track whose artist played
@@ -83,112 +71,17 @@
               && echo "azuracast-settings: avoid_duplicates=0"
           fi
 
-          if [ "$(mysql "SELECT enable_hls FROM station WHERE id=$SID;")" = "0" ]; then
-            if mysql "UPDATE station SET enable_hls=1 WHERE id=$SID;"; then
-              RADIO_CHANGED=1
-              echo "azuracast-settings: enable_hls=1"
-            fi
-          fi
-
-          if [ "$(mysql "SELECT COUNT(*) FROM station_hls_streams WHERE station_id=$SID;")" = "0" ]; then
-            if mysql "INSERT INTO station_hls_streams (station_id, name, format, bitrate, listeners) VALUES ($SID, 'aac_192', 'aac', 192, 0);"; then
-              RADIO_CHANGED=1
-              echo "azuracast-settings: added hls stream aac_192"
-            fi
-          fi
-
-          # FLAC mount for the /lossless-stream alias in proxy.nix. Not the default mount:
-          # /stream (radio.mp3) keeps serving web/mobile listeners, FLAC is opt-in by URL.
-          # autodj_bitrate is inert for FLAC (liquidsoap %flac is compression-based) - 0 keeps
-          # the API honest instead of advertising a fake kbps. All NOT NULL columns are set
-          # explicitly because DB-side defaults on station_mounts are not guaranteed.
-          if [ "$(mysql "SELECT COUNT(*) FROM station_mounts WHERE station_id=$SID AND name='/radio.flac';")" = "0" ]; then
-            if mysql "INSERT INTO station_mounts (station_id, name, display_name, is_visible_on_public_pages, is_default, is_public, max_listener_duration, enable_autodj, autodj_format, autodj_bitrate, listeners_unique, listeners_total) VALUES ($SID, '/radio.flac', 'FLAC', 1, 0, 0, 0, 1, 'flac', 0, 0, 0);"; then
-              RADIO_CHANGED=1
-              echo "azuracast-settings: added flac mount /radio.flac"
-            fi
-          fi
-
-          # Selector labels for the player's built-in stream dropdown: its item titles are the
-          # mounts' display_name, so they name the format and its bitrate. FLAC carries no
-          # number - liquidsoap's %flac is compression-based, so its rate floats with the
-          # material (~1 Mbps measured); a fixed kbps there would be a lie. Cosmetic, DB-only
-          # values - no radio restart needed. The player itself prepends a fixed "HLS" entry
-          # whenever HLS is enabled; that one is not renamable from the DB.
-          if [ "$(mysql "SELECT display_name FROM station_mounts WHERE station_id=$SID AND name='/radio.mp3';")" != "MP3 192k" ]; then
-            mysql "UPDATE station_mounts SET display_name='MP3 192k' WHERE station_id=$SID AND name='/radio.mp3';" \
-              && echo "azuracast-settings: mp3 mount labelled 'MP3 192k'"
-          fi
-          if [ "$(mysql "SELECT display_name FROM station_mounts WHERE station_id=$SID AND name='/radio.flac';")" != "FLAC" ]; then
-            mysql "UPDATE station_mounts SET display_name='FLAC' WHERE station_id=$SID AND name='/radio.flac';" \
-              && echo "azuracast-settings: flac mount labelled 'FLAC'"
-          fi
-
-          # Repair rows written with a type the current PlaylistTypes enum no longer has (an
-          # older revision inserted 'scheduled'). Hydrating one such row throws, which breaks
-          # the whole playlist listing - scheduling comes from station_schedules, not the type.
-          VALID_TYPES="'default','once_per_x_songs','once_per_x_minutes','once_per_hour'"
-          if [ "$(mysql "SELECT COUNT(*) FROM station_playlists WHERE station_id=$SID AND type NOT IN ($VALID_TYPES);")" != "0" ]; then
-            mysql "UPDATE station_playlists SET type='default' WHERE station_id=$SID AND type NOT IN ($VALID_TYPES);" \
-              && echo "azuracast-settings: reset invalid playlist type(s) to 'default'"
-          fi
-
-          # News bulletin playlist. radio-bot generates a bulletin at 07:30 and 16:30 and
-          # uploads it to the news/ folder; the folder row below makes AzuraCast attach each
-          # upload to this playlist on arrival (FlowUploadAction does that for any directory
-          # with a playlist binding), so no per-run playlist call is needed.
-          #
-          # station_schedules + loop_once: the bulletin plays once at the top of each window rather
-          # than looping for its whole length. The windows sit ~30 min after each generation
-          # run so the greeting the script writes ("good morning" / "good afternoon") matches
-          # when it actually airs. radio-bot prunes older bulletins after each upload, so the
-          # playlist only ever holds the current one.
-          NEWS_PID=$(mysql "SELECT id FROM station_playlists WHERE station_id=$SID AND name='news';")
-          if [ -z "$NEWS_PID" ]; then
-            mysql "INSERT INTO station_playlists (station_id, name, type, is_enabled, play_per_songs, play_per_minutes, weight, source, include_in_requests, playback_order, is_jingle, play_per_hour_minute, remote_timeout, include_in_on_demand, avoid_duplicates) VALUES ($SID, 'news', 'default', 1, 0, 0, 20, 'songs', 0, 'sequential', 0, 0, 0, 0, 0);"
-            NEWS_PID=$(mysql "SELECT id FROM station_playlists WHERE station_id=$SID AND name='news';")
-            echo "azuracast-settings: created 'news' playlist (id=$NEWS_PID)"
-          fi
-
-          if [ "$(mysql "SELECT weight FROM station_playlists WHERE id=$NEWS_PID;")" != "20" ]; then
-            mysql "UPDATE station_playlists SET weight=20 WHERE id=$NEWS_PID;" \
-              && echo "azuracast-settings: news playlist weight=20"
-          fi
-
-          # radio-bot is disabled (no timer generating bulletins any more) - keep the
-          # playlist/schedule/folder binding provisioned above, just stop it airing.
-          if [ "$(mysql "SELECT is_enabled FROM station_playlists WHERE id=$NEWS_PID;")" = "1" ]; then
-            mysql "UPDATE station_playlists SET is_enabled=0 WHERE id=$NEWS_PID;" \
-              && echo "azuracast-settings: news playlist disabled"
-          fi
-
-          if [ -n "$NEWS_PID" ]; then
-            ensure_schedule() {
-              if [ "$(mysql "SELECT COUNT(*) FROM station_schedules WHERE playlist_id=$NEWS_PID AND start_time=$1;")" = "0" ]; then
-                mysql "INSERT INTO station_schedules (playlist_id, start_time, end_time, loop_once, prevent_requests) VALUES ($NEWS_PID, $1, $2, 1, 0);" \
-                  && echo "azuracast-settings: news airs $1-$2"
-              fi
-            }
-            ensure_schedule 800 815
-            ensure_schedule 1700 1715
-
-            if [ "$(mysql "SELECT COUNT(*) FROM station_playlist_folders WHERE station_id=$SID AND playlist_id=$NEWS_PID AND path='news';")" = "0" ]; then
-              mysql "INSERT INTO station_playlist_folders (station_id, playlist_id, path) VALUES ($SID, $NEWS_PID, 'news');" \
-                && echo "azuracast-settings: bound news/ folder to the news playlist"
-            fi
-          fi
-
-          # Icecast hands every new listener burst-size bytes the moment it connects, so
-          # playback starts instantly but that far behind live: AzuraCast hardcodes 65535,
-          # which at 192kbps is ~2.7s. 16384 keeps the instant start (~0.7s of audio, more
-          # than any player needs to begin) and drops ~2s of lag. custom_config is merged
-          # recursively over the generated config (Radio/Frontend/Icecast.php), JSON or XML.
-          # Lower it further only if listeners on flaky links stop rebuffering.
-          BURST_CFG='{"limits":{"burst-size":16384}}'
+          # Icecast hands every new listener burst-size bytes the moment it connects, and that
+          # is all the buffer the player ever gets: after it the stream arrives at realtime.
+          # 65535 (~2.7s at 192kbps, AzuraCast's default) is kept explicit over a lower value:
+          # 16384 (~0.7s) cut ~2s of lag but made every start stutter. The lag no longer matters
+          # since resona's live mode plays the synced video stream, not this mount.
+          # custom_config is merged recursively over the generated config (Radio/Frontend/Icecast.php).
+          BURST_CFG='{"limits":{"burst-size":65535}}'
           if [ "$(mysql "SELECT JSON_UNQUOTE(JSON_EXTRACT(frontend_config, '\$.custom_config')) FROM station WHERE id=$SID;")" != "$BURST_CFG" ]; then
             if mysql "UPDATE station SET frontend_config=JSON_SET(frontend_config, '\$.custom_config', '$BURST_CFG') WHERE id=$SID;"; then
               RADIO_CHANGED=1
-              echo "azuracast-settings: icecast burst-size=16384"
+              echo "azuracast-settings: icecast burst-size=65535"
             fi
           fi
 
@@ -203,8 +96,7 @@
         fi
         sleep 5
       done
-      echo "azuracast-settings: gave up; last error:" >&2
-      podman exec azuracast azuracast_cli azuracast:settings:set homepage_redirect_url /public/radio_marcel >&2
+      echo "azuracast-settings: gave up waiting for the radio_marcel station" >&2
       exit 1
     '';
   };

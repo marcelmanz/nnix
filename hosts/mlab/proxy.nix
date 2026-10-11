@@ -536,21 +536,6 @@ in {
                     proxy_send_timeout 1h;
                   '';
                 };
-                # lossless twin of /stream; 404s until the FLAC mount /radio.flac exists
-                # (inserted declaratively by azuracast/default.nix, like the HLS rows).
-                "= /lossless-stream" = {
-                  proxyPass = "http://127.0.0.1:${toString services.azuracast.port}/listen/radio_marcel/radio.flac";
-                  extraConfig = ''
-                    proxy_set_header Host $host;
-                    proxy_set_header X-Real-IP $remote_addr;
-                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                    proxy_set_header X-Forwarded-Proto https;
-                    proxy_buffering off;
-                    proxy_request_buffering off;
-                    proxy_read_timeout 1h;
-                    proxy_send_timeout 1h;
-                  '';
-                };
                 # The player itself requests /listen/<station>/radio.mp3 directly (not via
                 # /stream above), which otherwise falls through to base "/" - no
                 # proxy_buffering off there, so nginx tries to buffer this endless stream
