@@ -2,6 +2,7 @@
   config,
   pkgs,
   lib,
+  inputs,
   ...
 }: let
   services = {
@@ -525,7 +526,8 @@ in {
               // {
                 # serve the public page at the clean root — internal rewrite,
                 "= /" = {
-                  extraConfig = "rewrite ^ /public/radio_marcel?hide_history=1&hide_playlist=1 last;";
+                  alias = "${inputs.resona}/index.html";
+                  extraConfig = "default_type text/html;";
                 };
                 "/admin" = {
                   return = "302 https://studio.marcel.cool$request_uri";

@@ -803,6 +803,22 @@
         "type": "github"
       }
     },
+    "resona": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791734364,
+        "narHash": "sha256-ssU1D5J+O0SILh5X8wR3NgNtP5NV6YkGV0Y4mvFCl3Q=",
+        "ref": "refs/heads/main",
+        "rev": "d4d0b2d0dcfc21714b4d5879615da0af70749c08",
+        "revCount": 1,
+        "type": "git",
+        "url": "https://codeberg.org/marcelmanz/resona"
+      },
+      "original": {
+        "type": "git",
+        "url": "https://codeberg.org/marcelmanz/resona"
+      }
+    },
     "root": {
       "inputs": {
         "brave-origin-channels": "brave-origin-channels",
@@ -826,6 +842,7 @@
         "openlogi": "openlogi",
         "pir": "pir",
         "psysonic": "psysonic",
+        "resona": "resona",
         "sops-nix": "sops-nix",
         "tmex": "tmex",
         "vpn-confinement": "vpn-confinement",

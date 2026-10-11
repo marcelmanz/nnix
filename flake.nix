@@ -69,6 +69,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     vpn-confinement.url = "github:Maroka-chan/VPN-Confinement";
+    resona = {
+      url = "git+https://codeberg.org/marcelmanz/resona";
+      flake = false;
+    };
   };
 
   outputs = {
