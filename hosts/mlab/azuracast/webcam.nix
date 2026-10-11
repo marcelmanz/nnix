@@ -96,7 +96,17 @@
 
           # by-id (serial-pinned), not /dev/video0: device numbering shifts whenever any
           # UVC device is (un)plugged or on boot order changes.
-          exec ${lib.getExe pkgs.ffmpeg} -f v4l2 -input_format mjpeg -video_size 1920x1080 -framerate 60 -i /dev/v4l/by-id/usb-046d_Logitech_BRIO_F67E04C5-video-index0 -an -vaapi_device /dev/dri/renderD128 -vf "''${filter:-null},hqdn3d=3:2:6:6,scale=in_range=pc:out_range=tv,format=nv12,hwupload" -c:v h264_vaapi -b:v 6M -maxrate 6M -bf 0 -g 60 -f rtsp rtsp://localhost:$RTSP_PORT/$RTSP_PATH
+          cam=/dev/v4l/by-id/usb-046d_Logitech_BRIO_F67E04C5-video-index0
+
+          # The desk never moves, so autofocus only hunts when hands cross it. focus_absolute=10
+          # is where autofocus settled on the desk - the knob if the camera is ever moved.
+          # exposure_dynamic_framerate=0 holds a true 60fps instead of letting the camera
+          # drop frames to expose longer in low light. Two calls: focus_absolute is
+          # rejected while autofocus is still on.
+          ${pkgs.v4l-utils}/bin/v4l2-ctl -d "$cam" -c focus_automatic_continuous=0 -c exposure_dynamic_framerate=0
+          ${pkgs.v4l-utils}/bin/v4l2-ctl -d "$cam" -c focus_absolute=10
+
+          exec ${lib.getExe pkgs.ffmpeg} -f v4l2 -input_format mjpeg -video_size 1920x1080 -framerate 60 -i "$cam" -an -vaapi_device /dev/dri/renderD128 -vf "''${filter:-null},hqdn3d=3:2:6:6,scale=in_range=pc:out_range=tv,format=nv12,hwupload" -c:v h264_vaapi -b:v 6M -maxrate 6M -bf 0 -g 60 -f rtsp rtsp://localhost:$RTSP_PORT/$RTSP_PATH
         '';
         runOnInitRestart = true;
       };
