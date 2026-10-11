@@ -1,9 +1,33 @@
 {
   _config,
   lib,
+  pkgs,
   services,
   ...
-}: {
+}: let
+  # Obfuscated releases (hash filenames) leave sonarr unable to tell episodes apart;
+  # the episode is usually still in the mkv title tag, so rename from that before sonarr imports.
+  renameFromTitle = pkgs.writeShellApplication {
+    name = "rename-from-title";
+    runtimeInputs = [pkgs.ffmpeg-headless pkgs.findutils pkgs.gnugrep];
+    text = ''
+      find "$1" -type f \( -iname '*.mkv' -o -iname '*.mp4' -o -iname '*.m4v' -o -iname '*.avi' \) -print0 |
+        while IFS= read -r -d "" file; do
+          name=$(basename "$file")
+          echo "$name" | grep -qiE 's[0-9]+e[0-9]+' && continue
+          title=$(ffprobe -v quiet -show_entries format_tags=title -of csv=p=0 "$file" || true)
+          echo "$title" | grep -qiE 's[0-9]+e[0-9]+' || continue
+          target="$(dirname "$file")/''${title//\//-}.''${name##*.}"
+          [ -e "$target" ] && continue
+          mv -v "$file" "$target"
+        done
+      exit 0  # non-zero would mark the job failed in sabnzbd
+    '';
+  };
+  scriptDir = pkgs.linkFarm "sabnzbd-scripts" {
+    "rename-from-title" = "${renameFromTitle}/bin/rename-from-title";
+  };
+in {
   sops.secrets."sabnzbd_api" = {};
 
   systemd.tmpfiles.rules = [
@@ -26,6 +50,12 @@
         # dead [server] ini section instead of ever setting this.)
         host = "0.0.0.0";
         port = services.sabnzbd.port;
+        script_dir = "${scriptDir}";
+      };
+      # "*" is what every category's script = Default resolves to
+      categories."*" = {
+        name = "*";
+        script = "rename-from-title";
       };
       # Credentials stay in the runtime ini: the merge is recursive and runs
       # nix-last, so these keys win while username/password survive untouched.
