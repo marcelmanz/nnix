@@ -805,11 +805,11 @@
     },
     "resona": {
       "locked": {
-        "lastModified": 1791742647,
-        "narHash": "sha256-lUYNRhWvsYJz8w0rK+3L5Y6wcBWIfMJUenV2Z3yLvNo=",
+        "lastModified": 1791745435,
+        "narHash": "sha256-5wFNsT8E6FrdvcXR1XbymuG53acGWTqPu5ovsMldn7Q=",
         "ref": "refs/heads/main",
-        "rev": "90f8255f9345199371da67acd7089bd85092bf70",
-        "revCount": 29,
+        "rev": "080c0757c20a32b27ab7a07f970ffd53e1d98db5",
+        "revCount": 38,
         "type": "git",
         "url": "https://codeberg.org/marcelmanz/resona"
       },
