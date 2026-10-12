@@ -732,11 +732,11 @@
         "nixpkgs-unstable": "nixpkgs-unstable"
       },
       "locked": {
-        "lastModified": 1791471288,
-        "narHash": "sha256-q+Kb+BWC6eq/73GVpoMPF0sP6/mRSWxA8Uf5EbyE5Lo=",
+        "lastModified": 1791765402,
+        "narHash": "sha256-rqTLxZ+Mzvs6jfYeee0QyV12ZzUTp1GjEPFHNTE64hQ=",
         "owner": "marcelmanz",
         "repo": "nvim-lua",
-        "rev": "d2cf9dfb423f8f8822ee76cefe62f2d63280094d",
+        "rev": "24c4283832679624bddd09fcb86e187ef48ecd9d",
         "type": "github"
       },
       "original": {
