@@ -1,4 +1,4 @@
-.PHONY: format nixos nixos-nixbuild mlab nixos-nixbuild-mlab droid hm news sops android-mirror whatsapp-register azuracast-connect azuracast-report azuracast-clear-chat
+.PHONY: format nixos nixos-nixbuild mlab mlab-gc nixos-nixbuild-mlab droid hm news sops android-mirror whatsapp-register azuracast-connect azuracast-report azuracast-clear-chat
 
 lint: 
 	@nix run .#ruff -- check --fix
@@ -37,6 +37,11 @@ mlab:
 	@# reuses the toplevel just built above (instant), just adds the root.
 	@mkdir -p $(HOME)/.cache/nix-roots
 	@nix build .#nixosConfigurations.mlab.config.system.build.toplevel --out-link $(HOME)/.cache/nix-roots/mlab
+
+mlab-gc:
+	@host=root@mlab-local; \
+	ssh -q -o ConnectTimeout=5 $$host exit 2>/dev/null || host=root@mlab; \
+	ssh $$host nix-collect-garbage -d
 
 nixos-nixbuild-mlab:
 	sudo nixos-rebuild switch --flake .#mlab --target-host root@mlab-local; \
