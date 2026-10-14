@@ -110,7 +110,7 @@ in {
         hostname = "192.168.1.172";
         user = "root";
         # gw terminfo db is minimal
-        SetEnv = "TERM=vt100";
+        SetEnv = {TERM = "vt100";};
         LocalForward = [
           {
             bind.port = 8443;
