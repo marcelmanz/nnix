@@ -69,6 +69,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     vpn-confinement.url = "github:Maroka-chan/VPN-Confinement";
+    resona.url = "git+https://codeberg.org/marcelmanz/resona";
   };
 
   outputs = {
@@ -110,6 +111,7 @@
         (import ./overlays/mautrix-whatsapp.nix)
         (import ./overlays/hyprland-glaze-fix.nix)
         (import ./overlays/myna-font.nix {inherit inputs;})
+        (import ./overlays/authelia-pnpm-hash.nix)
         (final: prev: {tmex = tmexPkg;})
         (final: prev: {
           pir = pir.packages.${system}.pir;
@@ -127,7 +129,7 @@
         (final: prev: {
           protonmail-desktop = inputs.my-nixpkgs.legacyPackages.${system}.protonmail-desktop;
         })
-        (final: prev: {"brave-origin" = inputs.brave-origin-channels.packages.${system}.nightly;})
+       (final: prev: {"brave-origin" = inputs.brave-origin-channels.packages.${system}.nightly;})
         (final: prev: {psysonic = inputs.psysonic.packages.${system}.psysonic;})
         (final: prev: {
           offtiktok = pkgs.callPackage ./packages/offtiktok/frontend.nix {};
@@ -199,6 +201,7 @@
         inputs.sops-nix.nixosModules.sops
         inputs.openlogi.nixosModules.default
         inputs.vpn-confinement.nixosModules.default
+        inputs.resona.nixosModules.default
         {
           programs.openlogi.enable = true;
         }

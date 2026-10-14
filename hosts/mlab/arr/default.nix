@@ -7,5 +7,6 @@
     ./bazarr.nix
     ./prowlarr.nix
     ./chaptarr.nix
+    ./unpackerr.nix
   ];
 }

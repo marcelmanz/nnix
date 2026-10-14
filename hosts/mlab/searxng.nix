@@ -21,7 +21,8 @@
     settings = {
       server = {
         port = services.searxng.port;
-        bind_address = "127.0.0.1";
+        # 0.0.0.0 so podman containers reach it; 8084 stays firewall-closed.
+        bind_address = "0.0.0.0";
         secret_key = "@SEARX_SECRET_KEY@";
       };
 

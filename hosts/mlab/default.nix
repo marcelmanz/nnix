@@ -20,12 +20,14 @@
     ./calibre.nix
     ./ddclient.nix
     ./filebrowser.nix
+    ./flaresolverr.nix
     ./dropbox.nix
     ./graphana.nix
     ./homepage.nix
     ./immich.nix
     ./invidious
     ./jellyfin.nix
+    ./kittygram.nix
     ./livekit.nix
     ./matrix.nix
     ./metube.nix
@@ -46,6 +48,7 @@
     ./searxng.nix
     ./seerr.nix
     ./shoko.nix
+    ./silverbullet.nix
     ./slskd.nix
     ./soulbeet.nix
     ./sway.nix
@@ -257,6 +260,9 @@
       extraCommands = ''
         # Allow traffic from Podman containers to the host
         iptables -A INPUT -i podman+ -p tcp --dport ${toString services.slskd.port} -j ACCEPT
+        # kittygram's SearXNG-backed user search; guarded like the sabnzbd rule below.
+        iptables -C INPUT -i podman+ -p tcp --dport ${toString services.searxng.port} -j ACCEPT 2>/dev/null \
+          || iptables -A INPUT -i podman+ -p tcp --dport ${toString services.searxng.port} -j ACCEPT
         iptables -A INPUT -i podman+ -p tcp --dport ${toString services.navidrome.port} -j ACCEPT
         # sabnzbd runs on the host network (vpn.nix) while the *arr apps stay
         # in the pia namespace, so they submit downloads over the bridge

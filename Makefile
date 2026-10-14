@@ -1,4 +1,4 @@
-.PHONY: format nixos nixos-nixbuild mlab nixos-nixbuild-mlab droid hm news sops android-mirror whatsapp-register azuracast-deploy azuracast-connect azuracast-report azuracast-clear-chat
+.PHONY: format nixos nixos-nixbuild mlab mlab-gc nixos-nixbuild-mlab droid hm news sops android-mirror whatsapp-register azuracast-connect azuracast-report azuracast-clear-chat
 
 lint: 
 	@nix run .#ruff -- check --fix
@@ -38,24 +38,16 @@ mlab:
 	@mkdir -p $(HOME)/.cache/nix-roots
 	@nix build .#nixosConfigurations.mlab.config.system.build.toplevel --out-link $(HOME)/.cache/nix-roots/mlab
 
+mlab-gc:
+	@host=root@mlab-local; \
+	ssh -q -o ConnectTimeout=5 $$host exit 2>/dev/null || host=root@mlab; \
+	ssh $$host nix-collect-garbage -d
+
 nixos-nixbuild-mlab:
 	sudo nixos-rebuild switch --flake .#mlab --target-host root@mlab-local; \
 		--option builders "@/tmp/nixbuild-machines" \
 		--option builders-use-substitutes true \
 		--option max-jobs 0
-
-# push only the azuracast public custom css/js to the live box, no full nixos rebuild.
-# the css/js live in azuracast's settings db, so this scps the local files over and runs the same
-# public-assets.sh the azuracast-settings unit uses (see the header there for why it writes the
-# settings table rather than calling azuracast_cli). no container or radio restart needed - the
-# public page picks the new css/js up on next load.
-azuracast-deploy:
-	@if ssh -q -o ConnectTimeout=5 root@mlab-local exit 2>/dev/null; then HOST=root@mlab-local; else HOST=root@mlab; fi; \
-	echo "Pushing azuracast css/js to $$HOST..."; \
-	scp hosts/mlab/azuracast/public/public.css hosts/mlab/azuracast/public/public.js $$HOST:/tmp/ && \
-	ssh $$HOST 'sh -s -- /tmp/public.css /tmp/public.js && rm -f /tmp/public.css /tmp/public.js' \
-		< hosts/mlab/azuracast/public-assets.sh && \
-	echo "azuracast css/js updated on $$HOST."
 
 # two commands, both thin wrappers over the scripts in hosts/mlab/azuracast/:
 #   azuracast-connect - ssh to the azuracast box (mlab-local/mlab autodetect);
@@ -67,9 +59,9 @@ azuracast-connect:
 azuracast-report:
 	@hosts/mlab/azuracast/report
 
-# chat history is in-memory only (see chat.py) - a service restart is all "clear the chat" needs.
+# chat history is in-memory only (resona's chat.py) - a service restart is all "clear the chat" needs.
 azuracast-clear-chat:
-	@hosts/mlab/azuracast/connect systemctl restart azuracast-chat
+	@hosts/mlab/azuracast/connect systemctl restart resona-chat
 
 # a bit complex but its the only way to deploy to android that I (claude) found so the phone does not do the build
 droid:

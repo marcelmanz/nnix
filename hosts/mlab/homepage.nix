@@ -315,6 +315,13 @@
             };
           }
           {
+            Notes = {
+              icon = "silverbullet";
+              href = services.notes.href;
+              description = "SilverBullet Notes";
+            };
+          }
+          {
             Seafile = {
               icon = "seafile";
               href = services.seafile.href;
@@ -411,6 +418,13 @@
               icon = "nitter";
               href = services.nitter.href;
               description = "Twitter Frontend";
+            };
+          }
+          {
+            Kittygram = {
+              icon = "mdi-instagram";
+              href = services.insta.href;
+              description = "Instagram Frontend";
             };
           }
           {

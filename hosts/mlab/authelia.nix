@@ -88,6 +88,10 @@
       subject = ["group:admins"];
     }
     {
+      domain = "notes.marcel.cool";
+      subject = ["group:admins"];
+    }
+    {
       domain = "live.marcel.cool";
       subject = ["group:admins"];
     }
@@ -181,7 +185,15 @@ in {
         # two_factor copies. Same domains and same group checks either way -
         # being on the LAN drops the TOTP code, not the password or the group.
         rules =
-          (map (svc:
+          [
+            # nzb360 and other API clients can't do the login flow; sabnzbd checks its own apikey there.
+            {
+              domain = "sabnzbd.marcel.cool";
+              resources = ["^/api([/?].*)?$"];
+              policy = "bypass";
+            }
+          ]
+          ++ (map (svc:
             svc
             // {
               policy = "one_factor";

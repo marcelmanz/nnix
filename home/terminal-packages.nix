@@ -77,6 +77,7 @@ with pkgs; [
   git-cliff
   git-commit-search
   gitFull
+  git-lfs
   glirc
   glow
   gnumake
