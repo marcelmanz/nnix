@@ -153,6 +153,7 @@ with pkgs; [
   pwgen
   rabbitmqadmin-ng
   reedline-bash
+  hax
   rbw
   rofi-rbw
   android-tools
