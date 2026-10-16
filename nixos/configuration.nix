@@ -57,7 +57,7 @@
       # Toggle Compression: ssh -o Compression=no mlab
   '';
 
-  nix.package = pkgs.lixPackageSets.stable.lix;
+  nix.package = pkgs.lixPackageSets.lix_2_96.lix;
   nix.settings = {
     # cores = 0; # Use all cores
     builders-use-substitutes = true;

@@ -40,6 +40,7 @@ in {
       age
       playwright-driver.browsers
       avrdude
+      devenv
     ]);
 
   programs.rbw = {

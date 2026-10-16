@@ -80,6 +80,7 @@ in {
     telegram-desktop
     tofi
     bemenu
+    j4-dmenu-desktop
     ubuntu-sans-mono
     way-displays
     pkgsStable.waybar
