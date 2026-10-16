@@ -347,6 +347,7 @@ in {
     profiles.default = {
       path = "default";
       isDefault = true;
+      settings."widget.use-xdg-desktop-portal.file-picker" = 1;
 
       extensions.packages = with pkgs.nur.repos.rycee.firefox-addons; [
         ublock-origin
