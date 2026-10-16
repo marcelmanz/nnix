@@ -40,6 +40,7 @@
     ./open-webui.nix
     ./paperless.nix
     ./pinchflat.nix
+    ./podcast-adcut.nix
     ./proxy.nix
     ./qbittorrent.nix
     ./redroid.nix

@@ -39,6 +39,7 @@ in {
       sops
       age
       playwright-driver.browsers
+      avrdude
     ]);
 
   programs.rbw = {
