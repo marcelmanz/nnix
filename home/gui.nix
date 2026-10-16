@@ -106,6 +106,7 @@ in {
     vvvvvv
     pinentry-all
     libsecret # secret-tool, for the pinentry-rbw keyring lookup
+    retrosmart-cursors
     mullvad-browser
     (symlinkJoin {
       name = "signal-desktop-tray";

@@ -125,6 +125,7 @@
         (final: prev: {pinentry-rbw = import ./packages/pinentry-rbw/package.nix {inherit pkgs;};})
         (final: prev: {discogs2xlsx = import ./packages/discogs2xlsx/package.nix {inherit pkgs;};})
         (final: prev: {"nitter-session" = import ./packages/nitter-session/package.nix {inherit pkgs;};})
+        (final: prev: {retrosmart-cursors = import ./packages/retrosmart-cursors/package.nix {inherit pkgs;};})
         (final: prev: {zuban = inputs.zuban.packages.${system}.default;})
         (final: prev: {cliflux = inputs.cliflux.packages.${system}.default;})
         (final: prev: {
