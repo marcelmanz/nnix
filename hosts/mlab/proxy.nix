@@ -214,6 +214,10 @@
       port = 8222;
       href = "https://vault.marcel.cool";
     };
+    vikunja = {
+      port = 3456;
+      href = "https://todo.marcel.cool";
+    };
   };
 
   # Must match vpnNamespaces.pia.namespaceAddress in vpn.nix.

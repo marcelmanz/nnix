@@ -57,6 +57,7 @@
     ./tagr.nix
     ./uptime-kuma.nix
     ./vaultwarden.nix
+    ./vikunja.nix
     ./vpn.nix
   ];
 
