@@ -140,6 +140,11 @@
         };
       };
     };
+    trackpoint = {
+      enable = true;
+      device = "TPPS/2 Elan TrackPoint";
+      sensitivity = 160;
+    };
   };
   services.flatpak.enable = true;
 
