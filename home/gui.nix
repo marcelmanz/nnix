@@ -35,6 +35,7 @@ in {
     obsidian
     blesh
     font-awesome
+    vikunja-desktop
     abiword
     kdePackages.ark
     brightnessctl

@@ -28,6 +28,12 @@ in {
     enable = true;
   };
 
+  xdg.configFile."vja/config.rc".text = ''
+    [application]
+    frontend_url=https://todo.marcel.cool/
+    api_url=https://todo.marcel.cool/api/v2
+  '';
+
   home.packages =
     terminalPackages
     ++ (with pkgs; [

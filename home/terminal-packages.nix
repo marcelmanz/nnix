@@ -78,6 +78,7 @@ with pkgs; [
   git-commit-search
   gitFull
   git-lfs
+  vja
   glirc
   glow
   gnumake
