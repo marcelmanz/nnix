@@ -93,6 +93,9 @@ with pkgs; [
   jaq
   java-language-server
   jq
+  jqp
+  fx
+  jless
   jujutsu
   rumdl
   just

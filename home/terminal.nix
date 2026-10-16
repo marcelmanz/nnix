@@ -106,6 +106,25 @@ in {
         identitiesOnly = true;
         serverAliveInterval = 60;
       };
+      # DHCP lease on the gateway's lan3 port, update if it changes
+      "tgw" = {
+        hostname = "192.168.1.172";
+        user = "root";
+        # gw terminfo db is minimal
+        SetEnv = {TERM = "vt100";};
+        LocalForward = [
+          {
+            bind.port = 8443;
+            host.address = "172.18.0.1";
+            host.port = 8443;
+          }
+          {
+            bind.port = 8080;
+            host.address = "172.18.0.1";
+            host.port = 8080;
+          }
+        ];
+      };
     };
   };
 
