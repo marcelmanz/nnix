@@ -58,6 +58,7 @@ in {
     (config.lib.nixGL.wrap proton-authenticator)
     (config.lib.nixGL.wrap brave-origin)
     (config.lib.nixGL.wrap inputs.openlogi.packages.${pkgs.stdenv.hostPlatform.system}.default)
+    xdg-desktop-portal-termfilechooser
   ];
 
   # FiiO EH11 keeps its a2dp-only codecs; hfp roles are back so headsets
@@ -178,6 +179,8 @@ in {
     ".local/state/udev-rules/70-openlogi.rules".source = "${inputs.openlogi.packages.${pkgs.stdenv.hostPlatform.system}.default}/lib/udev/rules.d/70-openlogi.rules";
     ".config/xdg-desktop-portal/hyprland-portals.conf".source =
       link "${dots}/.config/xdg-desktop-portal/hyprland-portals.conf";
+    ".config/xdg-desktop-portal-termfilechooser/config".source =
+      link "${dots}/.config/xdg-desktop-portal-termfilechooser/config";
     ".mozilla/native-messaging-hosts/passff.json".source = "${pkgs.passff-host}/lib/mozilla/native-messaging-hosts/passff.json";
   };
 

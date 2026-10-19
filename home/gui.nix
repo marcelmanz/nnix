@@ -980,6 +980,13 @@ in {
   xdg.configFile."swaync/config.json".force = true;
   xdg.configFile."swaync/style.css".force = true;
 
+  xdg.desktopEntries.nnn-open = {
+    name = "nnn";
+    exec = "foot nnn %f";
+    terminal = false;
+    mimeType = ["inode/directory"];
+  };
+
   xdg.mimeApps = let
     defaultApplications = {
       "text/plain" = ["nvim.desktop"];
@@ -1059,7 +1066,7 @@ in {
       # Other
       "application/epub+zip" = ["org.pwmt.zathura-pdf-mupdf.desktop"];
       "application/x-bittorrent" = ["org.qbittorrent.qBittorrent.desktop"];
-      "inode/directory" = ["kitty-open.desktop"];
+      "inode/directory" = ["nnn-open.desktop"];
     };
   in {
     enable = true;
