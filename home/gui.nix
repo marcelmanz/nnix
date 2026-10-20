@@ -1069,13 +1069,7 @@ in {
       # Other
       "application/epub+zip" = ["org.pwmt.zathura-pdf-mupdf.desktop"];
       "application/x-bittorrent" = ["org.qbittorrent.qBittorrent.desktop"];
-<<<<<<< HEAD
       "inode/directory" = ["nnn-open.desktop"];
-||||||| 1887f9a
-      "inode/directory" = ["kitty-open.desktop"];
-=======
-      "inode/directory" = ["nnn-foot.desktop"];
->>>>>>> f9aacd47926441ab95bf63d25a76c804e11f8359
     };
   in {
     enable = true;
