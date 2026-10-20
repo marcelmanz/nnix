@@ -40,6 +40,7 @@
     ./open-webui.nix
     ./paperless.nix
     ./pinchflat.nix
+    ./podcast-adcut.nix
     ./proxy.nix
     ./qbittorrent.nix
     ./redroid.nix
@@ -56,6 +57,7 @@
     ./tagr.nix
     ./uptime-kuma.nix
     ./vaultwarden.nix
+    ./vikunja.nix
     ./vpn.nix
   ];
 
@@ -495,7 +497,7 @@
   environment.sessionVariables.NVIM_PROFILE = "minimal";
 
   nix = {
-    package = pkgs.lixPackageSets.stable.lix;
+    package = pkgs.lixPackageSets.lix_2_96.lix;
     gc = {
       automatic = true;
       dates = "weekly";

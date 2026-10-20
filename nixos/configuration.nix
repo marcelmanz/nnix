@@ -57,7 +57,7 @@
       # Toggle Compression: ssh -o Compression=no mlab
   '';
 
-  nix.package = pkgs.lixPackageSets.stable.lix;
+  nix.package = pkgs.lixPackageSets.lix_2_96.lix;
   nix.settings = {
     # cores = 0; # Use all cores
     builders-use-substitutes = true;
@@ -140,6 +140,11 @@
         };
       };
     };
+    trackpoint = {
+      enable = true;
+      device = "TPPS/2 Elan TrackPoint";
+      sensitivity = 160;
+    };
   };
   services.flatpak.enable = true;
 
@@ -214,7 +219,7 @@
   # so Brave/Chromium can't read the system dark preference from the portal and falls back to
   # the (non-live) GTK-theme-name check. The GNOME portal reads org.gnome.desktop.interface
   # color-scheme and emits SettingChanged live. Used under Hyprland for color-scheme only.
-  xdg.portal.extraPortals = [pkgs.xdg-desktop-portal-gnome];
+  xdg.portal.extraPortals = [pkgs.xdg-desktop-portal-gnome pkgs.xdg-desktop-portal-termfilechooser];
 
   # Configure keymap in X11
   services.xserver.xkb = {

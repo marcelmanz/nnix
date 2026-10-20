@@ -35,6 +35,7 @@ in {
     obsidian
     blesh
     font-awesome
+    vikunja-desktop
     abiword
     kdePackages.ark
     brightnessctl
@@ -80,6 +81,7 @@ in {
     telegram-desktop
     tofi
     bemenu
+    j4-dmenu-desktop
     ubuntu-sans-mono
     way-displays
     pkgsStable.waybar
@@ -106,6 +108,7 @@ in {
     vvvvvv
     pinentry-all
     libsecret # secret-tool, for the pinentry-rbw keyring lookup
+    retrosmart-cursors
     mullvad-browser
     (symlinkJoin {
       name = "signal-desktop-tray";
@@ -346,6 +349,7 @@ in {
     profiles.default = {
       path = "default";
       isDefault = true;
+      settings."widget.use-xdg-desktop-portal.file-picker" = 1;
 
       extensions.packages = with pkgs.nur.repos.rycee.firefox-addons; [
         ublock-origin
@@ -980,10 +984,9 @@ in {
   xdg.configFile."swaync/config.json".force = true;
   xdg.configFile."swaync/style.css".force = true;
 
-  xdg.desktopEntries.nnn-open = {
+  xdg.desktopEntries.nnn-foot = {
     name = "nnn";
-    exec = "foot nnn %f";
-    terminal = false;
+    exec = "foot -a nnn nnn %f";
     mimeType = ["inode/directory"];
   };
 
@@ -1066,7 +1069,13 @@ in {
       # Other
       "application/epub+zip" = ["org.pwmt.zathura-pdf-mupdf.desktop"];
       "application/x-bittorrent" = ["org.qbittorrent.qBittorrent.desktop"];
+<<<<<<< HEAD
       "inode/directory" = ["nnn-open.desktop"];
+||||||| 1887f9a
+      "inode/directory" = ["kitty-open.desktop"];
+=======
+      "inode/directory" = ["nnn-foot.desktop"];
+>>>>>>> f9aacd47926441ab95bf63d25a76c804e11f8359
     };
   in {
     enable = true;

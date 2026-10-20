@@ -78,6 +78,7 @@ with pkgs; [
   git-commit-search
   gitFull
   git-lfs
+  vja
   glirc
   glow
   gnumake
@@ -156,6 +157,7 @@ with pkgs; [
   pwgen
   rabbitmqadmin-ng
   reedline-bash
+  hax
   rbw
   rofi-rbw
   android-tools
