@@ -74,6 +74,11 @@ in {
         identityFile = "~/.ssh/id_rsa_bitbucket";
         logLevel = "ERROR";
       };
+      "gitlab.com" = {
+        user = "git";
+        identityFile = "~/.ssh/id_ed25519_gitlab";
+        identitiesOnly = true;
+      };
       "codeberg.org" = {
         user = "git";
         identityFile = "~/.ssh/id_ed25519_codeberg";

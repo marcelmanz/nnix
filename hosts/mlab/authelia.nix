@@ -81,7 +81,7 @@
     }
     {
       domain = "nitter.marcel.cool";
-      subject = ["group:admins"];
+      subject = ["group:admins" "group:nitter"];
     }
     {
       domain = "tags.marcel.cool";
@@ -131,6 +131,12 @@ in {
           email: "metube@marcel.cool"
           groups:
             - youtube
+        laura:
+          displayname: "Laura"
+          password: "${config.sops.placeholder.laura_user_password}"
+          email: "lachafabian@gmail.com"
+          groups:
+            - nitter
     '';
     owner = "authelia-main";
   };
@@ -200,6 +206,13 @@ in {
               networks = ["lan"];
             })
           protectedServices)
+          ++ [
+            {
+              domain = "nitter.marcel.cool";
+              subject = ["group:nitter"];
+              policy = "one_factor";
+            }
+          ]
           ++ (map (svc: svc // {policy = "two_factor";}) protectedServices);
       };
 
