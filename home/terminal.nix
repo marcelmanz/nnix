@@ -195,6 +195,26 @@ in {
         source = link "${dots}/.agents/skills";
         force = true;
       };
+      ".claude/skills/antislop" = {
+        source = link "${dots}/.agents/skills/antislop";
+        force = true;
+      };
+      ".claude/skills/bbpr-review" = {
+        source = link "${dots}/.agents/skills/bbpr-review";
+        force = true;
+      };
+      ".claude/skills/dive-in" = {
+        source = link "${dots}/.agents/skills/dive-in";
+        force = true;
+      };
+      ".claude/skills/sources-plan-and-todo" = {
+        source = link "${dots}/.agents/skills/sources-plan-and-todo";
+        force = true;
+      };
+      ".claude/skills/summarize-changes" = {
+        source = link "${dots}/.agents/skills/summarize-changes";
+        force = true;
+      };
       ".agents/AGENTS.md".source = link "${dots}/.agents/AGENTS.md";
       ".config/btop/btop.conf".source = link "${dots}/.config/btop/btop.conf";
       ".codex/AGENTS.md".source = link "${dots}/.agents/AGENTS.md";
