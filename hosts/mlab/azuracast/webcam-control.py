@@ -98,7 +98,12 @@ class Handler(BaseHTTPRequestHandler):
 
         if self.path == "/status":
             # resona plays webcamav, which /authcheck only serves while on air
-            body = json.dumps({"live": public_live() and on_air(), "offline_text": current_offline_text()}).encode()
+            body = json.dumps(
+                {
+                    "live": public_live() and on_air(),
+                    "offline_text": current_offline_text(),
+                }
+            ).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Access-Control-Allow-Origin", "*")
@@ -140,7 +145,14 @@ class Handler(BaseHTTPRequestHandler):
                 # ponytail: the recorder's RTSP read still ends, so an effect change mid-show
                 # splits the recording; avoiding that needs mediamtx's HTTP API.
                 # /run/wrappers/bin: service PATH lacks it, bare "sudo" is FileNotFoundError.
-                subprocess.run(["/run/wrappers/bin/sudo", "/run/current-system/sw/bin/pkill", "-f", "usb-046d_Logitech_BRIO_F67E04C5"])
+                subprocess.run(
+                    [
+                        "/run/wrappers/bin/sudo",
+                        "/run/current-system/sw/bin/pkill",
+                        "-f",
+                        "usb-046d_Logitech_BRIO_F67E04C5",
+                    ]
+                )
             self.send_response(303)
             self.send_header("Location", "/")
             self.end_headers()
@@ -189,9 +201,7 @@ class Handler(BaseHTTPRequestHandler):
                     "127.0.0.1",
                     "::1",
                 )
-                allowed = (
-                    public_live() or given_token == preview_token() or local_rtsp
-                )
+                allowed = public_live() or given_token == preview_token() or local_rtsp
                 # livemix is the desk monitor (live.nix). It carries no webcam and is not
                 # gated on the public toggle: every way in is already LAN-scoped, so
                 # reaching this path at all means a LAN client. The WebRTC leg is proxied

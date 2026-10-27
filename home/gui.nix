@@ -987,48 +987,49 @@ in {
 
   # Plasma's Dolphin also claims this name; user service files take precedence over system ones
   xdg.dataFile."dbus-1/services/org.freedesktop.FileManager1.service".text = let
-    nnn-filemanager1 = pkgs.writers.writePython3Bin "nnn-filemanager1" {
-      libraries = [pkgs.python3Packages.dbus-next];
-      flakeIgnore = ["F722" "F821" "E501"];
-    } ''
-      import asyncio
-      import subprocess
-      from urllib.parse import unquote, urlparse
-      from dbus_next.aio import MessageBus
-      from dbus_next.service import ServiceInterface, method
+    nnn-filemanager1 =
+      pkgs.writers.writePython3Bin "nnn-filemanager1" {
+        libraries = [pkgs.python3Packages.dbus-next];
+        flakeIgnore = ["F722" "F821" "E501"];
+      } ''
+        import asyncio
+        import subprocess
+        from urllib.parse import unquote, urlparse
+        from dbus_next.aio import MessageBus
+        from dbus_next.service import ServiceInterface, method
 
 
-      def open_in_nnn(uris):
-          for uri in uris:
-              subprocess.Popen(["${pkgs.foot}/bin/foot", "-a", "nnn", "${pkgs.nnn}/bin/nnn", unquote(urlparse(uri).path)])
+        def open_in_nnn(uris):
+            for uri in uris:
+                subprocess.Popen(["${pkgs.foot}/bin/foot", "-a", "nnn", "${pkgs.nnn}/bin/nnn", unquote(urlparse(uri).path)])
 
 
-      class FileManager1(ServiceInterface):
-          def __init__(self):
-              super().__init__("org.freedesktop.FileManager1")
+        class FileManager1(ServiceInterface):
+            def __init__(self):
+                super().__init__("org.freedesktop.FileManager1")
 
-          @method()
-          def ShowFolders(self, uris: "as", startup_id: "s"):
-              open_in_nnn(uris)
+            @method()
+            def ShowFolders(self, uris: "as", startup_id: "s"):
+                open_in_nnn(uris)
 
-          @method()
-          def ShowItems(self, uris: "as", startup_id: "s"):
-              open_in_nnn(uris)
+            @method()
+            def ShowItems(self, uris: "as", startup_id: "s"):
+                open_in_nnn(uris)
 
-          @method()
-          def ShowItemProperties(self, uris: "as", startup_id: "s"):
-              open_in_nnn(uris)
-
-
-      async def main():
-          bus = await MessageBus().connect()
-          bus.export("/org/freedesktop/FileManager1", FileManager1())
-          await bus.request_name("org.freedesktop.FileManager1")
-          await asyncio.Event().wait()
+            @method()
+            def ShowItemProperties(self, uris: "as", startup_id: "s"):
+                open_in_nnn(uris)
 
 
-      asyncio.run(main())
-    '';
+        async def main():
+            bus = await MessageBus().connect()
+            bus.export("/org/freedesktop/FileManager1", FileManager1())
+            await bus.request_name("org.freedesktop.FileManager1")
+            await asyncio.Event().wait()
+
+
+        asyncio.run(main())
+      '';
   in ''
     [D-BUS Service]
     Name=org.freedesktop.FileManager1

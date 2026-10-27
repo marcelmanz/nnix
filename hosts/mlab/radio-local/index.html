@@ -1,100 +1,164 @@
 <!doctype html>
 <html lang="en" data-theme="dark">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-title" content="Desk">
-<meta name="theme-color" content="#2196F3">
-<link rel="manifest" href="/app.webmanifest">
-<link rel="apple-touch-icon" sizes="180x180" href="/static/icons/production/180.png">
-<title>Desk</title>
-<style>
-  :root { color-scheme: dark; --bg:#0d0d0f; --fg:#f2f2f2; --dim:#8a8a92; --accent:#2196F3; }
-  * { box-sizing: border-box; }
-  body {
-    margin:0; min-height:100dvh; background:var(--bg); color:var(--fg);
-    font:16px/1.4 system-ui, sans-serif;
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding:24px;
-  }
-  #desk {
-    width:min(88vw,520px); aspect-ratio:1200/754; object-fit:cover;
-    border-radius:12px; box-shadow:0 8px 40px #0008;
-  }
-  #title { font-size:1.25rem; font-weight:600; text-align:center; }
-  #sub { color:var(--dim); text-align:center; }
-  #play {
-    width:88px; height:88px; border:0; border-radius:50%; background:var(--accent); color:#fff;
-    font-size:2rem; cursor:pointer; display:grid; place-items:center;
-  }
-  #play:active { transform:scale(.96); }
-  #vol { width:min(70vw,320px); accent-color:var(--accent); }
-  #links { display:flex; gap:14px; font-size:.85rem; }
-  #links a { color:var(--dim); text-decoration:none; border-bottom:1px solid #333; }
-  #state { color:var(--dim); font-size:.8rem; min-height:1.2em; }
-</style>
-</head>
-<body>
-  <img id="desk" src="/desk.jpg" alt="The desk: controller, turntable and sampler">
-  <div>
-    <div id="title">Desk</div>
-    <div id="sub">live off the Focusrite</div>
-  </div>
-  <button id="play" aria-label="Play">&#9654;</button>
-  <input id="vol" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume">
-  <div id="state"></div>
-  <div id="links">
-    <a href="rtsp://192.168.1.140:8554/livemix">open in mpv</a>
-    <a href="/desk.m3u">save playlist</a>
-  </div>
-  <audio id="stream"></audio>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-title" content="Desk" />
+    <meta name="theme-color" content="#2196F3" />
+    <link rel="manifest" href="/app.webmanifest" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/production/180.png" />
+    <title>Desk</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0d0d0f;
+        --fg: #f2f2f2;
+        --dim: #8a8a92;
+        --accent: #2196f3;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          16px/1.4 system-ui,
+          sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        padding: 24px;
+      }
+      #desk {
+        width: min(88vw, 520px);
+        aspect-ratio: 1200/754;
+        object-fit: cover;
+        border-radius: 12px;
+        box-shadow: 0 8px 40px #0008;
+      }
+      #title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        text-align: center;
+      }
+      #sub {
+        color: var(--dim);
+        text-align: center;
+      }
+      #play {
+        width: 88px;
+        height: 88px;
+        border: 0;
+        border-radius: 50%;
+        background: var(--accent);
+        color: #fff;
+        font-size: 2rem;
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+      }
+      #play:active {
+        transform: scale(0.96);
+      }
+      #vol {
+        width: min(70vw, 320px);
+        accent-color: var(--accent);
+      }
+      #links {
+        display: flex;
+        gap: 14px;
+        font-size: 0.85rem;
+      }
+      #links a {
+        color: var(--dim);
+        text-decoration: none;
+        border-bottom: 1px solid #333;
+      }
+      #state {
+        color: var(--dim);
+        font-size: 0.8rem;
+        min-height: 1.2em;
+      }
+    </style>
+  </head>
+  <body>
+    <img id="desk" src="/desk.jpg" alt="The desk: controller, turntable and sampler" />
+    <div>
+      <div id="title">Desk</div>
+      <div id="sub">live off the Focusrite</div>
+    </div>
+    <button id="play" aria-label="Play">&#9654;</button>
+    <input id="vol" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume" />
+    <div id="state"></div>
+    <div id="links">
+      <a href="rtsp://192.168.1.140:8554/livemix">open in mpv</a>
+      <a href="/desk.m3u">save playlist</a>
+    </div>
+    <audio id="stream"></audio>
 
-<script>
-const audio = document.getElementById("stream");
-const play = document.getElementById("play");
-const state = document.getElementById("state");
-let pc = null;
+    <script>
+      const audio = document.getElementById("stream");
+      const play = document.getElementById("play");
+      const state = document.getElementById("state");
+      let pc = null;
 
-// The desk mix straight off mediamtx over WebRTC (path livemix, published by
-// azuracast-live-monitor in live.nix). Under a second behind the room, where the
-// broadcast leg is ~16s. No media session here on purpose: Chrome treats a
-// peer connection's MediaStream as real-time communication, not media playback,
-// so it builds no notification for it and the handlers would be dead code.
-async function start() {
-  state.textContent = "connecting";
-  pc = new RTCPeerConnection();
-  pc.ontrack = e => {
-    audio.srcObject = e.streams[0];
-    audio.play().catch(err => state.textContent = err.message);
-  };
-  pc.addTransceiver("audio", {direction: "recvonly"});
-  try {
-    await pc.setLocalDescription(await pc.createOffer());
-    const res = await fetch("/livemix/whep", {
-      method: "POST",
-      headers: {"Content-Type": "application/sdp"},
-      body: pc.localDescription.sdp,
-    });
-    if (!res.ok) throw new Error("desk offline");
-    await pc.setRemoteDescription({type: "answer", sdp: await res.text()});
-  } catch (e) {
-    stop();
-    state.textContent = e.message;
-  }
-}
-function stop() {
-  audio.pause();
-  if (pc) { pc.close(); pc = null; }
-  audio.srcObject = null;
-}
-play.onclick = () => pc ? stop() : start();
-audio.onplaying = () => { play.innerHTML = "&#10074;&#10074;"; state.textContent = ""; };
-audio.onpause = () => { play.innerHTML = "&#9654;"; };
+      // The desk mix straight off mediamtx over WebRTC (path livemix, published by
+      // azuracast-live-monitor in live.nix). Under a second behind the room, where the
+      // broadcast leg is ~16s. No media session here on purpose: Chrome treats a
+      // peer connection's MediaStream as real-time communication, not media playback,
+      // so it builds no notification for it and the handlers would be dead code.
+      async function start() {
+        state.textContent = "connecting";
+        pc = new RTCPeerConnection();
+        pc.ontrack = (e) => {
+          audio.srcObject = e.streams[0];
+          audio.play().catch((err) => (state.textContent = err.message));
+        };
+        pc.addTransceiver("audio", { direction: "recvonly" });
+        try {
+          await pc.setLocalDescription(await pc.createOffer());
+          const res = await fetch("/livemix/whep", {
+            method: "POST",
+            headers: { "Content-Type": "application/sdp" },
+            body: pc.localDescription.sdp,
+          });
+          if (!res.ok) throw new Error("desk offline");
+          await pc.setRemoteDescription({ type: "answer", sdp: await res.text() });
+        } catch (e) {
+          stop();
+          state.textContent = e.message;
+        }
+      }
+      function stop() {
+        audio.pause();
+        if (pc) {
+          pc.close();
+          pc = null;
+        }
+        audio.srcObject = null;
+      }
+      play.onclick = () => (pc ? stop() : start());
+      audio.onplaying = () => {
+        play.innerHTML = "&#10074;&#10074;";
+        state.textContent = "";
+      };
+      audio.onpause = () => {
+        play.innerHTML = "&#9654;";
+      };
 
-const vol = document.getElementById("vol");
-vol.value = localStorage.getItem("vol") ?? 1;
-audio.volume = vol.value;
-vol.oninput = () => { audio.volume = vol.value; localStorage.setItem("vol", vol.value); };
-</script>
-</body>
+      const vol = document.getElementById("vol");
+      vol.value = localStorage.getItem("vol") ?? 1;
+      audio.volume = vol.value;
+      vol.oninput = () => {
+        audio.volume = vol.value;
+        localStorage.setItem("vol", vol.value);
+      };
+    </script>
+  </body>
 </html>

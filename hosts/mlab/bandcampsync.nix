@@ -14,7 +14,10 @@
     name = "dj-enrich";
     runtimeInputs = [
       (pkgs.python313.withPackages (ps: [ps.mutagen ps.aubio-ledfx]))
-      pkgs.keyfinder-cli pkgs.ffmpeg-headless pkgs.rsgain pkgs.coreutils
+      pkgs.keyfinder-cli
+      pkgs.ffmpeg-headless
+      pkgs.rsgain
+      pkgs.coreutils
     ];
     text = ''
       if [ "$#" -eq 0 ]; then set -- /var/lib/media/dj /var/lib/media/music; fi

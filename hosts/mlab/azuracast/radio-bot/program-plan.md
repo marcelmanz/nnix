@@ -8,8 +8,16 @@ AzuraCast playlist schedule, with every unscheduled gap filled with "Banging tun
 - **Data source**: `GET /api/station/radio_marcel/schedule` (public, no auth, verified live).
   Returns upcoming occurrences, e.g.:
   ```json
-  [{"id":1,"type":"playlist","name":"news","start":"2026-08-31T08:00:00+02:00",
-    "end":"2026-08-31T08:15:00+02:00","is_now":false}]
+  [
+    {
+      "id": 1,
+      "type": "playlist",
+      "name": "news",
+      "start": "2026-08-31T08:00:00+02:00",
+      "end": "2026-08-31T08:15:00+02:00",
+      "is_now": false
+    }
+  ]
   ```
   Note: `/api/schedule` and `/api/playlists` do NOT exist on the public API (405) —
   only `/api/nowplaying`, `/api/stations`, `/api/status`, `/api/time`. The working

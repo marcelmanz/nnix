@@ -125,13 +125,14 @@
         (final: prev: {pinentry-rbw = import ./packages/pinentry-rbw/package.nix {inherit pkgs;};})
         (final: prev: {discogs2xlsx = import ./packages/discogs2xlsx/package.nix {inherit pkgs;};})
         (final: prev: {"nitter-session" = import ./packages/nitter-session/package.nix {inherit pkgs;};})
+        (final: prev: {wikipedia-cli = import ./packages/wikipedia-cli/package.nix {inherit pkgs;};})
         (final: prev: {retrosmart-cursors = import ./packages/retrosmart-cursors/package.nix {inherit pkgs;};})
         (final: prev: {zuban = inputs.zuban.packages.${system}.default;})
         (final: prev: {cliflux = inputs.cliflux.packages.${system}.default;})
         (final: prev: {
           protonmail-desktop = inputs.my-nixpkgs.legacyPackages.${system}.protonmail-desktop;
         })
-       (final: prev: {"brave-origin" = inputs.brave-origin-channels.packages.${system}.nightly;})
+        (final: prev: {"brave-origin" = inputs.brave-origin-channels.packages.${system}.nightly;})
         (final: prev: {psysonic = inputs.psysonic.packages.${system}.psysonic;})
         (final: prev: {
           offtiktok = pkgs.callPackage ./packages/offtiktok/frontend.nix {};

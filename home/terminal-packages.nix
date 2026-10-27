@@ -211,6 +211,7 @@ with pkgs; [
   vtsls
   w3m
   watchexec
+  wikipedia-cli
   xlsx2csv
   wireguard-tools
   wlr-layout-ui

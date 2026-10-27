@@ -217,6 +217,7 @@ def set_mic(on: bool):
         check=False,
     )
 
+
 CAM_CONTROLS = """
 <form method="post" action="/cam/effect">
   <label>Effect</label>
@@ -242,7 +243,9 @@ def cam_state():
 
 def post_cam(path: str):
     try:
-        urllib.request.urlopen(urllib.request.Request(f"{STREAMCAM_URL}{path}", method="POST"), timeout=3)
+        urllib.request.urlopen(
+            urllib.request.Request(f"{STREAMCAM_URL}{path}", method="POST"), timeout=3
+        )
     except Exception:
         # its 303 lands on a 404 here; the toggle itself already happened
         pass
@@ -336,10 +339,19 @@ def probe_tracks(show: Path) -> str:
     """One line per track. ffmpeg writes Matroska's Tracks element up front, so this reports
     correctly on a file that's still growing."""
     out = subprocess.run(
-        [FFPROBE, "-v", "error", "-show_entries",
-         "stream=codec_type,codec_name,width,height,r_frame_rate,sample_rate,channels",
-         "-of", "json", str(show)],
-        capture_output=True, text=True, check=False,
+        [
+            FFPROBE,
+            "-v",
+            "error",
+            "-show_entries",
+            "stream=codec_type,codec_name,width,height,r_frame_rate,sample_rate,channels",
+            "-of",
+            "json",
+            str(show),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
     ).stdout
     try:
         streams = json.loads(out)["streams"]
@@ -350,15 +362,19 @@ def probe_tracks(show: Path) -> str:
     for kind, label in (("video", "video"), ("audio", "audio")):
         st = next((s for s in streams if s.get("codec_type") == kind), None)
         if st is None:
-            lines.append(f'<span class="trk">{label}</span><span class="bad">missing</span>')
+            lines.append(
+                f'<span class="trk">{label}</span><span class="bad">missing</span>'
+            )
             continue
         if kind == "video":
             num, _, den = st.get("r_frame_rate", "0/1").partition("/")
             fps = float(num) / float(den) if float(den) else 0
-            spec = f'{st.get("codec_name")} {st.get("width")}x{st.get("height")} {fps:g}fps'
+            spec = f"{st.get('codec_name')} {st.get('width')}x{st.get('height')} {fps:g}fps"
         else:
-            ch = {1: "mono", 2: "stereo"}.get(st.get("channels"), f'{st.get("channels")}ch')
-            spec = f'{st.get("codec_name")} {st.get("sample_rate")} Hz {ch}'
+            ch = {1: "mono", 2: "stereo"}.get(
+                st.get("channels"), f"{st.get('channels')}ch"
+            )
+            spec = f"{st.get('codec_name')} {st.get('sample_rate')} Hz {ch}"
         lines.append(f'<span class="trk">{label}</span><span class="ok">{spec}</span>')
     return "<br>".join(lines)
 
@@ -380,26 +396,38 @@ def recording_state():
             return "off", "IDLE", f"No recordings yet<br>{offset_line()}"
         start = started_at(show)
         length = human_secs(show.stat().st_mtime - start.timestamp()) if start else "?"
-        return "off", "IDLE", (
-            f"Last: <b>{show.name}</b><br>"
-            f"{human_size(show.stat().st_size)} &middot; {length}<br>{offset_line()}"
+        return (
+            "off",
+            "IDLE",
+            (
+                f"Last: <b>{show.name}</b><br>"
+                f"{human_size(show.stat().st_size)} &middot; {length}<br>{offset_line()}"
+            ),
         )
 
     if not fresh:
         # Unit is up but nothing is landing on disk: ffmpeg is in its 10s restart loop because
         # mediamtx has no webcam to hand it.
-        return "wait", "WAITING FOR CAMERA", (
-            "Recorder is running but no video is arriving.<br>"
-            "Audio is still being captured by AzuraCast.<br>"
-            f"{offset_line()}"
+        return (
+            "wait",
+            "WAITING FOR CAMERA",
+            (
+                "Recorder is running but no video is arriving.<br>"
+                "Audio is still being captured by AzuraCast.<br>"
+                f"{offset_line()}"
+            ),
         )
 
     start = started_at(show)
     elapsed = human_secs(time.time() - start.timestamp()) if start else "?"
-    return "rec", "REC", (
-        f"<b>{show.name}</b><br>"
-        f"{human_size(show.stat().st_size)} &middot; {elapsed}<br>"
-        f"{probe_tracks(show)}<br>{offset_line()}"
+    return (
+        "rec",
+        "REC",
+        (
+            f"<b>{show.name}</b><br>"
+            f"{human_size(show.stat().st_size)} &middot; {elapsed}<br>"
+            f"{probe_tracks(show)}<br>{offset_line()}"
+        ),
     )
 
 
@@ -419,7 +447,9 @@ class Handler(BaseHTTPRequestHandler):
             mic_action="Mute mic" if mic else "Unmute mic",
             pub_badge="on" if cam and cam["live"] else "off",
             pub_status="LIVE" if cam and cam["live"] else "hidden",
-            pub_action=("Hide from public" if cam and cam["live"] else "Show on public"),
+            pub_action=(
+                "Hide from public" if cam and cam["live"] else "Show on public"
+            ),
             text_action=(
                 "Resume video" if cam and cam["text_mode"] else "Show text instead"
             ),
@@ -464,14 +494,34 @@ class Handler(BaseHTTPRequestHandler):
             peak = None
             try:
                 proc = subprocess.run(
-                    [FFMPEG, "-nostdin", "-hide_banner", "-f", "alsa", "-ar", "44100",
-                     "-ac", "2", "-i", METER_DEVICE, "-t", f"{LEVEL_MS / 1000:g}",
-                     "-af", "volumedetect", "-f", "null", "-"],
-                    capture_output=True, text=True, check=False, timeout=3,
+                    [
+                        FFMPEG,
+                        "-nostdin",
+                        "-hide_banner",
+                        "-f",
+                        "alsa",
+                        "-ar",
+                        "44100",
+                        "-ac",
+                        "2",
+                        "-i",
+                        METER_DEVICE,
+                        "-t",
+                        f"{LEVEL_MS / 1000:g}",
+                        "-af",
+                        "volumedetect",
+                        "-f",
+                        "null",
+                        "-",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    timeout=3,
                 )
             except subprocess.TimeoutExpired:
                 proc = None
-            for line in (proc.stderr.splitlines() if proc else []):
+            for line in proc.stderr.splitlines() if proc else []:
                 if "max_volume:" in line:
                     try:
                         peak = float(line.split("max_volume:")[1].strip().split()[0])
@@ -492,20 +542,27 @@ class Handler(BaseHTTPRequestHandler):
             rec_badge, rec_status, rec_detail = recording_state()
             live = is_active()
             mic = mic_on()
-            body = json.dumps({
-                "live": live, "live_status": "LIVE" if live else "OFFLINE",
-                "live_badge": "live" if live else "offline",
-                "live_action": "Stop streaming" if live else "Go live",
-                "live_button_class": "danger" if live else "primary",
-                "mic_badge": "on" if mic else "off",
-                "mic_status": "ON" if mic else "MUTED",
-                "mic_action": "Mute mic" if mic else "Unmute mic",
-                "pub_badge": "on" if cam and cam["live"] else "off",
-                "pub_status": "LIVE" if cam and cam["live"] else "hidden",
-                "pub_action": "Hide from public" if cam and cam["live"] else "Show on public",
-                "rec_badge": rec_badge, "rec_status": rec_status, "rec_detail": rec_detail,
-                "recording": rec_badge == "rec",
-            }).encode()
+            body = json.dumps(
+                {
+                    "live": live,
+                    "live_status": "LIVE" if live else "OFFLINE",
+                    "live_badge": "live" if live else "offline",
+                    "live_action": "Stop streaming" if live else "Go live",
+                    "live_button_class": "danger" if live else "primary",
+                    "mic_badge": "on" if mic else "off",
+                    "mic_status": "ON" if mic else "MUTED",
+                    "mic_action": "Mute mic" if mic else "Unmute mic",
+                    "pub_badge": "on" if cam and cam["live"] else "off",
+                    "pub_status": "LIVE" if cam and cam["live"] else "hidden",
+                    "pub_action": "Hide from public"
+                    if cam and cam["live"]
+                    else "Show on public",
+                    "rec_badge": rec_badge,
+                    "rec_status": rec_status,
+                    "rec_detail": rec_detail,
+                    "recording": rec_badge == "rec",
+                }
+            ).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Cache-Control", "no-store")
@@ -545,11 +602,13 @@ class Handler(BaseHTTPRequestHandler):
                 return
             # Don't redirect on failure - a silent bounce back to an unchanged field looks
             # exactly like a save that worked.
-            self.render(offset_msg=(
-                f'<span class="err">Could not save "{html.escape(raw)}" - '
-                f"must be a number between -{OFFSET_LIMIT:g} and {OFFSET_LIMIT:g}, "
-                "and /var/lib/azuracast-live-record/offset must be writable.</span>"
-            ))
+            self.render(
+                offset_msg=(
+                    f'<span class="err">Could not save "{html.escape(raw)}" - '
+                    f"must be a number between -{OFFSET_LIMIT:g} and {OFFSET_LIMIT:g}, "
+                    "and /var/lib/azuracast-live-record/offset must be writable.</span>"
+                )
+            )
             return
 
         if self.path == "/test-sync":
@@ -565,17 +624,49 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError:
                 offset, duration = "0", float(SYNC_SECS)
             proc = subprocess.run(
-                [FFMPEG, "-y", "-nostdin", "-hide_banner", "-loglevel", "error",
-                 "-itsoffset", offset, "-rtsp_transport", "tcp", "-i", RTSP_URL,
-                 "-f", "alsa", "-ar", "44100", "-ac", "2", "-i", MIX_DEVICE,
-                 "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "160k",
-                 "-t", f"{duration:g}", "-movflags", "+faststart", str(SYNC_FILE)],
-                capture_output=True, check=False, timeout=duration + 30,
+                [
+                    FFMPEG,
+                    "-y",
+                    "-nostdin",
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-itsoffset",
+                    offset,
+                    "-rtsp_transport",
+                    "tcp",
+                    "-i",
+                    RTSP_URL,
+                    "-f",
+                    "alsa",
+                    "-ar",
+                    "44100",
+                    "-ac",
+                    "2",
+                    "-i",
+                    MIX_DEVICE,
+                    "-map",
+                    "0:v",
+                    "-map",
+                    "1:a",
+                    "-c:v",
+                    "copy",
+                    "-c:a",
+                    "aac",
+                    "-b:a",
+                    "160k",
+                    "-t",
+                    f"{duration:g}",
+                    "-movflags",
+                    "+faststart",
+                    str(SYNC_FILE),
+                ],
+                capture_output=True,
+                check=False,
+                timeout=duration + 30,
             )
             if proc.returncode == 0:
-                result = (
-                    f'<video controls autoplay src="/test-sync.mp4?t={int(time.time())}"></video>'
-                )
+                result = f'<video controls autoplay src="/test-sync.mp4?t={int(time.time())}"></video>'
             else:
                 result = '<span class="err">Could not record - is the camera publishing?</span>'
             self.render(sync_result=result)

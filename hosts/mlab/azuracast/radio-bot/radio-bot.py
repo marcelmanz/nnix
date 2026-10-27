@@ -404,9 +404,21 @@ def make_news_art(path, now):
         "fontsize=72:x=(w-text_w)/2:y=660"
     )
     subprocess.run(
-        ["ffmpeg", "-y", "-v", "error", "-f", "lavfi",
-         "-i", "color=c=0x14141e:s=1000x1000,format=rgb24",
-         "-vf", vf, "-frames:v", "1", path],
+        [
+            "ffmpeg",
+            "-y",
+            "-v",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=0x14141e:s=1000x1000,format=rgb24",
+            "-vf",
+            vf,
+            "-frames:v",
+            "1",
+            path,
+        ],
         check=True,
     )
 
@@ -423,14 +435,30 @@ def to_mp3(wav_path, mp3_path, title, art=None):
     cmd = ["ffmpeg", "-y", "-v", "error", "-i", wav_path]
     if art and os.path.exists(art):
         cmd += [
-            "-i", art, "-map", "0:a", "-map", "1:v",
-            "-c:v", "copy", "-disposition:v", "attached_pic",
-            "-metadata:s:v", "comment=Cover (front)",
+            "-i",
+            art,
+            "-map",
+            "0:a",
+            "-map",
+            "1:v",
+            "-c:v",
+            "copy",
+            "-disposition:v",
+            "attached_pic",
+            "-metadata:s:v",
+            "comment=Cover (front)",
         ]
     cmd += [
-        "-codec:a", "libmp3lame", "-q:a", "5", "-ac", "1",
-        "-id3v2_version", "3",
-        "-metadata", f"title={title}",
+        "-codec:a",
+        "libmp3lame",
+        "-q:a",
+        "5",
+        "-ac",
+        "1",
+        "-id3v2_version",
+        "3",
+        "-metadata",
+        f"title={title}",
         mp3_path,
     ]
     subprocess.run(cmd, check=True)

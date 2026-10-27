@@ -153,7 +153,6 @@
     };
   };
 
-
   # Public page at radio.marcel.cool: radio, live video+desk audio, chat (codeberg.org/marcelmanz/resona).
   services.resona = {
     enable = true;
