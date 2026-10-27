@@ -42,7 +42,6 @@ in {
     (config.lib.nixGL.wrap cinnyWithCodecs)
     pnpm
     attic-client
-    blueman
     # sway # for now we will install it via apt
     # python313Packages.python-lsp-server
     (config.lib.nixGL.wrap _1password-gui)

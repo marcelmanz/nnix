@@ -312,7 +312,7 @@ in {
             }
             {
               label = "";
-              command = "blueman";
+              command = "foot -e bluetuith";
             }
             {
               label = "";
@@ -1203,11 +1203,6 @@ in {
 
     ".config/eww" = {
       source = link "${dots}/.config/eww";
-      recursive = true;
-    };
-
-    ".config/blueman" = {
-      source = link "${dots}/.config/blueman";
       recursive = true;
     };
 
