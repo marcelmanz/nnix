@@ -90,6 +90,7 @@ with pkgs; [
   htop
   hyprland-workspaces
   imagemagick
+  w3m
   iptables
   jaq
   java-language-server
