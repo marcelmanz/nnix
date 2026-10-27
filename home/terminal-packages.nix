@@ -229,6 +229,8 @@ with pkgs; [
   zsh
   pi-coding-agent
   pir
+  pulsemixer
+  wiremix
   (pkgs.python3.withPackages (ps:
     with ps; [
       python-lsp-server

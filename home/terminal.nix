@@ -167,6 +167,7 @@ in {
       ".config/zellij"
       ".config/zk"
       ".config/cliflux"
+      ".config/bluetuith"
       ".pi"
       ".newsboat"
     ])
@@ -201,6 +202,10 @@ in {
       };
       ".claude/skills/bbpr-review" = {
         source = link "${dots}/.agents/skills/bbpr-review";
+        force = true;
+      };
+      ".claude/skills/branch-explained" = {
+        source = link "${dots}/.agents/skills/branch-explained";
         force = true;
       };
       ".claude/skills/dive-in" = {
