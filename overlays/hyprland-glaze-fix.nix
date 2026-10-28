@@ -6,6 +6,7 @@ final: prev: {
   hyprland = prev.hyprland.override {
     glaze = prev.glaze.overrideAttrs (old: {
       version = "7.2.0";
+      patches = [];
       src = final.fetchFromGitHub {
         owner = "stephenberry";
         repo = "glaze";
