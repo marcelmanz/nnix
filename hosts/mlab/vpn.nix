@@ -287,6 +287,22 @@ in {
   systemd.services.pia = {
     after = ["pia-wg-config.service"];
     wants = ["pia-wg-config.service" "pia-escape-route.service"];
+    # BindsTo stops the confined units when pia goes down but never starts them
+    # again, so Upholds brings them back once pia is up.
+    unitConfig.Upholds = [
+      "qbittorrent.service"
+      "sonarr.service"
+      "radarr.service"
+      "lidarr.service"
+      "bazarr.service"
+      "prowlarr.service"
+      "podman-chaptarr.service"
+      "podman-buildarr.service"
+    ];
+    serviceConfig = {
+      Restart = "on-failure";
+      RestartSec = "30s";
+    };
   };
 
   systemd.services.pia-wg-config = {
@@ -294,6 +310,8 @@ in {
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
+      Restart = "on-failure";
+      RestartSec = "30s";
       RuntimeDirectory = "pia";
       RuntimeDirectoryMode = "0700";
       ExecStart = lib.getExe pia-wg-config;
