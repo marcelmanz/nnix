@@ -4,6 +4,7 @@ files that already have both tags are skipped, so rerun after every sync.
 
 Usage: dj-enrich.py DIR [DIR ...]   (no args = /var/lib/media/dj + /var/lib/media/music)
 """
+
 import os
 import re
 import subprocess
@@ -28,13 +29,18 @@ def sh(cmd):
 
 
 def complain(name, r):
-    raise RuntimeError(f"{name} rc={r.returncode} out={r.stdout[:200]!r} err={r.stderr[:200]!r}")
+    raise RuntimeError(
+        f"{name} rc={r.returncode} out={r.stdout[:200]!r} err={r.stderr[:200]!r}"
+    )
 
 
 def analyze_bpm(path):
     from aubio import source, tempo
+
     win_s, hop_s = 1024, 512
-    s = source(path, samplerate=0, hop_size=hop_s)  # ledfx fork: samplerate comes FIRST positionally
+    s = source(
+        path, samplerate=0, hop_size=hop_s
+    )  # ledfx fork: samplerate comes FIRST positionally
     o = tempo("default", win_s, hop_s, s.samplerate)
     while True:
         samples, read = s()
@@ -50,7 +56,22 @@ def analyze_bpm(path):
 def analyze_key(path):
     # keyfinder-cli fails to resample 24-bit aiff itself -> decode to 16-bit wav first
     with tempfile.NamedTemporaryFile(suffix=".wav") as tmp:
-        r = sh(["ffmpeg", "-v", "error", "-y", "-i", path, "-vn", "-ac", "1", "-ar", "44100", tmp.name])
+        r = sh(
+            [
+                "ffmpeg",
+                "-v",
+                "error",
+                "-y",
+                "-i",
+                path,
+                "-vn",
+                "-ac",
+                "1",
+                "-ar",
+                "44100",
+                tmp.name,
+            ]
+        )
         if r.returncode != 0:
             complain("ffmpeg", r)
         r = sh(["keyfinder-cli", "-n", "standard", tmp.name])
@@ -135,7 +156,10 @@ def main(dirs):
                     continue
                 done += 1
                 bpm, key, warn = result
-                print(f"bpm={bpm} key={key}{f'  (partial: {warn})' if warn else ''}  {path}", flush=True)
+                print(
+                    f"bpm={bpm} key={key}{f'  (partial: {warn})' if warn else ''}  {path}",
+                    flush=True,
+                )
     print(f"enriched={done} failed={failed} already-tagged={skipped}")
 
 

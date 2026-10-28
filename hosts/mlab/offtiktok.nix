@@ -1,10 +1,12 @@
-{ config, pkgs, ... }:
-
 {
+  config,
+  pkgs,
+  ...
+}: {
   systemd.services.offtiktok = {
     description = "offtiktok frontend (Next.js on loopback port 3010)";
-    wantedBy = [ "multi-user.target" ];
-    after = [ "network.target" ];
+    wantedBy = ["multi-user.target"];
+    after = ["network.target"];
     serviceConfig = {
       Type = "simple";
       User = "offtiktok";
@@ -16,8 +18,8 @@
 
   systemd.services.offtiktokapi = {
     description = "offtiktok backend (Express/Prisma on port 2000)";
-    wantedBy = [ "multi-user.target" ];
-    after = [ "network.target" ];
+    wantedBy = ["multi-user.target"];
+    after = ["network.target"];
     serviceConfig = {
       Type = "simple";
       User = "offtiktokapi";

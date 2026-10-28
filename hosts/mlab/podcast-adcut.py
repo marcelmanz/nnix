@@ -25,13 +25,23 @@ AUDIO_SUFFIXES = {".mp3", ".m4a", ".aac", ".ogg", ".opus"}
 PODCAST_DIR = Path(os.environ["PODCAST_DIR"])
 STATE_DIR = Path(os.environ["STATE_DIRECTORY"])
 DRY_RUN = os.environ.get("DRY_RUN") == "1"
-STINGS = {show: np.array(fp, dtype=np.uint32) for show, fp in json.loads(Path(os.environ["SHOWS_FILE"]).read_text()).items()}
+STINGS = {
+    show: np.array(fp, dtype=np.uint32)
+    for show, fp in json.loads(Path(os.environ["SHOWS_FILE"]).read_text()).items()
+}
 
 
 def fingerprint(path):
-    out = subprocess.run(["fpcalc", "-raw", "-length", "0", str(path)], capture_output=True, text=True, check=True).stdout
+    out = subprocess.run(
+        ["fpcalc", "-raw", "-length", "0", str(path)],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
     fields = dict(line.split("=", 1) for line in out.splitlines() if "=" in line)
-    return np.array([int(v) for v in fields["FINGERPRINT"].split(",")], dtype=np.uint32), float(fields["DURATION"])
+    return np.array(
+        [int(v) for v in fields["FINGERPRINT"].split(",")], dtype=np.uint32
+    ), float(fields["DURATION"])
 
 
 def find_stings(episode, sting):
@@ -47,7 +57,11 @@ def find_stings(episode, sting):
 
 
 def plan_cuts(stings, duration):
-    cuts = [(first + STING_SECONDS, second + STING_SECONDS) for first, second in zip(stings, stings[1:]) if second - first < MAX_BREAK_SECONDS]
+    cuts = [
+        (first + STING_SECONDS, second + STING_SECONDS)
+        for first, second in zip(stings, stings[1:])
+        if second - first < MAX_BREAK_SECONDS
+    ]
     if stings and OUTRO_SECONDS + 5 < duration - stings[-1] < POST_ROLL_WINDOW_SECONDS:
         cuts.append((stings[-1] + OUTRO_SECONDS, duration))
     merged = []
@@ -65,14 +79,37 @@ def cut(path, cuts):
         keep.append((position, start))
         position = end
     quoted = str(path).replace("'", r"'\''")
-    listing = "".join(f"file '{quoted}'\ninpoint {start:.3f}\noutpoint {end:.3f}\n" for start, end in keep)
+    listing = "".join(
+        f"file '{quoted}'\ninpoint {start:.3f}\noutpoint {end:.3f}\n"
+        for start, end in keep
+    )
     listing += f"file '{quoted}'\ninpoint {position:.3f}\n"
     listing_path = STATE_DIR / "concat.txt"
     listing_path.write_text(listing)
     # dotfile: audiobookshelf's scanner ignores it until the rename
     partial = path.with_name(f".adcut-{path.name}")
     subprocess.run(
-        ["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(listing_path), "-i", str(path), "-map", "0:a", "-map_metadata", "1", "-c", "copy", str(partial)],
+        [
+            "ffmpeg",
+            "-v",
+            "error",
+            "-y",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            str(listing_path),
+            "-i",
+            str(path),
+            "-map",
+            "0:a",
+            "-map_metadata",
+            "1",
+            "-c",
+            "copy",
+            str(partial),
+        ],
         check=True,
     )
     os.replace(partial, path)
@@ -89,7 +126,11 @@ def main():
     for show, sting in STINGS.items():
         for path in sorted((PODCAST_DIR / show).iterdir()):
             relative = str(path.relative_to(PODCAST_DIR))
-            if path.suffix.lower() not in AUDIO_SUFFIXES or path.name.startswith(".") or relative in done:
+            if (
+                path.suffix.lower() not in AUDIO_SUFFIXES
+                or path.name.startswith(".")
+                or relative in done
+            ):
                 continue
             if time.time() - path.stat().st_mtime < MIN_AGE_SECONDS:
                 continue
@@ -97,7 +138,10 @@ def main():
             stings = find_stings(episode, sting)
             cuts = plan_cuts(stings, duration)
             removed = sum(end - start for start, end in cuts)
-            print(f"{relative}: stings {', '.join(map(ts, stings)) or 'none'}; cut {', '.join(f'{ts(s)}-{ts(e)}' for s, e in cuts) or 'nothing'} ({removed:.0f}s)", flush=True)
+            print(
+                f"{relative}: stings {', '.join(map(ts, stings)) or 'none'}; cut {', '.join(f'{ts(s)}-{ts(e)}' for s, e in cuts) or 'nothing'} ({removed:.0f}s)",
+                flush=True,
+            )
             if cuts and not DRY_RUN:
                 cut(path, cuts)
             with done_path.open("a") as f:

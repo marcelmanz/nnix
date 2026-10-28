@@ -18,8 +18,6 @@
     };
   };
 
-  services.blueman.enable = true;
-
   programs.nix-ld.enable = true;
 
   nix.distributedBuilds = true;

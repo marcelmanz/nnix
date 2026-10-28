@@ -1,9 +1,10 @@
-{ config, pkgs, ... }:
-
-let
-  notesDir = "/var/lib/notes";
-in
 {
+  config,
+  pkgs,
+  ...
+}: let
+  notesDir = "/var/lib/notes";
+in {
   systemd.tmpfiles.rules = [
     "d ${notesDir} 0770 root root -"
   ];
@@ -12,15 +13,15 @@ in
   # Port 3000 is open-webui's, hence 3021.
   virtualisation.oci-containers.containers.silverbullet = {
     image = "ghcr.io/silverbulletmd/silverbullet:latest";
-    ports = [ "127.0.0.1:3021:3000" ];
-    volumes = [ "${notesDir}:/space" ];
+    ports = ["127.0.0.1:3021:3000"];
+    volumes = ["${notesDir}:/space"];
   };
 
   systemd.services.notes-git-sync = {
     description = "Auto-commit and sync SilverBullet notes";
-    after = [ "network-online.target" ];
-    wants = [ "network-online.target" ];
-    path = [ pkgs.git pkgs.openssh ];
+    after = ["network-online.target"];
+    wants = ["network-online.target"];
+    path = [pkgs.git pkgs.openssh];
 
     serviceConfig = {
       Type = "oneshot";
@@ -47,7 +48,7 @@ in
   };
 
   systemd.timers.notes-git-sync = {
-    wantedBy = [ "timers.target" ];
+    wantedBy = ["timers.target"];
     timerConfig = {
       OnBootSec = "5m";
       OnUnitActiveSec = "5m";

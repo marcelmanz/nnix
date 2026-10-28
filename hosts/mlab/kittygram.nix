@@ -1,18 +1,16 @@
-{ pkgs, ... }:
-
-{
+{pkgs, ...}: {
   # Proxied via proxy.nix (services.insta -> insta.marcel.cool, port 3022).
 
   # Built from marcelmanz's fork (SearXNG-backed search), no image published upstream. podman build is
   # layer-cached; a no-change rebuild costs seconds. To force an update:
   # `systemctl start kittygram-image` then restart podman-kittygram.
-  systemd.tmpfiles.rules = [ "d /var/lib/kittygram 0755 root root -" ];
+  systemd.tmpfiles.rules = ["d /var/lib/kittygram 0755 root root -"];
 
   systemd.services.kittygram-image = {
     description = "Build the kittygram container image from source";
-    after = [ "network-online.target" ];
-    wants = [ "network-online.target" ];
-    path = with pkgs; [ git git-lfs podman ];
+    after = ["network-online.target"];
+    wants = ["network-online.target"];
+    path = with pkgs; [git git-lfs podman];
     serviceConfig.Type = "oneshot";
     script = ''
       src=/var/lib/kittygram
@@ -37,8 +35,8 @@
   # same pattern as seafile.nix.
   systemd.services.podman-network-kittygram = {
     description = "Create Podman network for kittygram";
-    after = [ "network.target" ];
-    wantedBy = [ "multi-user.target" ];
+    after = ["network.target"];
+    wantedBy = ["multi-user.target"];
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
@@ -51,12 +49,12 @@
   virtualisation.oci-containers.containers = {
     kittygram-valkey = {
       image = "docker.io/valkey/valkey:latest";
-      extraOptions = [ "--network=kittygram-net" ];
+      extraOptions = ["--network=kittygram-net"];
     };
     kittygram = {
       image = "localhost/kittygram:latest";
-      dependsOn = [ "kittygram-valkey" ];
-      ports = [ "127.0.0.1:3022:80" ];
+      dependsOn = ["kittygram-valkey"];
+      ports = ["127.0.0.1:3022:80"];
       environment = {
         REDIS_HOST = "kittygram-valkey";
         REDIS_PORT = "6379";
@@ -66,16 +64,16 @@
         RESOLVER = "10.89.2.1";
         ABOUT_MESSAGE = "Muerte al capitalismo ostias ya";
       };
-      extraOptions = [ "--network=kittygram-net" ];
+      extraOptions = ["--network=kittygram-net"];
     };
   };
 
   systemd.services.podman-kittygram = {
-    after = [ "kittygram-image.service" "podman-network-kittygram.service" ];
-    requires = [ "kittygram-image.service" "podman-network-kittygram.service" ];
+    after = ["kittygram-image.service" "podman-network-kittygram.service"];
+    requires = ["kittygram-image.service" "podman-network-kittygram.service"];
   };
   systemd.services.podman-kittygram-valkey = {
-    after = [ "podman-network-kittygram.service" ];
-    requires = [ "podman-network-kittygram.service" ];
+    after = ["podman-network-kittygram.service"];
+    requires = ["podman-network-kittygram.service"];
   };
 }

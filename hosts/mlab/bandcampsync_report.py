@@ -231,7 +231,9 @@ def reachable_url(url):
     """The purchase's url, or its artist page if bandcamp has since taken the release down."""
     if not url:
         return url
-    req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "Mozilla/5.0"})
+    req = urllib.request.Request(
+        url, method="HEAD", headers={"User-Agent": "Mozilla/5.0"}
+    )
     try:
         urllib.request.urlopen(req, timeout=10)
     except urllib.error.HTTPError as e:
@@ -250,7 +252,9 @@ def fetch_urls():
     b = Bandcamp(cookies=cookies)
     b.verify_authentication()
     b.load_purchases()
-    urls = {str(it.item_id): reachable_url(it._data.get("item_url")) for it in b.purchases}
+    urls = {
+        str(it.item_id): reachable_url(it._data.get("item_url")) for it in b.purchases
+    }
     URLS_JSON.write_text(json.dumps(urls, indent=2))
     print(f"wrote {len(urls)} urls")
 

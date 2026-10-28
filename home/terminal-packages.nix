@@ -90,6 +90,7 @@ with pkgs; [
   htop
   hyprland-workspaces
   imagemagick
+  w3m
   iptables
   jaq
   java-language-server
@@ -211,6 +212,7 @@ with pkgs; [
   vtsls
   w3m
   watchexec
+  wikipedia-cli
   xlsx2csv
   wireguard-tools
   wlr-layout-ui
@@ -227,6 +229,8 @@ with pkgs; [
   zsh
   pi-coding-agent
   pir
+  pulsemixer
+  wiremix
   (pkgs.python3.withPackages (ps:
     with ps; [
       python-lsp-server
