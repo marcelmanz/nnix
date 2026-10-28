@@ -183,6 +183,12 @@ in {
     ".mozilla/native-messaging-hosts/passff.json".source = "${pkgs.passff-host}/lib/mozilla/native-messaging-hosts/passff.json";
   };
 
+  xdg.configFile."ironbar/tray.css".text = ''
+    .tray picture, .tray image {
+        -gtk-icon-filter: brightness(0);
+    }
+  '';
+
   xdg.configFile."systemd/user/waybar.service.d/after-portal.conf".text = ''
     [Unit]
     After=xdg-desktop-portal.service

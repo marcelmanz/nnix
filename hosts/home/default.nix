@@ -27,6 +27,11 @@ in {
     org.freedesktop.impl.portal.Settings=gtk
     org.freedesktop.impl.portal.FileChooser=termfilechooser
   '';
+  xdg.configFile."ironbar/tray.css".text = ''
+    .tray .item {
+        margin: 0 4px;
+    }
+  '';
   xdg.configFile."xdg-desktop-portal-termfilechooser/config".text = ''
     [filechooser]
     cmd=${pkgs.xdg-desktop-portal-termfilechooser}/share/xdg-desktop-portal-termfilechooser/nnn-wrapper.sh
