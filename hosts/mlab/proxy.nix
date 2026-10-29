@@ -334,6 +334,15 @@
     };
   };
 
+  feishinSettings = pkgs.writeTextDir "settings.js" ''
+    "use strict";
+    window.SERVER_NAME = "Navidrome";
+    window.SERVER_TYPE = "navidrome";
+    window.SERVER_URL = "${services.navidrome.href}";
+    window.SERVER_LOCK = "true";
+    window.ANALYTICS_DISABLED = "true";
+  '';
+
   serviceVirtualHosts = lib.mapAttrs mkProxyHost services;
 in {
   _module.args.services = services;
@@ -368,7 +377,7 @@ in {
     '';
 
     virtualHosts =
-      (builtins.removeAttrs serviceVirtualHosts ["auth" "jellyfin" "seafile" "azuracast" "live" "livedj" "streamcam"])
+      (builtins.removeAttrs serviceVirtualHosts ["auth" "jellyfin" "seafile" "azuracast" "live" "livedj" "streamcam" "navidrome"])
       // {
         # Merged show-control page. / is live-toggle.py (go live, mic, recording status) and
         # /cam/ is webcam-control.py - the trailing slash on proxyPass strips the prefix, so
@@ -434,6 +443,48 @@ in {
                 };
               };
           };
+
+        # Feishin owns only /, /settings.js and /assets/. Everything else must keep reaching
+        # Navidrome: Subsonic clients, share links and Feishin itself use this host.
+        "music.marcel.cool" = let
+          base = mkProxyHost "navidrome" services.navidrome;
+        in
+          base
+          // {
+            locations =
+              base.locations
+              // {
+                "= /" = {
+                  root = pkgs.feishin-web;
+                  tryFiles = "/index.html =404";
+                  extraConfig = ''
+                    add_header Cache-Control "no-cache";
+                  '';
+                };
+                "= /settings.js" = {
+                  alias = "${feishinSettings}/settings.js";
+                  extraConfig = ''
+                    add_header Cache-Control "no-store";
+                  '';
+                };
+                "/assets/" = {
+                  root = pkgs.feishin-web;
+                  tryFiles = "$uri =404";
+                  extraConfig = ''
+                    gzip on;
+                    gzip_vary on;
+                    gzip_types text/css text/javascript application/javascript application/json application/wasm image/svg+xml;
+                  '';
+                };
+                # .webmanifest is not in nginx's mime.types, and Chrome ignores a manifest served as octet-stream.
+                "= /assets/manifest.webmanifest" = {
+                  root = pkgs.feishin-web;
+                  extraConfig = "default_type application/manifest+json;";
+                };
+              };
+          };
+
+        "navi.marcel.cool" = mkProxyHost "navidrome" (services.navidrome // {href = "https://navi.marcel.cool";});
 
         "auth.marcel.cool" = let
           base = mkProxyHost "auth" services.auth;

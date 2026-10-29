@@ -134,7 +134,7 @@ class Handler(BaseHTTPRequestHandler):
             effect = (body.get("effect") or [None])[0]
             if effect in EFFECTS:
                 EFFECT_FILE.write_text(EFFECTS[effect])
-                # Kills only the runOnInit publisher - runOnInitRestart respawns it with the
+                # Kills only the runOnDemand publisher - runOnDemandRestart respawns it with the
                 # new filter. Restarting all of mediamtx worked too but took every viewer and
                 # the WHEP endpoint down with it. Matched on the camera id because the script
                 # execs ffmpeg (its own name is gone) and nothing else opens the BRIO; the

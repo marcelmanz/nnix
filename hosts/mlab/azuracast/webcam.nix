@@ -74,9 +74,9 @@
 
         # The -vf value is read fresh from effect file on every (re)start; webcam-control.py
         # writes the chosen filter there and restarts mediamtx to apply it.
-        # Must be a script file, not an inline shell one-liner: mediamtx fork/execs runOnInit
+        # Must be a script file, not an inline shell one-liner: mediamtx fork/execs runOnDemand
         # directly (no shell), so "filter=$(...)" isn't parsed - it's treated as the program name.
-        runOnInit = pkgs.writeShellScript "webcam-publish" ''
+        runOnDemand = pkgs.writeShellScript "webcam-publish" ''
           filter="$(cat /var/lib/webcam-control/effect 2>/dev/null)"
           # All three of -input_format/-video_size/-framerate are required. With none of them
           # ffmpeg takes the driver's default, which is the first entry of the first format:
@@ -108,7 +108,7 @@
 
           exec ${lib.getExe pkgs.ffmpeg} -f v4l2 -input_format mjpeg -video_size 1920x1080 -framerate 60 -i "$cam" -an -vaapi_device /dev/dri/renderD128 -vf "''${filter:-null},hqdn3d=3:2:6:6,scale=in_range=pc:out_range=tv,format=nv12,hwupload" -c:v h264_vaapi -b:v 6M -maxrate 6M -bf 0 -g 60 -f rtsp rtsp://localhost:$RTSP_PORT/$RTSP_PATH
         '';
-        runOnInitRestart = true;
+        runOnDemandRestart = true;
       };
     };
   };
