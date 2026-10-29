@@ -9,6 +9,8 @@
     my-nixpkgs.url = "github:marcelmanz/nixpkgs";
     nixpkgsStable.url = "github:NixOS/nixpkgs/nixos-25.11";
     nixpkgs2405.url = "github:NixOS/nixpkgs/nixos-24.05";
+    # last nixpkgs whose nitter still compiles (later ones dropped pcre v1)
+    nixpkgsNitter.url = "github:NixOS/nixpkgs/e7439b6b14ad3cc35d05608ebca9bce01a25f5f8";
     openlogi.url = "github:AprilNEA/OpenLogi?dir=packaging";
     fenix = {
       url = "github:nix-community/fenix";
@@ -113,6 +115,7 @@
         (import ./overlays/hyprland-glaze-fix.nix)
         (import ./overlays/myna-font.nix {inherit inputs;})
         (import ./overlays/authelia-pnpm-hash.nix)
+        (import ./overlays/open-webui-mcp1.nix)
         (final: prev: {tmex = tmexPkg;})
         (final: prev: {
           pir = pir.packages.${system}.pir;

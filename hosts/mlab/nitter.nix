@@ -1,5 +1,7 @@
 {
   config,
+  inputs,
+  pkgs,
   services,
   ...
 }: {
@@ -7,6 +9,7 @@
 
   services.nitter = {
     enable = true;
+    package = inputs.nixpkgsNitter.legacyPackages.${pkgs.stdenv.hostPlatform.system}.nitter;
     # jsonl, one {"kind":"cookie",...} session per line (nix run .#nitter-session)
     sessionsFile = config.sops.secrets."nitter_sessions".path;
     # 6379 is livekit's; own instance on 6380

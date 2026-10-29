@@ -36,5 +36,12 @@
 
   systemd.services.navidrome.serviceConfig.BindReadOnlyPaths = [
     "/var/lib/media/music"
+    # Uncomment with the tmpfiles rule below to expose slskd's share read-only to Navidrome only.
+    # "/var/lib/slskd/music/share:/var/lib/media/music/slskd"
   ];
+
+  # Mount point for the slskd bind above; the parent is read-only inside the unit, so systemd can't create it.
+  # systemd.tmpfiles.rules = [
+  #   "d /var/lib/media/music/slskd 0755 root root -"
+  # ];
 }

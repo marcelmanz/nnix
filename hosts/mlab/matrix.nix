@@ -144,6 +144,7 @@ in {
     keyFile = config.sops.templates."livekit-secrets".path;
     port = 8090;
   };
+  systemd.services.lk-jwt-service.environment.LIVEKIT_FULL_ACCESS_HOMESERVERS = serverName;
 
   services.matrix-synapse.settings.turn_servers = [
     {
