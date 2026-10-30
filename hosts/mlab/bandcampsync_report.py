@@ -161,6 +161,10 @@ def generate():
         "td,th{border:1px solid #ccc;padding:4px 8px;text-align:left}"
         ".ok{color:green}.pend{color:darkorange}.fail{color:red}"
         "td a{color:#0066cc;text-decoration:underline}td a:visited{color:#551a8b}"
+        ":root{color-scheme:light dark}"
+        "@media(prefers-color-scheme:dark){body{background:#181818;color:#ddd}"
+        "td,th{border-color:#444}.ok{color:#6c6}.pend{color:#fa3}.fail{color:#f66}"
+        "td a{color:#6af}td a:visited{color:#b9f}}"
         "</style>"
     )
     o.append(

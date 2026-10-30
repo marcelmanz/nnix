@@ -244,6 +244,7 @@ with pkgs; [
       netifaces
       pytest
       sdbus
+      youtube-transcript-api
     ]))
   (pkgs.google-cloud-sdk.withExtraComponents (with pkgs.google-cloud-sdk.components; [gke-gcloud-auth-plugin]))
   (pkgs.writeShellScriptBin "codelldb" ''
