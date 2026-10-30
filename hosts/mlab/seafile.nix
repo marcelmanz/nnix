@@ -124,6 +124,9 @@ in {
           if ! grep -q "CSRF_TRUSTED_ORIGINS" "$SETTINGS"; then
             echo "CSRF_TRUSTED_ORIGINS = ['https://${domain}']" >> "$SETTINGS"
           fi
+          if ! grep -q "THUMBNAIL_SIZE_FOR_ORIGINAL" "$SETTINGS"; then
+            echo "THUMBNAIL_SIZE_FOR_ORIGINAL = 4096" >> "$SETTINGS"
+          fi
         '';
       };
     };
