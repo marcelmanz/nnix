@@ -156,6 +156,7 @@
   in {
     packages.${system} = {
       lsv = pkgs.lsv;
+      "ink-md" = pkgs.ink-md;
       "audio-select" = pkgs."audio-select";
       rff = pkgs.rff;
       "reedline-bash" = pkgs."reedline-bash";
@@ -230,6 +231,7 @@
             {
               config,
               pkgs,
+              pkgsStable,
               nixGL,
               ...
             }: {
@@ -238,7 +240,10 @@
               targets.genericLinux.enable = true;
 
               targets.genericLinux.nixGL = {
-                packages = nixGL.packages;
+                # TODO: back to nixGL.packages once upstream nixGL drops pcre (removed from unstable 2026-10-25)
+                packages = import "${nixGL}/default.nix" {
+                  pkgs = pkgs.extend (_: _: {inherit (pkgsStable) pcre;});
+                };
                 defaultWrapper = "mesa";
               };
             }
