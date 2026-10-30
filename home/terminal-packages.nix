@@ -15,6 +15,7 @@ with pkgs; [
   # pi-undo-redo
   # rff
   # zuban
+  ink-md
   appimage-run
   astro-language-server
   atool
@@ -170,6 +171,7 @@ with pkgs; [
   rmpc
   ruby
   rustup
+  s-tui
   sendme
   shellcheck
   shfmt
