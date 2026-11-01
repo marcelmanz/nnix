@@ -137,6 +137,7 @@ with pkgs; [
   nwg-displays
   tea
   nix-prefetch-git
+  omnidiff
   onefetch
   opencode
   openssl

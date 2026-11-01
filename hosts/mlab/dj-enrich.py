@@ -107,7 +107,8 @@ def process(path):
 
     if vorbis:
         have = {k.lower() for k in audio.keys()}
-        missing_bpm, missing_key = "bpm" not in have, not ({"initialkey", "key"} & have)
+        missing_bpm = not any(v.strip() not in ("", "0") for v in audio.get("bpm", []))
+        missing_key = not ({"initialkey", "key"} & have)
     else:
         tags = audio.tags
         missing_bpm = tags is None or "TBPM" not in tags
