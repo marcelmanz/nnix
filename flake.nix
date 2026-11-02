@@ -12,6 +12,7 @@
     # last nixpkgs whose nitter still compiles (later ones dropped pcre v1)
     nixpkgsNitter.url = "github:NixOS/nixpkgs/e7439b6b14ad3cc35d05608ebca9bce01a25f5f8";
     openlogi.url = "github:AprilNEA/OpenLogi?dir=packaging";
+    omnidiff.url = "github:ivankovic/omnidiff";
     fenix = {
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -138,6 +139,7 @@
         })
         (final: prev: {"brave-origin" = inputs.brave-origin-channels.packages.${system}.nightly;})
         (final: prev: {psysonic = inputs.psysonic.packages.${system}.psysonic;})
+        (final: prev: {omnidiff = inputs.omnidiff.packages.${system}.omnidiff;})
         (final: prev: {
           offtiktok = pkgs.callPackage ./packages/offtiktok/frontend.nix {};
           offtiktokapi = pkgs.callPackage ./packages/offtiktok/backend.nix {};

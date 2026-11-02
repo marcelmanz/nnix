@@ -25,7 +25,92 @@
       rsgain easy "$@" || true  # replaygain; tolerate unsupported files
     '';
   };
+
+  beetsMusicDir = "/var/lib/beets-music";
+  beetsMusicConfig = pkgs.writeText "beets-music.yaml" ''
+    directory: /var/lib/media/music
+    library: ${beetsMusicDir}/library.db
+    ignore: [".*", "*~", "news"]
+
+    plugins: bandcamp zero
+
+    import:
+      copy: no
+      move: no
+      write: yes
+      quiet: yes
+      quiet_fallback: skip
+      duplicate_action: skip
+      incremental: yes
+      incremental_skip_later: yes
+      resume: no
+      log: ${beetsMusicDir}/import.log
+
+    match:
+      strong_rec_thresh: 0.5
+      max_rec:
+        missing_tracks: strong
+        unmatched_tracks: strong
+
+    bandcamp:
+      exclude_extra_fields: [comments]
+      genre:
+        capitalize: yes
+
+    zero:
+      fields: mb_albumid mb_trackid mb_artistid mb_artistids mb_albumartistid mb_albumartistids mb_releasetrackid mb_releasegroupid
+  '';
+  musicBeet = pkgs.writeShellApplication {
+    name = "music-beet";
+    runtimeInputs = [
+      (pkgs.python3Packages.beets.override {
+        pluginOverrides.beetcamp = {
+          enable = true;
+          propagatedBuildInputs = [
+            (pkgs.python3Packages.beetcamp.overridePythonAttrs (old: {
+              postPatch =
+                (old.postPatch or "")
+                + ''
+                  substituteInPlace beetcamp/http.py --replace-fail \
+                    'USER_AGENT = f"beets/{beets.__version__} +https://beets.io/"' \
+                    'USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0"'
+                '';
+            }))
+          ];
+        };
+      })
+    ];
+    text = ''
+      export BEETSDIR=${beetsMusicDir}
+      exec beet -c ${beetsMusicConfig} "$@"
+    '';
+  };
+  musicBeetImport = pkgs.writeShellApplication {
+    name = "music-beet-import";
+    runtimeInputs = [musicBeet pkgs.jq pkgs.findutils pkgs.coreutils];
+    text = ''
+      find /var/lib/media/music -name bandcamp_item_id.txt -print0 | while IFS= read -r -d "" item_id_file; do
+        url=$(jq -r --arg id "$(tr -d '[:space:]' < "$item_id_file")" '.[$id] // empty' ${htmlDir}/urls.json)
+        if [ -z "$url" ]; then
+          echo "no purchase url: $(dirname "$item_id_file")" >&2
+          continue
+        fi
+        music-beet import -S "$url" "$(dirname "$item_id_file")" < /dev/null || true
+      done
+    '';
+  };
+  djGenres = pkgs.writeShellApplication {
+    name = "dj-genres";
+    runtimeInputs = [(pkgs.python313.withPackages (ps: [ps.mutagen]))];
+    text = ''
+      python3 ${./dj-genres.py} "$@"
+    '';
+  };
 in {
+  systemd.tmpfiles.rules = [
+    "d ${beetsMusicDir} 0750 root root -"
+  ];
+
   # bandcamp cookies arrive via syncthing from laptop (see syncthing.nix)
 
   systemd.services.bandcampsync = {
@@ -65,6 +150,8 @@ in {
         find "$tree" -type d -exec chmod 2775 {} +
         find "$tree" -type f -exec chmod 0664 {} +
       done
+      ${musicBeetImport}/bin/music-beet-import || true
+      ${djGenres}/bin/dj-genres || true
       # tag new files with bpm + key + replaygain (skips already-tagged ones)
       ${djEnrich}/bin/dj-enrich
       # trigger a navidrome full scan so new tracks show up right away
@@ -201,7 +288,7 @@ in {
     '';
   };
 
-  environment.systemPackages = [djEnrich];
+  environment.systemPackages = [djEnrich musicBeet musicBeetImport djGenres];
 
   systemd.timers.bandcampsync = {
     wantedBy = ["timers.target"];
