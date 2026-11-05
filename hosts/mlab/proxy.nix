@@ -114,7 +114,7 @@
     };
     offtiktokapi = {
       port = 2000;
-      href = "https://api.offtiktok.marcel.cool";
+      href = "https://offtiktok-api.marcel.cool";
     };
     openwebui = {
       port = 3000;
@@ -399,6 +399,7 @@ in {
                       ''
                         allow 127.0.0.1;
                         allow 192.168.1.0/24;
+                        allow 2a0c:5a83:550a:e300::/64;
                         deny all;
                       ''
                       + base.locations."/".extraConfig;

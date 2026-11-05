@@ -11,16 +11,17 @@ https://git.marcel.cool and served to peers on `ssh.marcel.cool:8776`.
 
 ## Pieces
 
-| Where                        | What                                                  |
-| ---------------------------- | ----------------------------------------------------- |
-| `default.nix`                | radicle-node + radicle-httpd (port from `proxy.nix`)  |
-| `radicle.pub`                | node public key                                       |
-| `secrets/mlab.yaml`          | `radicle_node_key`, the node private key (sops)       |
-| `../proxy.nix`               | `git.marcel.cool`: explorer UI + httpd API/git routes |
-| `home/terminal-packages.nix` | `rad` CLI (`radicle-node`)                            |
-| `home/terminal.nix`          | `radit`, seeds the current repo on mlab               |
-| `home/gui.nix`               | `radicle-desktop`, GUI for issues/patches/comments    |
-| dots `.bashrc`               | `rad` wrapper: `rad init` is public + radit reminder  |
+| Where                        | What                                                         |
+| ---------------------------- | ------------------------------------------------------------ |
+| `default.nix`                | radicle-node + radicle-httpd (port from `proxy.nix`)         |
+| `default.nix`                | radicle-search + Meilisearch, repo search on git.marcel.cool |
+| `radicle.pub`                | node public key                                              |
+| `secrets/mlab.yaml`          | `radicle_node_key`, the node private key (sops)              |
+| `../proxy.nix`               | `git.marcel.cool`: explorer UI + httpd API/git routes        |
+| `home/terminal-packages.nix` | `rad` CLI (`radicle-node`)                                   |
+| `home/terminal.nix`          | `radit`, seeds the current repo on mlab                      |
+| `home/gui.nix`               | `radicle-desktop`, GUI for issues/patches/comments           |
+| dots `.bashrc`               | `rad` wrapper: `rad init` is public + radit reminder         |
 
 ## New laptop
 

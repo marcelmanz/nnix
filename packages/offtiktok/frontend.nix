@@ -20,8 +20,18 @@ in
 
     npmDepsHash = "sha256-LT21Cy7SLw0Mudr1CxIMEX4IOfb1U1pQ+eTysKfYDhs=";
 
+    postPatch = ''
+      substituteInPlace next.config.mjs --replace-fail \
+        "value: 'www.offtiktok.com'," \
+        "value: 'www.offtiktok.com',
+                },
+                {
+                  type: 'host',
+                  value: 'offtiktok.marcel.cool',"
+    '';
+
     env = {
-      NEXT_PUBLIC_API_URL = "https://api.offtiktok.marcel.cool";
+      NEXT_PUBLIC_API_URL = "https://offtiktok-api.marcel.cool";
       NEXT_INTERNAL_API_URL = "http://127.0.0.1:3010";
       NEXT_TELEMETRY_DISABLED = "1";
     };
