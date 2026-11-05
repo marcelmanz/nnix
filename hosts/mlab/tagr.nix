@@ -22,7 +22,7 @@
   '';
 
   systemd.tmpfiles.rules = [
-    "d /var/lib/tagr 0755 root root -"
+    "d /var/lib/tagr 0755 tagr media -"
   ];
 
   virtualisation.oci-containers.containers.tagr = {
@@ -30,9 +30,9 @@
     ports = ["127.0.0.1:${toString services.tagr.port}:3000"];
     # tagr rewrites tags in place, so it needs group write on the library.
     # bandcampsync normalizes music/ to 2775 dirs + 0664 files owned by :media
-    # after every run, which is what makes uid 1000 + gid media enough here.
+    # after every run, which is what makes the tagr user + gid media enough here.
     environment = {
-      PUID = "1000";
+      PUID = toString config.users.users.tagr.uid;
       PGID = toString config.users.groups.media.gid;
     };
     volumes = [
@@ -40,5 +40,13 @@
       "/var/lib/media/music:/music"
     ];
     environmentFiles = [config.sops.templates."tagr.env".path];
+  };
+
+  # uid must not exist in the image (node is 1000): the entrypoint only gives a
+  # user it creates itself PGID as primary group, which is what grants media write.
+  users.users.tagr = {
+    isSystemUser = true;
+    group = "media";
+    uid = 952;
   };
 }
