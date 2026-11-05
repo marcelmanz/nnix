@@ -58,6 +58,7 @@ purge-offtiktok:
 	ssh -n $$host "cd /var/lib/offtiktokapi/public && for id in $$ids; do \
 		rm -f videos/\$$id.mp4 thumbnails/\$$id.jpg audio/\$$id.mp4; rm -rf images/\$$id; \
 		runuser -u offtiktokapi -- sqlite3 $$db \"PRAGMA foreign_keys = ON; DELETE FROM Video WHERE postId IN (SELECT id FROM Post WHERE tiktokId = '\$$id'); DELETE FROM Carousel WHERE postId IN (SELECT id FROM Post WHERE tiktokId = '\$$id'); DELETE FROM Post WHERE tiktokId = '\$$id';\"; \
+		if [ -f /var/lib/tiktok-follow/follow.db ]; then runuser -u tiktok-follow -- sqlite3 /var/lib/tiktok-follow/follow.db \"UPDATE videos SET status = 'purged', post_id = NULL, error = NULL WHERE tiktok_id = '\$$id';\"; fi; \
 		echo \"removed \$$id\"; done"
 
 nixos-nixbuild-mlab:

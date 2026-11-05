@@ -220,7 +220,8 @@ def render_page(message=""):
             """
         ).fetchall()
         videos = conn.execute(
-            "SELECT * FROM videos WHERE status != 'skipped' ORDER BY upload_date DESC, seen_at DESC LIMIT 300"
+            """SELECT * FROM videos WHERE status NOT IN ('skipped', 'purged')
+               ORDER BY COALESCE(upload_date, strftime('%Y%m%d', seen_at, 'unixepoch')) DESC, seen_at DESC LIMIT 300"""
         ).fetchall()
 
     profile_rows = "".join(
@@ -276,6 +277,10 @@ def render_page(message=""):
   <button>Follow</button>
 </form>
 <form method="post" action="/check" class="inline"><button>Check now</button></form>
+<p><form method="post" action="/save" class="inline">
+  <input name="url" placeholder="TikTok video link" size="48" required>
+  <button>Save one video</button>
+</form></p>
 <p>Checked daily; new videos are saved to <a href="{OFFTIKTOK_URL}">offtiktok</a>.</p>
 <table><tr><th>Profile</th><th>Saved</th><th>Last check</th><th>Last error</th><th></th></tr>{profile_rows}</table>
 <div class="grid">{cards}</div>
@@ -332,6 +337,14 @@ class Handler(BaseHTTPRequestHandler):
                     conn.execute("DELETE FROM videos WHERE handle = ?", (handle,))
                     conn.execute("DELETE FROM profiles WHERE handle = ?", (handle,))
             self.redirect(f"Stopped following @{handle}. Saved videos stay in offtiktok.")
+        elif self.path == "/save":
+            tiktok_url = fields.get("url", [""])[0].strip()
+            parsed = urllib.parse.urlparse(tiktok_url)
+            if parsed.scheme not in ("http", "https") or not (parsed.hostname or "").endswith("tiktok.com"):
+                self.redirect("That doesn't look like a TikTok link.")
+                return
+            threading.Thread(target=save_single_video, args=(tiktok_url,), daemon=True).start()
+            self.redirect("Saving the video in the background. Reload in a few seconds.")
         elif self.path == "/check":
             run_checks_in_background()
             self.redirect("Checking all profiles in the background. Reload in a minute.")
