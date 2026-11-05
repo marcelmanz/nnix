@@ -43,7 +43,7 @@
     ./podcast-adcut.nix
     ./proxy.nix
     ./qbittorrent.nix
-    ./radicle.nix
+    ./radicle
     ./redroid.nix
     ./sabnzbd.nix
     ./seafile.nix

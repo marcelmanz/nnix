@@ -15,6 +15,10 @@
         alias = "mlab";
         externalAddresses = ["ssh.marcel.cool:${toString config.services.radicle.node.listenPort}"];
         seedingPolicy.default = "block";
+        connect = [
+          "z6MkrLMMsiPWUcNPHcRajuMi9mDfYckSoJyPwwnknocNYPm7@iris.radicle.network:8776"
+          "z6Mkmqogy2qEM2ummccUthFEaaHvyYmYBYh3dbe9W4ebScxo@rosa.radicle.network:8776"
+        ];
       };
     };
     httpd = {
