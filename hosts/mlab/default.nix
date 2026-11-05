@@ -56,6 +56,7 @@
     ./sway.nix
     ./syncthing.nix
     ./tagr.nix
+    ./tiktok-follow
     ./uptime-kuma.nix
     ./vaultwarden.nix
     ./vikunja.nix

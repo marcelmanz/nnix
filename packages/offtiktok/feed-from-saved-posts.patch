@@ -1,0 +1,73 @@
+--- a/utils/db-helpers.ts
++++ b/utils/db-helpers.ts
+@@ -136,6 +136,26 @@
+ }
+ 
+ //Fetch newest post
++export async function fetchNextSavedPost(excludeTiktokIds: string[]) {
++  const next = await prisma.post.findFirst({
++    orderBy: {
++      createdAt: 'desc',
++    },
++    select: {
++      id: true,
++    },
++    where: {
++      deleted: {
++        equals: false,
++      },
++      tiktokId: {
++        notIn: excludeTiktokIds,
++      },
++    },
++  });
++  return next ? await fetchPostById(next.id) : null;
++}
++
+ export async function fetchNewestPost() {
+   return await prisma.post.findFirst({
+     orderBy: {
+--- a/routes/get-video.ts
++++ b/routes/get-video.ts
+@@ -2,6 +2,7 @@
+ import { RequestHandler } from 'express';
+ import {
+   createSession,
++  fetchNextSavedPost,
+   fetchPostById,
+   fetchSessionByToken,
+   openDb,
+@@ -9,7 +10,6 @@
+ } from '../utils/db-helpers';
+ import {
+   downloadThroughFetch,
+-  getRelatedPosts,
+   justFetchPost,
+ } from '../legacy/old-fetching-helpers';
+ import { checkAndCleanPublicFolder } from '../utils/disk-utils';
+@@ -40,19 +40,16 @@
+         userSession = await createSession(sessionParsed);
+       }
+     }
+-    logger.info('Running quickfetch');
+-
+-    const fetchRelatedPosts = await getRelatedPosts(url, userSession?.token);
+-    logger.info({
+-      fetchRelatedPosts,
+-    });
+-    if (!fetchRelatedPosts || fetchRelatedPosts instanceof Error) {
++    const currentTiktokId = url.split('?')[0].split('/').filter(Boolean).at(-1) ?? '';
++    const watchedTiktokIds = (userSession?.watched || '').split(',').filter(Boolean);
++    const nextPost = await fetchNextSavedPost([currentTiktokId, ...watchedTiktokIds]);
++    if (!nextPost) {
+       return res.status(500).send({ error: 'Something went wrong' });
+     }
+     if (userSession) {
+-      await updateSession(userSession.token, fetchRelatedPosts.tiktokId);
++      await updateSession(userSession.token, `${currentTiktokId},${nextPost.tiktokId}`);
+     }
+-    res.send(fetchRelatedPosts);
++    res.send(nextPost);
+   } catch (error) {
+     if (error instanceof Error) {
+       res.status(500).send({

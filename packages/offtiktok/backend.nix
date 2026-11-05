@@ -57,7 +57,10 @@ in
 
     npmDepsHash = "sha256-cb++RE1anojBm+W3xZzmR6DJ6CilZc+v0hIvUdXBAnw=";
 
-    patches = [./fetch-post-from-page.patch];
+    patches = [
+      ./fetch-post-from-page.patch
+      ./feed-from-saved-posts.patch
+    ];
 
     # postinstalls would download chromium (puppeteer, unused: only legacy/*)
     # and the ffmpeg binary (ffmpeg-static); both replaced below.

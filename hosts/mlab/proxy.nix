@@ -187,6 +187,11 @@
       href = "https://tags.marcel.cool";
       protected = true;
     };
+    tiktok = {
+      port = 8296;
+      href = "https://tiktok.marcel.cool";
+      protected = true;
+    };
     syncthing = {
       port = 8384;
       href = "https://sync.marcel.cool";
@@ -382,8 +387,20 @@ in {
     '';
 
     virtualHosts =
-      (builtins.removeAttrs serviceVirtualHosts ["auth" "jellyfin" "seafile" "azuracast" "live" "livedj" "streamcam" "navidrome" "radicle" "vaultwarden"])
+      (builtins.removeAttrs serviceVirtualHosts ["auth" "jellyfin" "seafile" "azuracast" "live" "livedj" "streamcam" "navidrome" "radicle" "vaultwarden" "offtiktokapi"])
       // {
+        "offtiktok-api.marcel.cool" = let
+          base = mkProxyHost "offtiktokapi" services.offtiktokapi;
+        in
+          base
+          // {
+            locations =
+              base.locations
+              // {
+                "/by_url/".return = "403";
+              };
+          };
+
         "vault.marcel.cool" = let
           base = mkProxyHost "vaultwarden" services.vaultwarden;
         in
