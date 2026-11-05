@@ -30,7 +30,7 @@
   systemd.services.radicle-node.serviceConfig.MemoryMax = "2G";
   systemd.services.radicle-httpd.serviceConfig = {
     MemoryMax = "2G";
-    ReadOnlyPaths = [
+    BindReadOnlyPaths = [
       "/var/lib/radicle/storage"
       "/var/lib/radicle/cobs"
       "/var/lib/radicle/node/policies.db"
