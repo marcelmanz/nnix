@@ -1,26 +1,27 @@
 --- a/utils/db-helpers.ts
 +++ b/utils/db-helpers.ts
-@@ -136,6 +136,26 @@
+@@ -136,6 +136,27 @@
  }
  
  //Fetch newest post
 +export async function fetchNextOlderSavedPost(currentTiktokId: string) {
-+  const next = await prisma.post.findFirst({
-+    orderBy: {
-+      tiktokId: 'desc',
-+    },
-+    select: {
-+      id: true,
-+    },
-+    where: {
-+      deleted: {
-+        equals: false,
++  const findNewestSaved = (olderThan?: string) =>
++    prisma.post.findFirst({
++      orderBy: {
++        tiktokId: 'desc',
 +      },
-+      tiktokId: {
-+        lt: currentTiktokId,
++      select: {
++        id: true,
 +      },
-+    },
-+  });
++      where: {
++        deleted: {
++          equals: false,
++        },
++        tiktokId: olderThan ? { lt: olderThan } : { not: currentTiktokId },
++      },
++    });
++  const next =
++    (await findNewestSaved(currentTiktokId)) ?? (await findNewestSaved());
 +  return next ? await fetchPostById(next.id) : null;
 +}
 +
