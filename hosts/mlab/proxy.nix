@@ -382,8 +382,30 @@ in {
     '';
 
     virtualHosts =
-      (builtins.removeAttrs serviceVirtualHosts ["auth" "jellyfin" "seafile" "azuracast" "live" "livedj" "streamcam" "navidrome" "radicle"])
+      (builtins.removeAttrs serviceVirtualHosts ["auth" "jellyfin" "seafile" "azuracast" "live" "livedj" "streamcam" "navidrome" "radicle" "vaultwarden"])
       // {
+        "vault.marcel.cool" = let
+          base = mkProxyHost "vaultwarden" services.vaultwarden;
+        in
+          base
+          // {
+            locations =
+              base.locations
+              // {
+                "/admin" =
+                  base.locations."/"
+                  // {
+                    extraConfig =
+                      ''
+                        allow 127.0.0.1;
+                        allow 192.168.1.0/24;
+                        deny all;
+                      ''
+                      + base.locations."/".extraConfig;
+                  };
+              };
+          };
+
         "git.marcel.cool" = let
           base = mkProxyHost "radicle" services.radicle;
           httpdLocation =
