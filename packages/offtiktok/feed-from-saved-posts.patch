@@ -4,10 +4,10 @@
  }
  
  //Fetch newest post
-+export async function fetchNextSavedPost(excludeTiktokIds: string[]) {
++export async function fetchNextOlderSavedPost(currentTiktokId: string) {
 +  const next = await prisma.post.findFirst({
 +    orderBy: {
-+      createdAt: 'desc',
++      tiktokId: 'desc',
 +    },
 +    select: {
 +      id: true,
@@ -17,7 +17,7 @@
 +        equals: false,
 +      },
 +      tiktokId: {
-+        notIn: excludeTiktokIds,
++        lt: currentTiktokId,
 +      },
 +    },
 +  });
@@ -33,7 +33,7 @@
  import { RequestHandler } from 'express';
  import {
    createSession,
-+  fetchNextSavedPost,
++  fetchNextOlderSavedPost,
    fetchPostById,
    fetchSessionByToken,
    openDb,
@@ -45,10 +45,24 @@
    justFetchPost,
  } from '../legacy/old-fetching-helpers';
  import { checkAndCleanPublicFolder } from '../utils/disk-utils';
-@@ -40,19 +40,16 @@
-         userSession = await createSession(sessionParsed);
-       }
-     }
+@@ -26,33 +26,12 @@
+ export const getRelatedVideos: RequestHandler = async (req, res) => {
+   try {
+     const { url } = req.params;
+-    const { sessiontoken } = req.headers;
+-    let sessionParsed =
+-      typeof sessiontoken === 'string'
+-        ? sessiontoken
+-        : sessiontoken
+-        ? sessiontoken[0]
+-        : null;
+-    let userSession;
+-    if (typeof sessionParsed === 'string') {
+-      userSession = await fetchSessionByToken(sessionParsed);
+-      if (!userSession) {
+-        userSession = await createSession(sessionParsed);
+-      }
+-    }
 -    logger.info('Running quickfetch');
 -
 -    const fetchRelatedPosts = await getRelatedPosts(url, userSession?.token);
@@ -57,15 +71,13 @@
 -    });
 -    if (!fetchRelatedPosts || fetchRelatedPosts instanceof Error) {
 +    const currentTiktokId = url.split('?')[0].split('/').filter(Boolean).at(-1) ?? '';
-+    const watchedTiktokIds = (userSession?.watched || '').split(',').filter(Boolean);
-+    const nextPost = await fetchNextSavedPost([currentTiktokId, ...watchedTiktokIds]);
++    const nextPost = await fetchNextOlderSavedPost(currentTiktokId);
 +    if (!nextPost) {
        return res.status(500).send({ error: 'Something went wrong' });
      }
-     if (userSession) {
+-    if (userSession) {
 -      await updateSession(userSession.token, fetchRelatedPosts.tiktokId);
-+      await updateSession(userSession.token, `${currentTiktokId},${nextPost.tiktokId}`);
-     }
+-    }
 -    res.send(fetchRelatedPosts);
 +    res.send(nextPost);
    } catch (error) {
