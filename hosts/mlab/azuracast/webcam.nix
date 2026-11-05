@@ -125,7 +125,9 @@
   # and loopback RTSP (azuracast-live-record) still matches its own rule.
   networking.firewall.extraCommands = ''
     iptables -I nixos-fw -p tcp --dport 8554 -s 192.168.1.0/24 -j nixos-fw-accept
-    ip6tables -I nixos-fw -p tcp --dport 8554 -s 2a0c:5a83:550c:8300::/64 -j nixos-fw-accept
+    if [ -s /var/lib/lan-ipv6-prefix/prefix ]; then
+      ip6tables -I nixos-fw -p tcp --dport 8554 -s "$(${pkgs.coreutils}/bin/cat /var/lib/lan-ipv6-prefix/prefix)" -j nixos-fw-accept
+    fi
   '';
 
   # services.mediamtx writes its config via pkgs.formats.yaml, which prepends a

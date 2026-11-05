@@ -41,7 +41,7 @@
       href = "https://grafana.marcel.cool";
     };
     files = {
-      port = 8086;
+      socket = "/run/filebrowser/http.sock";
       href = "https://files.marcel.cool";
       protected = true;
     };
@@ -240,11 +240,14 @@
     useACMEHost = "marcel.cool";
 
     locations."/" = {
-      proxyPass = "http://${
-        if service ? vpn
-        then vpnAddresses.${service.vpn}
-        else "127.0.0.1"
-      }:${toString service.port}";
+      proxyPass =
+        if service ? socket
+        then "http://unix:${service.socket}"
+        else "http://${
+          if service ? vpn
+          then vpnAddresses.${service.vpn}
+          else "127.0.0.1"
+        }:${toString service.port}";
       proxyWebsockets = true;
       extraConfig = ''
         # Tell the app what the original URL and IP were
@@ -416,7 +419,7 @@ in {
                       ''
                         allow 127.0.0.1;
                         allow 192.168.1.0/24;
-                        allow 2a0c:5a83:550a:e300::/64;
+                        include /var/lib/lan-ipv6-prefix/nginx-allow*.conf;
                         deny all;
                       ''
                       + base.locations."/".extraConfig;
@@ -791,15 +794,13 @@ in {
         # and sets the Host header by hand. Both families are listed because LAN devices
         # have no private v6 address - they reach this over the ISP-delegated global prefix,
         # so an IPv4-only allow list 403s every one of them that resolves an AAAA.
-        # ponytail: the v6 prefix is hardcoded; if the ISP ever rotates it this 403s until
-        # the new /64 is pasted in. A prefix lookup at build time is not worth the machinery.
         "radiolan.marcel.cool" = {
           forceSSL = true;
           useACMEHost = "marcel.cool";
           root = "${./radio-local}";
           extraConfig = ''
             allow 192.168.1.0/24;
-            allow 2a0c:5a83:550c:8300::/64;
+            include /var/lib/lan-ipv6-prefix/nginx-allow*.conf;
             deny all;
           '';
           locations = radioLanLocations;

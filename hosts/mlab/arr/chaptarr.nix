@@ -25,6 +25,7 @@
       PUID = "950"; # static chaptarr user UID
       PGID = "986"; # system's 'media' group GID
       UMASK = "002"; # allows CWA to move files
+      CHAPTARR__AUTH__REQUIRED = "Enabled";
     };
     extraOptions = [
       "--network=host"

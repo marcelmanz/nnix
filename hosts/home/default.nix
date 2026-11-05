@@ -18,13 +18,14 @@ in {
     ../../home/syncthing.nix
   ];
 
-  # Route the portal Settings interface to the GTK backend so Brave/Chromium's read it live
+  # Route Settings to the GNOME backend: gtk answers Read but never emits
+  # SettingChanged, so Chromium follows the theme only at process start.
   xdg.configFile."xdg-desktop-portal/hyprland-portals.conf".text = ''
     [preferred]
     default=gtk;hyprland
     org.freedesktop.impl.portal.ScreenCast=hyprland
     org.freedesktop.impl.portal.Screenshot=hyprland
-    org.freedesktop.impl.portal.Settings=gtk
+    org.freedesktop.impl.portal.Settings=gnome
     org.freedesktop.impl.portal.FileChooser=termfilechooser
   '';
   xdg.configFile."ironbar/tray.css".text = ''

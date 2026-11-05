@@ -28,6 +28,7 @@
     ./invidious
     ./jellyfin.nix
     ./kittygram.nix
+    ./lan-ipv6-prefix.nix
     ./livekit.nix
     ./matrix.nix
     ./metube.nix
@@ -374,6 +375,7 @@
       efi.canTouchEfiVariables = true;
     };
     tmp.cleanOnBoot = true;
+    kernel.sysctl."kernel.modprobe" = "${pkgs.kmod}/bin/modprobe";
     kernelParams = [
       "i915.enable_guc=3" # Forces GuC/HuC firmware loading for Low-Power encoding
     ];
@@ -406,7 +408,7 @@
       # admin is local console only
       DenyUsers admin
 
-      Match User dev
+      Match User dev Address 192.168.1.0/24
         PasswordAuthentication yes
         KbdInteractiveAuthentication yes
     '';

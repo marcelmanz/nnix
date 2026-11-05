@@ -48,4 +48,37 @@
     devices = ["nixos"];
     type = "sendonly";
   };
+
+  services.syncthing.settings.folders."immich-upload" = {
+    path = "/var/lib/syncthing/immich/upload";
+    id = "immich-upload";
+    devices = ["nixos"];
+    type = "sendonly";
+    markerName = ".immich";
+  };
+
+  services.syncthing.settings.folders."immich-db-backups" = {
+    path = "/var/lib/syncthing/immich/backups";
+    id = "immich-db-backups";
+    devices = ["nixos"];
+    type = "sendonly";
+    markerName = ".immich";
+  };
+
+  fileSystems."/var/lib/syncthing/immich/upload" = {
+    device = "/var/lib/immich/upload";
+    fsType = "none";
+    options = ["bind" "ro"];
+  };
+
+  fileSystems."/var/lib/syncthing/immich/backups" = {
+    device = "/var/lib/immich/backups";
+    fsType = "none";
+    options = ["bind" "ro"];
+  };
+
+  systemd.tmpfiles.rules = [
+    "A+ /var/lib/immich/upload - - - - u:syncthing:rX,d:u:syncthing:rX"
+    "A+ /var/lib/immich/backups - - - - u:syncthing:rX,d:u:syncthing:rX"
+  ];
 }

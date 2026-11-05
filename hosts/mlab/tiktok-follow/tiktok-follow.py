@@ -316,9 +316,17 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         fields = self.form()
         if self.path == "/add":
-            handle = parse_handle(fields.get("handle", [""])[0])
+            entered = fields.get("handle", [""])[0]
+            handle = parse_handle(entered)
             if not handle:
-                self.redirect("That doesn't look like a TikTok handle or profile URL.")
+                if re.search(r"tiktok\.com/(discover|tag|search|music)", entered):
+                    self.redirect(
+                        "That's a TikTok search or topic page, not a profile. Open the creator's profile and copy its link (tiktok.com/@...)."
+                    )
+                else:
+                    self.redirect(
+                        "That doesn't look like a TikTok username or profile link. Usernames only contain letters, numbers, '.' and '_'."
+                    )
                 return
             with db() as conn:
                 inserted = conn.execute(

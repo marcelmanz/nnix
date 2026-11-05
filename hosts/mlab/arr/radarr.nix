@@ -11,6 +11,7 @@
     enable = true;
     group = "media";
     openFirewall = false; # nginx fronts this
+    settings.auth.required = "Enabled";
   };
 
   users.users.radarr = {
