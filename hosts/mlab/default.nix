@@ -65,6 +65,16 @@
 
   programs.mosh.enable = true;
 
+  programs.git = {
+    enable = true;
+    config = {
+      diff.external = "omnidiff";
+      diff.tool = "omnidiff";
+      difftool.prompt = false;
+      difftool.omnidiff.cmd = ''omnidiff "$LOCAL" "$REMOTE"'';
+    };
+  };
+
   sops = {
     defaultSopsFile = ../../secrets/mlab.yaml;
     age.sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
@@ -479,6 +489,7 @@
     lsof
     mysql84
     neovim
+    omnidiff
     pi-coding-agent
     ripgrep
     starship
