@@ -47,6 +47,7 @@ in {
       playwright-driver.browsers
       avrdude
       devenv
+      ((zulip-term.override {python3 = python313;}).overridePythonAttrs {doCheck = false;})
     ]);
 
   programs.rbw = {

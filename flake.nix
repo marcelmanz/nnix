@@ -107,6 +107,10 @@
           "pnpm-9.15.9"
           "olm-3.2.16" # mautrix-whatsapp links libolm (deprecated, CVE-2024-45191/2/3) for optional E2E
           "pinchflat-2025.9.26"
+          # node protocol unencrypted/unauthenticated, only seed public repos; fix (breaking, iroh-based) tracked at
+          # https://radicle.dev/2026/09/23/disclosure-of-vulnerability-in-network-protocol
+          # https://radicle.network/nodes/seed.radicle.dev/rad%3Az3gqcJUoA1n9HaHKufZs5FCSGazv5/patches/828581ae87d842dcdc67c3b08bb3bc9d940f3d8f
+          "radicle-node-1.10.3"
         ];
       };
       overlays = [

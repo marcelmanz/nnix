@@ -132,6 +132,10 @@
       protected = true;
       vpn = "pia";
     };
+    radicle = {
+      port = 8777;
+      href = "https://git.marcel.cool";
+    };
     radarr = {
       port = 7878;
       href = "https://radarr.marcel.cool";
@@ -377,8 +381,32 @@ in {
     '';
 
     virtualHosts =
-      (builtins.removeAttrs serviceVirtualHosts ["auth" "jellyfin" "seafile" "azuracast" "live" "livedj" "streamcam" "navidrome"])
+      (builtins.removeAttrs serviceVirtualHosts ["auth" "jellyfin" "seafile" "azuracast" "live" "livedj" "streamcam" "navidrome" "radicle"])
       // {
+        "git.marcel.cool" = let
+          base = mkProxyHost "radicle" services.radicle;
+          httpdLocation = base.locations."/";
+          explorer = pkgs.radicle-explorer.withConfig {
+            preferredSeeds = [
+              {
+                hostname = "git.marcel.cool";
+                port = 443;
+                scheme = "https";
+              }
+            ];
+          };
+        in
+          base
+          // {
+            root = explorer;
+            locations = {
+              "/".tryFiles = "$uri $uri/ /index.html";
+              "/api/" = httpdLocation;
+              "/raw/" = httpdLocation;
+              "~ ^/[^/]+\\.git(/|$)" = httpdLocation;
+            };
+          };
+
         # Merged show-control page. / is live-toggle.py (go live, mic, recording status) and
         # /cam/ is webcam-control.py - the trailing slash on proxyPass strips the prefix, so
         # that service still sees its own "/toggle", "/effect", ... and its 303s back to "/"
