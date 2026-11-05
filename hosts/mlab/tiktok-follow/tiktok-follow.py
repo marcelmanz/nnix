@@ -340,7 +340,8 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/save":
             tiktok_url = fields.get("url", [""])[0].strip()
             parsed = urllib.parse.urlparse(tiktok_url)
-            if parsed.scheme not in ("http", "https") or not (parsed.hostname or "").endswith("tiktok.com"):
+            hostname = parsed.hostname or ""
+            if parsed.scheme not in ("http", "https") or not (hostname == "tiktok.com" or hostname.endswith(".tiktok.com")):
                 self.redirect("That doesn't look like a TikTok link.")
                 return
             threading.Thread(target=save_single_video, args=(tiktok_url,), daemon=True).start()
