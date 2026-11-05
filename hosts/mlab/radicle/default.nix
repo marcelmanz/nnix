@@ -26,4 +26,19 @@
       listenPort = services.radicle.port;
     };
   };
+
+  networking.firewall.extraCommands = ''
+    radicle_output_rule() {
+      local cmd=$1
+      shift
+      $cmd -C OUTPUT -m owner --uid-owner radicle "$@" 2>/dev/null \
+        || $cmd -A OUTPUT -m owner --uid-owner radicle "$@"
+    }
+    radicle_output_rule iptables -o lo -p udp --dport 53 -d 127.0.0.53 -j ACCEPT
+    radicle_output_rule iptables -o lo -p tcp --dport 53 -d 127.0.0.53 -j ACCEPT
+    radicle_output_rule iptables -o lo -m conntrack --ctstate NEW -j REJECT
+    radicle_output_rule iptables -d 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16 -m conntrack --ctstate NEW -j REJECT
+    radicle_output_rule ip6tables -o lo -m conntrack --ctstate NEW -j REJECT
+    radicle_output_rule ip6tables -d fc00::/7,fe80::/10 -m conntrack --ctstate NEW -j REJECT
+  '';
 }
