@@ -377,6 +377,7 @@ in {
 
     appendHttpConfig = ''
       limit_req_zone $binary_remote_addr zone=webcam:10m rate=10r/m;
+      limit_req_zone $binary_remote_addr zone=radicle:10m rate=10r/s;
       limit_conn_zone $binary_remote_addr zone=webcam_conn:10m;
     '';
 
@@ -385,7 +386,16 @@ in {
       // {
         "git.marcel.cool" = let
           base = mkProxyHost "radicle" services.radicle;
-          httpdLocation = base.locations."/";
+          httpdLocation =
+            base.locations."/"
+            // {
+              extraConfig =
+                base.locations."/".extraConfig
+                + ''
+                  limit_req zone=radicle burst=50 nodelay;
+                  limit_req_status 429;
+                '';
+            };
           explorer = pkgs.radicle-explorer.withConfig {
             preferredSeeds = [
               {

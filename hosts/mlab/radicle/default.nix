@@ -27,6 +27,16 @@
     };
   };
 
+  systemd.services.radicle-node.serviceConfig.MemoryMax = "2G";
+  systemd.services.radicle-httpd.serviceConfig = {
+    MemoryMax = "2G";
+    ReadOnlyPaths = [
+      "/var/lib/radicle/storage"
+      "/var/lib/radicle/cobs"
+      "/var/lib/radicle/node/policies.db"
+    ];
+  };
+
   networking.firewall.extraCommands = ''
     radicle_output_rule() {
       local cmd=$1
