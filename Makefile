@@ -1,4 +1,4 @@
-.PHONY: format nixos nixos-nixbuild mlab mlab-gc nixos-nixbuild-mlab droid hm news sops android-mirror whatsapp-register whatsapp-update azuracast-connect azuracast-report azuracast-clear-chat
+.PHONY: format nixos nixos-nixbuild mlab mlab-gc nixos-nixbuild-mlab droid hm news sops android-mirror whatsapp-register whatsapp-update azuracast-connect azuracast-report azuracast-clear-chat purge-offtiktok
 
 lint: 
 	@nix run .#ruff -- check --fix
@@ -42,6 +42,23 @@ mlab-gc:
 	@host=root@mlab-local; \
 	ssh -q -o ConnectTimeout=5 $$host exit 2>/dev/null || host=root@mlab; \
 	ssh $$host nix-collect-garbage -d
+
+purge-offtiktok:
+	@host=root@mlab-local; \
+	ssh -n -q -o ConnectTimeout=5 $$host exit 2>/dev/null || host=root@mlab; \
+	db=/var/lib/offtiktokapi/offtiktok.db; \
+	selected=$$(ssh -n $$host "sqlite3 $$db \"SELECT p.tiktokId, p.type, '@' || a.handle, replace(replace(coalesce(trim(p.postDescription), ''), char(10), ' '), '|', '/') FROM Post p JOIN Author a ON a.id = p.authorId ORDER BY p.createdAt DESC;\"" \
+		| fzf --multi --delimiter='|' --prompt='purge (tab selects)> ' --header='tiktokId | type | author | description'); \
+	[ -n "$$selected" ] || { echo "nothing selected"; exit 0; }; \
+	echo "$$selected" | cut -c1-120; \
+	printf 'Delete these %s post(s) from mlab? [y/N] ' "$$(echo "$$selected" | wc -l)"; \
+	read answer; \
+	[ "$$answer" = y ] || { echo "aborted"; exit 0; }; \
+	ids=$$(echo "$$selected" | cut -d'|' -f1 | grep -E '^[0-9]+$$' | tr '\n' ' '); \
+	ssh -n $$host "cd /var/lib/offtiktokapi/public && for id in $$ids; do \
+		rm -f videos/\$$id.mp4 thumbnails/\$$id.jpg audio/\$$id.mp4; rm -rf images/\$$id; \
+		runuser -u offtiktokapi -- sqlite3 $$db \"PRAGMA foreign_keys = ON; DELETE FROM Video WHERE postId IN (SELECT id FROM Post WHERE tiktokId = '\$$id'); DELETE FROM Carousel WHERE postId IN (SELECT id FROM Post WHERE tiktokId = '\$$id'); DELETE FROM Post WHERE tiktokId = '\$$id';\"; \
+		echo \"removed \$$id\"; done"
 
 nixos-nixbuild-mlab:
 	sudo nixos-rebuild switch --flake .#mlab --target-host root@mlab-local; \

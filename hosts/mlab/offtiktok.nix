@@ -39,6 +39,7 @@ in {
         Type = "simple";
         User = "offtiktok";
         ExecStart = "${pkgs.offtiktok}/bin/offtiktok";
+        CacheDirectory = "offtiktok";
         Restart = "always";
         RestartSec = "5";
       };

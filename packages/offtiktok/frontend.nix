@@ -22,12 +22,17 @@ in
 
     postPatch = ''
       substituteInPlace next.config.mjs --replace-fail \
-        "value: 'www.offtiktok.com'," \
-        "value: 'www.offtiktok.com',
-                },
-                {
-                  type: 'host',
-                  value: 'offtiktok.marcel.cool',"
+        "redirects: async () => {" \
+        "redirects: async () => { return [];"
+      substituteInPlace "src/app/post/[id]/page.tsx" --replace-fail \
+        "container md:rounded-2xl md:m-auto" \
+        "container md:m-auto"
+      substituteInPlace "src/app/post/[id]/page.module.scss" \
+        --replace-fail "max-width: 550px;" "height: 100dvh !important; width: calc(100dvh * 9 / 16) !important; max-width: 100vw !important;" \
+        --replace-fail "aspect-ratio: 6/9;" "aspect-ratio: 9/16;"
+      substituteInPlace src/components/VideoPlayer/index.tsx --replace-fail \
+        "isPanoramic ? 'object-contain' : 'object-cover'" \
+        "'object-contain'"
     '';
 
     env = {
@@ -40,8 +45,11 @@ in
       runHook preInstall
       mkdir -p $out/share/offtiktok $out/bin
       cp -r .next public package.json next.config.mjs node_modules $out/share/offtiktok/
+      rm -rf $out/share/offtiktok/.next/cache
+      ln -s /var/cache/offtiktok $out/share/offtiktok/.next/cache
       cat > $out/bin/offtiktok <<EOF
       #!${runtimeShell}
+      export NEXT_INTERNAL_API_URL=http://127.0.0.1:3010
       cd $out/share/offtiktok
       exec ${nodejs}/bin/node node_modules/next/dist/bin/next start -H 127.0.0.1 -p 3010
       EOF
