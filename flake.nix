@@ -46,6 +46,10 @@
       url = "github:marcelmanz/xelabash";
       flake = false;
     };
+    reedline-bash = {
+      url = "github:maxomatic458/reedline-bash";
+      flake = false;
+    };
     zuban.url = "github:marcelmanz/zuban";
     nix-on-droid = {
       url = "github:nix-community/nix-on-droid/master";
@@ -124,7 +128,7 @@
         })
         (import ./overlays/pi-jiti-cache.nix)
         (final: prev: {nuit = nu-alias-converter.packages.${system}.default;})
-        (import ./overlays/rust.nix {inherit pkgs crane;})
+        (import ./overlays/rust.nix {inherit pkgs crane inputs;})
         (final: prev: {hax = import ./packages/hax/package.nix {inherit pkgs;};})
         (final: prev: {haralyzer = import ./packages/haralyzer/package.nix {inherit pkgs;};})
         (final: prev: {pinentry-rbw = import ./packages/pinentry-rbw/package.nix {inherit pkgs;};})
