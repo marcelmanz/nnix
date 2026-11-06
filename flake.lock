@@ -865,11 +865,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1794004026,
-        "narHash": "sha256-IeTumjry6PN21pY/txFvy1Q/sQ+ODBf5J40Cv1UStHI=",
+        "lastModified": 1794004950,
+        "narHash": "sha256-YcF4E9ym5Tv77HjeGT6WayZj3xUMbKnKarTyjGEQAvE=",
         "ref": "refs/heads/main",
-        "rev": "a2ded5c90d6391bd7253c3d95c40511a3dd75fd0",
-        "revCount": 15,
+        "rev": "98de28d5c193e2b99deaae43d0b0cc6192bdbf9a",
+        "revCount": 18,
         "type": "git",
         "url": "https://git.marcel.cool/z39znYAkBEASv5SXaMGoFXFTYZwhn.git"
       },
