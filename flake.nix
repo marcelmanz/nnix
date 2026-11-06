@@ -77,6 +77,11 @@
     };
     vpn-confinement.url = "github:Maroka-chan/VPN-Confinement";
     resona.url = "git+https://codeberg.org/marcelmanz/resona";
+    projectw = {
+      url = "git+https://git.marcel.cool/z39znYAkBEASv5SXaMGoFXFTYZwhn.git";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixGL.follows = "nixGL";
+    };
   };
 
   outputs = {
@@ -201,8 +206,10 @@
         inputs.sops-nix.nixosModules.sops
         home-manager.nixosModules.home-manager
         inputs.openlogi.nixosModules.default
+        inputs.projectw.nixosModules.default
         {
           programs.openlogi.enable = true;
+          programs.projectw.enable = true;
           home-manager = {
             useGlobalPkgs = true;
             useUserPackages = true;

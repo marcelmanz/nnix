@@ -141,6 +141,12 @@ in {
           email: "lachafabian@gmail.com"
           groups:
             - nitter
+        josep:
+          displayname: "Josep"
+          password: "${config.sops.placeholder.josep_password}"
+          email: "jmanzanares@gmail.com"
+          groups:
+            - nitter
     '';
     owner = "authelia-main";
   };

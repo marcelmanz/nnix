@@ -855,6 +855,29 @@
         "url": "https://codeberg.org/marcelmanz/pir"
       }
     },
+    "projectw": {
+      "inputs": {
+        "nixGL": [
+          "nixGL"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1794004026,
+        "narHash": "sha256-IeTumjry6PN21pY/txFvy1Q/sQ+ODBf5J40Cv1UStHI=",
+        "ref": "refs/heads/main",
+        "rev": "a2ded5c90d6391bd7253c3d95c40511a3dd75fd0",
+        "revCount": 15,
+        "type": "git",
+        "url": "https://git.marcel.cool/z39znYAkBEASv5SXaMGoFXFTYZwhn.git"
+      },
+      "original": {
+        "type": "git",
+        "url": "https://git.marcel.cool/z39znYAkBEASv5SXaMGoFXFTYZwhn.git"
+      }
+    },
     "psysonic": {
       "inputs": {
         "nixpkgs": "nixpkgs_9"
@@ -929,6 +952,7 @@
         "omnidiff": "omnidiff",
         "openlogi": "openlogi",
         "pir": "pir",
+        "projectw": "projectw",
         "psysonic": "psysonic",
         "reedline-bash": "reedline-bash",
         "resona": "resona",

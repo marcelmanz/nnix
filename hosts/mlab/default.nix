@@ -120,6 +120,7 @@
       "ms01_dev_hash" = {neededForUsers = true;};
       "metube_user_password" = {};
       "laura_user_password" = {};
+        "josep_password" = {};
       "azuracast_dj_password" = {};
     };
 

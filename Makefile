@@ -1,4 +1,4 @@
-.PHONY: format nixos nixos-nixbuild mlab mlab-gc nixos-nixbuild-mlab droid hm news sops android-mirror whatsapp-register whatsapp-update azuracast-connect azuracast-report azuracast-clear-chat purge-offtiktok
+.PHONY: format nixos nixos-nixbuild mlab mlab-gc nixos-nixbuild-mlab droid hm news sops android-mirror whatsapp-register whatsapp-update azuracast-connect azuracast-report azuracast-clear-chat purge-offtiktok radicle-app
 
 lint: 
 	@nix run .#ruff -- check --fix
@@ -60,6 +60,17 @@ purge-offtiktok:
 		runuser -u offtiktokapi -- sqlite3 $$db \"PRAGMA foreign_keys = ON; DELETE FROM Video WHERE postId IN (SELECT id FROM Post WHERE tiktokId = '\$$id'); DELETE FROM Carousel WHERE postId IN (SELECT id FROM Post WHERE tiktokId = '\$$id'); DELETE FROM Post WHERE tiktokId = '\$$id';\"; \
 		if [ -f /var/lib/tiktok-follow/follow.db ]; then runuser -u tiktok-follow -- sqlite3 /var/lib/tiktok-follow/follow.db \"UPDATE videos SET status = 'purged', post_id = NULL, error = NULL WHERE tiktok_id = '\$$id';\"; fi; \
 		echo \"removed \$$id\"; done"
+
+# make radicle-app APP=<name-or-rid>; names resolve through local `rad ls`
+radicle-app:
+	@[ -n "$(APP)" ] || { echo "usage: make radicle-app APP=<name-or-rid>"; exit 1; }; \
+	rid=$(APP); \
+	case "$$rid" in rad:*) ;; *) \
+		rid=$$(rad ls | awk -v name="$(APP)" '$$2 == name { print $$3 }'); \
+		[ -n "$$rid" ] || { echo "no local radicle repo named $(APP)"; exit 1; }; \
+	esac; \
+	echo "seeding $$rid on mlab"; \
+	radit "$$rid"
 
 nixos-nixbuild-mlab:
 	sudo nixos-rebuild switch --flake .#mlab --target-host root@mlab-local; \
