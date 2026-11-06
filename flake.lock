@@ -874,6 +874,22 @@
         "type": "github"
       }
     },
+    "reedline-bash": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1793777454,
+        "narHash": "sha256-VqWkEoYf9YQHy2BkXAnPzvbYiGwl6Nkj0SGbDGMciqM=",
+        "owner": "maxomatic458",
+        "repo": "reedline-bash",
+        "rev": "e22b5b2a83b66a34a10398759e1745ae3ae633a0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "maxomatic458",
+        "repo": "reedline-bash",
+        "type": "github"
+      }
+    },
     "resona": {
       "locked": {
         "lastModified": 1791748267,
@@ -914,6 +930,7 @@
         "openlogi": "openlogi",
         "pir": "pir",
         "psysonic": "psysonic",
+        "reedline-bash": "reedline-bash",
         "resona": "resona",
         "sops-nix": "sops-nix",
         "tmex": "tmex",

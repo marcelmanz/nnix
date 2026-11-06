@@ -1,6 +1,7 @@
 {
   pkgs,
   crane,
+  inputs,
 }: let
   craneLib = crane.mkLib pkgs;
   call = name: import ../packages/${name}/package.nix {inherit craneLib pkgs;};
@@ -12,5 +13,5 @@ in
     rff = call "rff";
     pulseaudio-next-output = call "pulseaudio-next-output";
     git-commit-search = call "git-commit-search";
-    reedline-bash = call "reedline-bash";
+    reedline-bash = import ../packages/reedline-bash/package.nix {inherit craneLib pkgs inputs;};
   }

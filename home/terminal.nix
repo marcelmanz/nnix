@@ -130,9 +130,8 @@ in {
         identitiesOnly = true;
         serverAliveInterval = 60;
       };
-      # DHCP lease on the gateway's lan3 port, update if it changes
       "tgw" = {
-        hostname = "192.168.1.172";
+        hostname = "192.168.1.173";
         user = "root";
         # gw terminfo db is minimal
         SetEnv = {TERM = "vt100";};
