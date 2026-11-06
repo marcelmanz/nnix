@@ -159,6 +159,7 @@ with pkgs; [
   pulseaudioFull
   pwgen
   rabbitmqadmin-ng
+  radicle-node
   reedline-bash
   hax
   rbw

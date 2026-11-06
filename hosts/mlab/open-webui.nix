@@ -28,6 +28,9 @@ in {
       # persistence is off, so the whole config comes from here instead.
       ENABLE_PERSISTENT_CONFIG = "False";
 
+      ENABLE_SIGNUP = "False";
+      DEFAULT_USER_ROLE = "pending";
+
       ENABLE_OPENAI_API = "True";
       OPENAI_API_BASE_URLS = "${synthetic.baseUrl};${hfRouter}/v1";
       OPENAI_API_CONFIGS = builtins.toJSON {

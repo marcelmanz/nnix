@@ -41,7 +41,7 @@
       href = "https://grafana.marcel.cool";
     };
     files = {
-      port = 8086;
+      socket = "/run/filebrowser/http.sock";
       href = "https://files.marcel.cool";
       protected = true;
     };
@@ -114,7 +114,7 @@
     };
     offtiktokapi = {
       port = 2000;
-      href = "https://api.offtiktok.marcel.cool";
+      href = "https://offtiktok-api.marcel.cool";
     };
     openwebui = {
       port = 3000;
@@ -131,6 +131,10 @@
       # Arr stack talks to qbit on localhost, so this only gates browser access.
       protected = true;
       vpn = "pia";
+    };
+    radicle = {
+      port = 8777;
+      href = "https://git.marcel.cool";
     };
     radarr = {
       port = 7878;
@@ -183,6 +187,11 @@
       href = "https://tags.marcel.cool";
       protected = true;
     };
+    tiktok = {
+      port = 8296;
+      href = "https://tiktok.marcel.cool";
+      protected = true;
+    };
     syncthing = {
       port = 8384;
       href = "https://sync.marcel.cool";
@@ -231,11 +240,14 @@
     useACMEHost = "marcel.cool";
 
     locations."/" = {
-      proxyPass = "http://${
-        if service ? vpn
-        then vpnAddresses.${service.vpn}
-        else "127.0.0.1"
-      }:${toString service.port}";
+      proxyPass =
+        if service ? socket
+        then "http://unix:${service.socket}"
+        else "http://${
+          if service ? vpn
+          then vpnAddresses.${service.vpn}
+          else "127.0.0.1"
+        }:${toString service.port}";
       proxyWebsockets = true;
       extraConfig = ''
         # Tell the app what the original URL and IP were
@@ -373,12 +385,81 @@ in {
 
     appendHttpConfig = ''
       limit_req_zone $binary_remote_addr zone=webcam:10m rate=10r/m;
+      limit_req_zone $binary_remote_addr zone=radicle:10m rate=10r/s;
       limit_conn_zone $binary_remote_addr zone=webcam_conn:10m;
     '';
 
     virtualHosts =
-      (builtins.removeAttrs serviceVirtualHosts ["auth" "jellyfin" "seafile" "azuracast" "live" "livedj" "streamcam" "navidrome"])
+      (builtins.removeAttrs serviceVirtualHosts ["auth" "jellyfin" "seafile" "azuracast" "live" "livedj" "streamcam" "navidrome" "radicle" "vaultwarden" "offtiktokapi"])
       // {
+        "offtiktok-api.marcel.cool" = let
+          base = mkProxyHost "offtiktokapi" services.offtiktokapi;
+        in
+          base
+          // {
+            locations =
+              base.locations
+              // {
+                "/by_url/".return = "403";
+              };
+          };
+
+        "vault.marcel.cool" = let
+          base = mkProxyHost "vaultwarden" services.vaultwarden;
+        in
+          base
+          // {
+            locations =
+              base.locations
+              // {
+                "/admin" =
+                  base.locations."/"
+                  // {
+                    extraConfig =
+                      ''
+                        allow 127.0.0.1;
+                        allow 192.168.1.0/24;
+                        include /var/lib/lan-ipv6-prefix/nginx-allow*.conf;
+                        deny all;
+                      ''
+                      + base.locations."/".extraConfig;
+                  };
+              };
+          };
+
+        "git.marcel.cool" = let
+          base = mkProxyHost "radicle" services.radicle;
+          httpdLocation =
+            base.locations."/"
+            // {
+              extraConfig =
+                base.locations."/".extraConfig
+                + ''
+                  limit_req zone=radicle burst=50 nodelay;
+                  limit_req_status 429;
+                '';
+            };
+          explorer = pkgs.radicle-explorer.withConfig {
+            preferredSeeds = [
+              {
+                hostname = "git.marcel.cool";
+                port = 443;
+                scheme = "https";
+              }
+            ];
+          };
+        in
+          base
+          // {
+            root = explorer;
+            locations = {
+              "/".tryFiles = "$uri $uri/ /index.html";
+              "/api/" = httpdLocation;
+              "/raw/" = httpdLocation;
+              "~ ^/[^/]+\\.git(/|$)" = httpdLocation;
+            };
+          };
+
         # Merged show-control page. / is live-toggle.py (go live, mic, recording status) and
         # /cam/ is webcam-control.py - the trailing slash on proxyPass strips the prefix, so
         # that service still sees its own "/toggle", "/effect", ... and its 303s back to "/"
@@ -713,15 +794,13 @@ in {
         # and sets the Host header by hand. Both families are listed because LAN devices
         # have no private v6 address - they reach this over the ISP-delegated global prefix,
         # so an IPv4-only allow list 403s every one of them that resolves an AAAA.
-        # ponytail: the v6 prefix is hardcoded; if the ISP ever rotates it this 403s until
-        # the new /64 is pasted in. A prefix lookup at build time is not worth the machinery.
         "radiolan.marcel.cool" = {
           forceSSL = true;
           useACMEHost = "marcel.cool";
           root = "${./radio-local}";
           extraConfig = ''
             allow 192.168.1.0/24;
-            allow 2a0c:5a83:550c:8300::/64;
+            include /var/lib/lan-ipv6-prefix/nginx-allow*.conf;
             deny all;
           '';
           locations = radioLanLocations;

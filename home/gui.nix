@@ -66,6 +66,7 @@ in {
     pavucontrol
     pyprland
     qbittorrent
+    radicle-desktop
     ripdrag
     roboto
     roboto-mono

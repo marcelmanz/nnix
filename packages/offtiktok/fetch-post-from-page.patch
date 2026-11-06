@@ -1,0 +1,78 @@
+--- a/utils/tiktok-api-wrappers.ts
++++ b/utils/tiktok-api-wrappers.ts
+@@ -136,6 +136,7 @@
+     msToken,
+     cookies,
+     joinedCookies: cookies.join(';'),
++    pageData: jsonData,
+   };
+ };
+ 
+@@ -214,7 +215,16 @@
+   const postDescription = `${
+     imageDetail?.title ? `${imageDetail.title} |` : ''
+   } ${findObjectWithKey(item, 'desc')}`;
+-  const videoURL = videoDetail ? videoDetail.playAddr : null;
++  const bestRendition = videoDetail?.bitrateInfo
++    ?.filter((rendition: any) => rendition?.PlayAddr?.UrlList?.length)
++    .sort(
++      (a: any, b: any) =>
++        b.PlayAddr.Width * b.PlayAddr.Height -
++        a.PlayAddr.Width * a.PlayAddr.Height
++    )[0];
++  const videoURL = videoDetail
++    ? bestRendition?.PlayAddr.UrlList[0] ?? videoDetail.playAddr
++    : null;
+ 
+   const dataObject = {
+     id,
+@@ -309,25 +319,33 @@
+             (version) => `clientABVersions${version}&`
+           )}cookie_enabled=true&count=16&coverFormat=2&cursor=0&data_collection_enabled=true&device_id=${deviceId}&device_platform=web_pc&focus_state=true&from_page=video&history_len=2&isNonPersonalized=false&is_fullscreen=false&is_page_visible=true&itemID=${postId}&language=en&odinId=${odinId}&os=mac&priority_region=ES&referer=&region=ES&screen_height=1117&screen_width=1728&tz_name=Europe%2FMadrid&user_is_login=true&verifyFp=verify_lws1fk3n_P0R9e85b_CSlT_4mNA_BBoR_9av0jRDDSXI0&webcast_language=en`
+         : '';
+-    const xbogus_parameter = xbogus(URLSansBogus, userAgent);
++    let jsonContent;
++    if (
++      mode === URL_SANS_BOGUS.FETCH_POST &&
++      findObjectWithKey(parseData.pageData, 'itemStruct')
++    ) {
++      jsonContent = parseData.pageData;
++    } else {
++      const xbogus_parameter = xbogus(URLSansBogus, userAgent);
++
++      const fetchContent = await fetch(
++        `${URLSansBogus}&X-Bogus=${xbogus_parameter}`,
++        {
++          ...tiktokFetchOptions({
++            formattedCookies: joinedCookies,
++            stringURL: URLSansBogus,
++          }),
++        }
++      );
+ 
+-    const fetchContent = await fetch(
+-      `${URLSansBogus}&X-Bogus=${xbogus_parameter}`,
+-      {
+-        ...tiktokFetchOptions({
+-          formattedCookies: joinedCookies,
+-          stringURL: URLSansBogus,
+-        }),
++      if (!fetchContent.ok) {
++        throw new Error(`API request failed with status: ${fetchContent.status}`);
+       }
+-    );
+ 
+-    if (!fetchContent.ok) {
+-      throw new Error(`API request failed with status: ${fetchContent.status}`);
+-    }
+-
+-    const jsonContent = await fetchContent.json();
+-    if (!jsonContent) {
+-      throw new Error('Failed to parse API response');
++      jsonContent = await fetchContent.json();
++      if (!jsonContent) {
++        throw new Error('Failed to parse API response');
++      }
+     }
+ 
+     let watchedIds;

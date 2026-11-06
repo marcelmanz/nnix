@@ -28,6 +28,22 @@
         # mlab is the source of truth, don't send deletes back
         type = "receiveonly";
       };
+      folders."immich-upload" = {
+        id = "immich-upload";
+        path = "~/Sync/immich/upload";
+        devices = ["mlab"];
+        type = "receiveonly";
+        versioning = {
+          type = "trashcan";
+          params.cleanoutDays = "90";
+        };
+      };
+      folders."immich-db-backups" = {
+        id = "immich-db-backups";
+        path = "~/Sync/immich/backups";
+        devices = ["mlab"];
+        type = "receiveonly";
+      };
     };
   };
 }

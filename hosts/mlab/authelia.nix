@@ -88,6 +88,10 @@
       subject = ["group:admins"];
     }
     {
+      domain = "tiktok.marcel.cool";
+      subject = ["group:admins"];
+    }
+    {
       domain = "notes.marcel.cool";
       subject = ["group:admins"];
     }

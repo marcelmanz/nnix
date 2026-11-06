@@ -13,7 +13,7 @@
     autoStart = true;
     privileged = true;
     ports = [
-      "5555:5555" # adb port for scrcpy connections
+      "127.0.0.1:5555:5555" # adb port for scrcpy connections
     ];
     volumes = [
       "/var/lib/redroid:/data"

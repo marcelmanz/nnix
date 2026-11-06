@@ -6,7 +6,6 @@
   configFile = (pkgs.formats.yaml {}).generate "filebrowser-quantum.yaml" {
     server = {
       listen = "127.0.0.1";
-      port = services.files.port;
       externalUrl = services.files.href;
       database = "/var/lib/filebrowser-quantum/database.db";
       cacheDir = "/var/cache/filebrowser-quantum";
@@ -72,9 +71,19 @@ in {
   };
   users.groups.filebrowser = {};
 
+  systemd.sockets.filebrowser = {
+    wantedBy = ["sockets.target"];
+    listenStreams = [services.files.socket];
+    socketConfig = {
+      SocketGroup = "nginx";
+      SocketMode = "0660";
+    };
+  };
+
   systemd.services.filebrowser = {
     description = "FileBrowser Quantum";
-    after = ["network.target"];
+    requires = ["filebrowser.socket"];
+    after = ["network.target" "filebrowser.socket"];
     wantedBy = ["multi-user.target"];
 
     serviceConfig = {
@@ -87,6 +96,7 @@ in {
       UMask = "0002";
       Restart = "on-failure";
 
+      PrivateNetwork = true;
       NoNewPrivileges = true;
       PrivateDevices = true;
       ProtectSystem = "strict";

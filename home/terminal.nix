@@ -47,6 +47,18 @@ in {
       playwright-driver.browsers
       avrdude
       devenv
+      ((zulip-term.override {python3 = python313;}).overridePythonAttrs {doCheck = false;})
+      (writeShellApplication {
+        name = "radit";
+        runtimeInputs = [radicle-node openssh];
+        excludeShellChecks = ["SC2029"];
+        text = ''
+          rid="''${1:-$(rad .)}"
+          host=root@mlab-local
+          ssh -q -o ConnectTimeout=5 "$host" exit 2>/dev/null || host=root@mlab
+          ssh "$host" rad-system seed "$rid"
+        '';
+      })
     ]);
 
   programs.rbw = {

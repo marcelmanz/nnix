@@ -28,6 +28,7 @@
     ./invidious
     ./jellyfin.nix
     ./kittygram.nix
+    ./lan-ipv6-prefix.nix
     ./livekit.nix
     ./matrix.nix
     ./metube.nix
@@ -43,6 +44,7 @@
     ./podcast-adcut.nix
     ./proxy.nix
     ./qbittorrent.nix
+    ./radicle
     ./redroid.nix
     ./sabnzbd.nix
     ./seafile.nix
@@ -55,6 +57,7 @@
     ./sway.nix
     ./syncthing.nix
     ./tagr.nix
+    ./tiktok-follow
     ./uptime-kuma.nix
     ./vaultwarden.nix
     ./vikunja.nix
@@ -64,6 +67,16 @@
   time.timeZone = "Europe/Madrid";
 
   programs.mosh.enable = true;
+
+  programs.git = {
+    enable = true;
+    config = {
+      diff.external = "omnidiff";
+      diff.tool = "omnidiff";
+      difftool.prompt = false;
+      difftool.omnidiff.cmd = ''omnidiff "$LOCAL" "$REMOTE"'';
+    };
+  };
 
   sops = {
     defaultSopsFile = ../../secrets/mlab.yaml;
@@ -362,6 +375,7 @@
       efi.canTouchEfiVariables = true;
     };
     tmp.cleanOnBoot = true;
+    kernel.sysctl."kernel.modprobe" = "${pkgs.kmod}/bin/modprobe";
     kernelParams = [
       "i915.enable_guc=3" # Forces GuC/HuC firmware loading for Low-Power encoding
     ];
@@ -394,7 +408,7 @@
       # admin is local console only
       DenyUsers admin
 
-      Match User dev
+      Match User dev Address 192.168.1.0/24
         PasswordAuthentication yes
         KbdInteractiveAuthentication yes
     '';
@@ -479,6 +493,7 @@
     lsof
     mysql84
     neovim
+    omnidiff
     pi-coding-agent
     ripgrep
     starship

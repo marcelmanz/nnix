@@ -5,17 +5,21 @@
   nodejs,
   ffmpeg,
   openssl,
-  stdenvNoCC,
+  stdenv,
+  autoPatchelfHook,
+  zlib,
   runtimeShell,
 }: let
   # Prisma's npm packages don't vendor the engines; their postinstall
   # downloads them from binaries.prisma.sh. Pinned to the engines commit
   # prisma 5.17.0 uses, placed where the postinstall would put them
   # (node_modules/@prisma/engines/), so everything runs offline.
-  prismaEngines = stdenvNoCC.mkDerivation {
+  prismaEngines = stdenv.mkDerivation {
     pname = "prisma-engines";
     version = "5.17.0";
     dontUnpack = true;
+    nativeBuildInputs = [autoPatchelfHook];
+    buildInputs = [openssl zlib stdenv.cc.cc.lib];
     installPhase = let
       commit = "393aa359c9ad4a4bb28630fb5613f9c281cde053";
       base = "https://binaries.prisma.sh/all_commits/${commit}/debian-openssl-3.0.x";
@@ -53,6 +57,11 @@ in
 
     npmDepsHash = "sha256-cb++RE1anojBm+W3xZzmR6DJ6CilZc+v0hIvUdXBAnw=";
 
+    patches = [
+      ./fetch-post-from-page.patch
+      ./feed-from-saved-posts.patch
+    ];
+
     # postinstalls would download chromium (puppeteer, unused: only legacy/*)
     # and the ffmpeg binary (ffmpeg-static); both replaced below.
     npmFlags = ["--ignore-scripts"];
@@ -87,9 +96,9 @@ in
       export LD_LIBRARY_PATH=\''${LD_LIBRARY_PATH:+\$LD_LIBRARY_PATH:}${openssl.out}/lib
       export PRISMA_QUERY_ENGINE_LIBRARY=$out/share/offtiktokapi/node_modules/@prisma/engines/libquery_engine-debian-openssl-3.0.x.so.node
       export PRISMA_SCHEMA_ENGINE_BINARY=$out/share/offtiktokapi/node_modules/@prisma/engines/schema-engine-debian-openssl-3.0.x
-      cd $out/share/offtiktokapi
-      ./node_modules/.bin/prisma migrate deploy
-      exec ${nodejs}/bin/node dist/index.js
+      $out/share/offtiktokapi/node_modules/.bin/prisma migrate deploy --schema $out/share/offtiktokapi/prisma/schema.prisma
+      cd "\''${STATE_DIRECTORY:?}"
+      exec ${nodejs}/bin/node $out/share/offtiktokapi/dist/index.js
       EOF
       chmod +x $out/bin/offtiktokapi
       runHook postInstall

@@ -29,6 +29,7 @@ in {
     bat
     rsync
     gawk
+    inputs.omnidiff.packages.${pkgs.system}.omnidiff
   ];
 
   environment.sessionVariables = {
@@ -70,6 +71,15 @@ in {
         file."clones/forks/xelabash".source = inputs.xelabash;
         file."scripts".source = "${inputs.dots}/scripts";
         file.".config/git".source = "${inputs.dots}/.config/git";
+        file.".gitconfig".text = ''
+          [diff]
+          	external = omnidiff
+          	tool = omnidiff
+          [difftool]
+          	prompt = false
+          [difftool "omnidiff"]
+          	cmd = omnidiff "$LOCAL" "$REMOTE"
+        '';
         # no secret-tool/D-Bus secret service on Termux, so this uses
         # pinentry-tty instead of the shared keyring-backed config
         file.".config/rbw/config.json".text = builtins.toJSON {

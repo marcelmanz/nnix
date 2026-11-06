@@ -1,0 +1,86 @@
+--- a/utils/db-helpers.ts
++++ b/utils/db-helpers.ts
+@@ -136,6 +136,27 @@
+ }
+ 
+ //Fetch newest post
++export async function fetchNextOlderSavedPost(currentTiktokId: string) {
++  const findNewestSaved = (olderThan?: string) =>
++    prisma.post.findFirst({
++      orderBy: {
++        tiktokId: 'desc',
++      },
++      select: {
++        id: true,
++      },
++      where: {
++        deleted: {
++          equals: false,
++        },
++        tiktokId: olderThan ? { lt: olderThan } : { not: currentTiktokId },
++      },
++    });
++  const next =
++    (await findNewestSaved(currentTiktokId)) ?? (await findNewestSaved());
++  return next ? await fetchPostById(next.id) : null;
++}
++
+ export async function fetchNewestPost() {
+   return await prisma.post.findFirst({
+     orderBy: {
+--- a/routes/get-video.ts
++++ b/routes/get-video.ts
+@@ -2,6 +2,7 @@
+ import { RequestHandler } from 'express';
+ import {
+   createSession,
++  fetchNextOlderSavedPost,
+   fetchPostById,
+   fetchSessionByToken,
+   openDb,
+@@ -9,7 +10,6 @@
+ } from '../utils/db-helpers';
+ import {
+   downloadThroughFetch,
+-  getRelatedPosts,
+   justFetchPost,
+ } from '../legacy/old-fetching-helpers';
+ import { checkAndCleanPublicFolder } from '../utils/disk-utils';
+@@ -26,33 +26,12 @@
+ export const getRelatedVideos: RequestHandler = async (req, res) => {
+   try {
+     const { url } = req.params;
+-    const { sessiontoken } = req.headers;
+-    let sessionParsed =
+-      typeof sessiontoken === 'string'
+-        ? sessiontoken
+-        : sessiontoken
+-        ? sessiontoken[0]
+-        : null;
+-    let userSession;
+-    if (typeof sessionParsed === 'string') {
+-      userSession = await fetchSessionByToken(sessionParsed);
+-      if (!userSession) {
+-        userSession = await createSession(sessionParsed);
+-      }
+-    }
+-    logger.info('Running quickfetch');
+-
+-    const fetchRelatedPosts = await getRelatedPosts(url, userSession?.token);
+-    logger.info({
+-      fetchRelatedPosts,
+-    });
+-    if (!fetchRelatedPosts || fetchRelatedPosts instanceof Error) {
++    const currentTiktokId = url.split('?')[0].split('/').filter(Boolean).at(-1) ?? '';
++    const nextPost = await fetchNextOlderSavedPost(currentTiktokId);
++    if (!nextPost) {
+       return res.status(500).send({ error: 'Something went wrong' });
+     }
+-    if (userSession) {
+-      await updateSession(userSession.token, fetchRelatedPosts.tiktokId);
+-    }
+-    res.send(fetchRelatedPosts);
++    res.send(nextPost);
+   } catch (error) {
+     if (error instanceof Error) {
+       res.status(500).send({

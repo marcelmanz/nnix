@@ -97,6 +97,7 @@
         fi
         music-beet import -S "$url" "$(dirname "$item_id_file")" < /dev/null || true
       done
+      music-beet modify -a -y 'genres::^$' 'style::.' "genres=\$style"
     '';
   };
   djGenres = pkgs.writeShellApplication {

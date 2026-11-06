@@ -1,4 +1,4 @@
-.PHONY: format nixos nixos-nixbuild mlab mlab-gc nixos-nixbuild-mlab droid hm news sops android-mirror whatsapp-register azuracast-connect azuracast-report azuracast-clear-chat
+.PHONY: format nixos nixos-nixbuild mlab mlab-gc nixos-nixbuild-mlab droid hm news sops android-mirror whatsapp-register whatsapp-update azuracast-connect azuracast-report azuracast-clear-chat purge-offtiktok
 
 lint: 
 	@nix run .#ruff -- check --fix
@@ -42,6 +42,24 @@ mlab-gc:
 	@host=root@mlab-local; \
 	ssh -q -o ConnectTimeout=5 $$host exit 2>/dev/null || host=root@mlab; \
 	ssh $$host nix-collect-garbage -d
+
+purge-offtiktok:
+	@host=root@mlab-local; \
+	ssh -n -q -o ConnectTimeout=5 $$host exit 2>/dev/null || host=root@mlab; \
+	db=/var/lib/offtiktokapi/offtiktok.db; \
+	selected=$$(ssh -n $$host "sqlite3 $$db \"SELECT p.tiktokId, p.type, '@' || a.handle, replace(replace(coalesce(trim(p.postDescription), ''), char(10), ' '), '|', '/') FROM Post p JOIN Author a ON a.id = p.authorId ORDER BY p.createdAt DESC;\"" \
+		| fzf --multi --delimiter='|' --prompt='purge (tab selects)> ' --header='tiktokId | type | author | description'); \
+	[ -n "$$selected" ] || { echo "nothing selected"; exit 0; }; \
+	echo "$$selected" | cut -c1-120; \
+	printf 'Delete these %s post(s) from mlab? [y/N] ' "$$(echo "$$selected" | wc -l)"; \
+	read answer; \
+	[ "$$answer" = y ] || { echo "aborted"; exit 0; }; \
+	ids=$$(echo "$$selected" | cut -d'|' -f1 | grep -E '^[0-9]+$$' | tr '\n' ' '); \
+	ssh -n $$host "cd /var/lib/offtiktokapi/public && for id in $$ids; do \
+		rm -f videos/\$$id.mp4 thumbnails/\$$id.jpg audio/\$$id.mp4; rm -rf images/\$$id; \
+		runuser -u offtiktokapi -- sqlite3 $$db \"PRAGMA foreign_keys = ON; DELETE FROM Video WHERE postId IN (SELECT id FROM Post WHERE tiktokId = '\$$id'); DELETE FROM Carousel WHERE postId IN (SELECT id FROM Post WHERE tiktokId = '\$$id'); DELETE FROM Post WHERE tiktokId = '\$$id';\"; \
+		if [ -f /var/lib/tiktok-follow/follow.db ]; then runuser -u tiktok-follow -- sqlite3 /var/lib/tiktok-follow/follow.db \"UPDATE videos SET status = 'purged', post_id = NULL, error = NULL WHERE tiktok_id = '\$$id';\"; fi; \
+		echo \"removed \$$id\"; done"
 
 nixos-nixbuild-mlab:
 	sudo nixos-rebuild switch --flake .#mlab --target-host root@mlab-local; \
@@ -92,7 +110,7 @@ android-mirror:
 	echo "Connecting ADB..."; \
 	until adb connect 127.0.0.1:5555 | grep -q "already connected to\|connected to"; do sleep 0.5; done; \
 	adb -s 127.0.0.1:5555 wait-for-device; \
-	scrcpy --no-audio -s 127.0.0.1:5555 --keyboard=uhid --mouse=sdk --max-fps 30
+	scrcpy --no-audio -s 127.0.0.1:5555 --mouse=sdk --max-fps 30
 
 android-mirror-old:
 	@echo "Starting SSH tunnel..."
@@ -108,3 +126,16 @@ whatsapp-register:
 	@adb connect 127.0.0.1:5555 | grep -q "already connected to\|connected to" \
 		|| { echo "ADB connect failed — is 'make android-mirror' running?"; exit 1; }
 	uv run --python python3 --with uiautomator2 python scripts/whatsapp-register.py
+
+# redroid has no Play Store; reinstalling over the old APK keeps chats and the session
+whatsapp-update:
+	@adb connect 127.0.0.1:5555 | grep -q "already connected to\|connected to" \
+		|| { echo "ADB connect failed — is 'make android-mirror' running?"; exit 1; }
+	@set -e; url=$$(curl -sL https://www.whatsapp.com/android/ \
+		| grep -oE 'https://scontent[^"]*WhatsApp\.apk[^"]*' | head -1 | sed 's/&amp;/\&/g'); \
+	[ -n "$$url" ] || { echo "APK link not found on whatsapp.com/android"; exit 1; }; \
+	apk=$$(mktemp --suffix=.apk); \
+	trap 'rm -f "$$apk"' EXIT; \
+	curl -fL -o "$$apk" "$$url"; \
+	adb -s 127.0.0.1:5555 install -r "$$apk"; \
+	adb -s 127.0.0.1:5555 shell dumpsys package com.whatsapp | grep -m1 versionName
