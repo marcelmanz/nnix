@@ -83,6 +83,7 @@ with pkgs; [
   glirc
   glow
   gnumake
+  sayonara
   gping
   gst_all_1.gstreamer
   haralyzer
