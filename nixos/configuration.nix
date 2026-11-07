@@ -316,6 +316,7 @@
       "docker"
       "libvirtd"
       "kvm"
+      "input"
     ];
     packages = with pkgs; [
       kitty
