@@ -25,6 +25,7 @@ in {
     tesseract
     grayjay
     psysonic
+    termsonic
     simplex-chat-desktop
     strawberry
     ironbar
@@ -985,6 +986,15 @@ in {
   '';
   xdg.configFile."swaync/config.json".force = true;
   xdg.configFile."swaync/style.css".force = true;
+
+  # termsonic rewrites its config to store the password, so only seed it
+  home.activation.termsonicConfig = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    if [ ! -e "$HOME/.config/termsonic.toml" ]; then
+      run install -m 600 ${pkgs.writeText "termsonic.toml" ''
+        BaseURL = "https://music.marcel.cool"
+      ''} "$HOME/.config/termsonic.toml"
+    fi
+  '';
 
   # Plasma's Dolphin also claims this name; user service files take precedence over system ones
   xdg.dataFile."dbus-1/services/org.freedesktop.FileManager1.service".text = let
