@@ -80,7 +80,8 @@
     projectw = {
       url = "git+https://git.marcel.cool/z39znYAkBEASv5SXaMGoFXFTYZwhn.git";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.nixGL.follows = "nixGL";
+      # TODO: back to follows = "nixGL" once upstream nixGL drops pcre
+      inputs.nixGL.inputs.nixpkgs.follows = "nixpkgsStable";
     };
   };
 
@@ -241,6 +242,7 @@
         extraSpecialArgs = {inherit inputs pkgsStable nixGL;};
         modules = [
           inputs.sops-nix.homeManagerModules.sops
+          inputs.projectw.homeManagerModules.default
           ./home/gui.nix
           ./home/terminal.nix
           ./hosts/work/default.nix
@@ -255,6 +257,7 @@
               home.username = "mmanzanares";
               home.homeDirectory = "/home/mmanzanares";
               targets.genericLinux.enable = true;
+              programs.projectw.enable = true;
 
               targets.genericLinux.nixGL = {
                 # TODO: back to nixGL.packages once upstream nixGL drops pcre (removed from unstable 2026-10-25)
