@@ -27,6 +27,8 @@
       # the column type is cosmetic. Delete this once upstream upstream fixes
       # migrations.lua.
       sed -i 's/types\.id/types.integer/g' "$src/migrations.lua"
+      # No logo for now. The empty span keeps the nav's height, since the right-hand icons are floated.
+      sed -i 's|<a href="/"><img src="/static/kittygram.png".*</a>|<span style="display:inline-block;height:3em"></span>|' "$src/views/navbar.etlua"
       podman build -t localhost/kittygram:latest "$src"
     '';
   };
