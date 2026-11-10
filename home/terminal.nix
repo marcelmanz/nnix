@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   pkgs,
   inputs ? null,
   pkgsStable ? null,
@@ -32,6 +33,14 @@ in {
     [application]
     frontend_url=https://todo.marcel.cool/
     api_url=https://todo.marcel.cool/api/v2
+  '';
+
+  # each machine gets its own key, never shared; `rad auth` can't be used as it rewrites the nix-managed config.json
+  home.activation.radicleKey = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    if [ ! -e "$HOME/.radicle/keys/radicle" ]; then
+      run mkdir -p "$HOME/.radicle/keys"
+      run ${pkgs.openssh}/bin/ssh-keygen -q -t ed25519 -N "" -C "" -f "$HOME/.radicle/keys/radicle"
+    fi
   '';
 
   systemd.user.services.radicle-node = {
