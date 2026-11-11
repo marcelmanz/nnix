@@ -93,7 +93,12 @@
         owner = "grafana";
       };
       "github_ssh_key" = {
-        sopsFile = ../../secrets/github.yaml;
+        sopsFile = ../../secrets/ssh.yaml;
+        owner = "dev";
+        mode = "0600";
+      };
+      "srht_ssh_key" = {
+        sopsFile = ../../secrets/ssh.yaml;
         owner = "dev";
         mode = "0600";
       };
@@ -637,6 +642,12 @@
           HostName = "github.com";
           User = "git";
           IdentityFile = "/run/secrets/github_ssh_key";
+          IdentitiesOnly = "yes";
+        };
+        settings."git.sr.ht" = {
+          HostName = "git.sr.ht";
+          User = "git";
+          IdentityFile = "/run/secrets/srht_ssh_key";
           IdentitiesOnly = "yes";
         };
         settings."codeberg.org" = {

@@ -6,7 +6,7 @@
 }: let
   meilisearchUrl = "http://127.0.0.1:${toString config.services.meilisearch.listenPort}";
 in {
-  sops.secrets."radicle_node_key" = {};
+  sops.secrets."radicle_node_key".sopsFile = ../../../secrets/ssh.yaml;
   sops.secrets."meilisearch_master_key" = {};
   sops.templates."radicle-search.env".content = ''
     RADICLE_SEARCH_KEY=${config.sops.placeholder.meilisearch_master_key}

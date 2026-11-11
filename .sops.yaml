@@ -23,7 +23,7 @@ creation_rules:
           - *admin
           - *mlab
 
-  - path_regex: secrets/github\.yaml$
+  - path_regex: secrets/ssh\.yaml$
     key_groups:
       - age:
           - *admin

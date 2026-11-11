@@ -96,6 +96,11 @@ in {
         identityFile = "~/.ssh/id_ed25519_codeberg";
         identitiesOnly = true;
       };
+      "git.sr.ht" = {
+        user = "git";
+        identityFile = "~/.ssh/srht_ed25519";
+        identitiesOnly = true;
+      };
       "vps" = {
         hostname = "204.168.128.208";
         user = "git";
@@ -190,6 +195,7 @@ in {
     // {
       ".vimrc".source = link "${dots}/.vimrc";
       ".gitconfig".source = link "${dots}/.gitconfig";
+      ".ssh/srht_ed25519.pub".source = ./srht_ed25519.pub;
       ".gitignore".source = link "${dots}/.gitignore";
       ".bashrc".source = link "${dots}/.bashrc";
       ".bash_aliases".source = link "${dots}/.bash_aliases";

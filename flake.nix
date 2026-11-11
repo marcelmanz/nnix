@@ -130,6 +130,7 @@
         (import ./overlays/myna-font.nix {inherit inputs;})
         (import ./overlays/authelia-pnpm-hash.nix)
         (import ./overlays/open-webui-mcp1.nix)
+        (import ./overlays/ostui-vim.nix)
         (final: prev: {tmex = tmexPkg;})
         (final: prev: {
           pir = pir.packages.${system}.pir;

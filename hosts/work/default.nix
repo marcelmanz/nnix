@@ -87,8 +87,12 @@ in {
       mode = "0600";
     };
     secrets.github_ssh_key = {
-      sopsFile = ../../secrets/github.yaml;
+      sopsFile = ../../secrets/ssh.yaml;
       path = "${config.home.homeDirectory}/.ssh/github_ed25519";
+    };
+    secrets.srht_ssh_key = {
+      sopsFile = ../../secrets/ssh.yaml;
+      path = "${config.home.homeDirectory}/.ssh/srht_ed25519";
     };
   };
 

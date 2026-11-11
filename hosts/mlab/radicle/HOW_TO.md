@@ -16,7 +16,7 @@ https://git.marcel.cool and served to peers on `ssh.marcel.cool:8776`.
 | `default.nix`                | radicle-node + radicle-httpd (port from `proxy.nix`)         |
 | `default.nix`                | radicle-search + Meilisearch, repo search on git.marcel.cool |
 | `radicle.pub`                | node public key                                              |
-| `secrets/mlab.yaml`          | `radicle_node_key`, the node private key (sops)              |
+| `secrets/ssh.yaml`           | `radicle_node_key`, the node private key (sops)              |
 | `../proxy.nix`               | `git.marcel.cool`: explorer UI + httpd API/git routes        |
 | `home/terminal-packages.nix` | `rad` CLI (`radicle-node`)                                   |
 | `home/terminal.nix`          | `radit`, seeds the current repo on mlab                      |
@@ -83,6 +83,6 @@ journalctl -u radicle-node -u radicle-httpd
 ssh-keygen -t ed25519 -N "" -C "" -f /tmp/radicle
 ```
 
-Put the private key in `secrets/mlab.yaml` as `radicle_node_key`, the public
+Put the private key in `secrets/ssh.yaml` as `radicle_node_key`, the public
 key in `radicle.pub` (no comment), deploy. The Node ID changes, so update
 `node.connect` on every laptop.
