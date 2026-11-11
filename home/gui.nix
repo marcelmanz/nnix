@@ -1184,6 +1184,7 @@ in {
     ".config/swappy/config".source = link "${dots}/.config/swappy/config";
     # ".config/mako/config".source = link "${dots}/.config/mako/config";
     ".config/ironbar/config.toml".source = link "${dots}/.config/ironbar/config.toml";
+    ".config/ostui/config".source = link "${dots}/.config/ostui/config";
 
     # Firefox extension configs
     ".config/vimmatic/vimmatic.json".source = link "${dots}/.config/vimmatic/vimmatic.json";

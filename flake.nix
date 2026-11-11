@@ -167,6 +167,7 @@
           });
           gelly = prev.gelly.overrideAttrs (old: {preBuild = (old.preBuild or "") + "unset AWS_LC_SYS_USE_SYSTEM\n";});
           rabbitmqadmin-ng = prev.rabbitmqadmin-ng.overrideAttrs (old: {preBuild = (old.preBuild or "") + "unset AWS_LC_SYS_USE_SYSTEM\n";});
+          lk-jwt-service = prev.lk-jwt-service.overrideAttrs (old: {preBuild = (old.preBuild or "") + "unset AWS_LC_SYS_USE_SYSTEM\n";});
           ironbar = prev.ironbar.overrideAttrs (old: {
             nativeBuildInputs = (old.nativeBuildInputs or []) ++ [prev.pkg-config];
             buildInputs = (old.buildInputs or []) ++ [prev.libgit2];
@@ -174,6 +175,10 @@
           radicle-node = prev.radicle-node.overrideAttrs (old: {
             nativeBuildInputs = (old.nativeBuildInputs or []) ++ [prev.pkg-config];
             buildInputs = (old.buildInputs or []) ++ [prev.libgit2];
+          });
+          radicle-httpd = prev.radicle-httpd.overrideAttrs (old: {
+            nativeBuildInputs = (old.nativeBuildInputs or []) ++ [prev.pkg-config];
+            buildInputs = (old.buildInputs or []) ++ [prev.libgit2 prev.zstd];
           });
         })
         (final: prev: {
