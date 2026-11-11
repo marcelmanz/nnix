@@ -11,6 +11,7 @@
     inputs.home-manager.nixosModules.home-manager
     inputs.pir.nixosModules.pir-server
     ./arr
+    ./agent-sandbox.nix
     ./attic.nix
     ./audiobookshelf.nix
     ./authelia.nix
