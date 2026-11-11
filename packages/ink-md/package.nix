@@ -4,12 +4,11 @@
 }:
 craneLib.buildPackage {
   pname = "ink-md";
-  version = "0.13.0";
+  version = "0.15.0";
   src = pkgs.fetchFromGitHub {
-    owner = "marcelmanz";
+    owner = "borghei";
     repo = "ink";
-    rev = "29cc640f2fb072707bcae6d628718a8f41d2340d";
-    sha256 = "sha256-/ImdciTisBVhzpBL8mP71OIQOzPR7iQaGidHTp+UKWU=";
+    rev = "v0.15.0";
+    sha256 = "sha256-c2PK7+h4rZDb5eGPMwNwjI7D4tZH/gPCq73xT/8r5xE=";
   };
-  cargoVendorHash = pkgs.lib.fakeHash;
 }

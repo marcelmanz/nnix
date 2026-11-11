@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   pkgs,
   inputs ? null,
   pkgsStable ? null,
@@ -33,6 +34,24 @@ in {
     frontend_url=https://todo.marcel.cool/
     api_url=https://todo.marcel.cool/api/v2
   '';
+
+  # each machine gets its own key, never shared; `rad auth` can't be used as it rewrites the nix-managed config.json
+  home.activation.radicleKey = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    if [ ! -e "$HOME/.radicle/keys/radicle" ]; then
+      run mkdir -p "$HOME/.radicle/keys"
+      run ${pkgs.openssh}/bin/ssh-keygen -q -t ed25519 -N "" -C "" -f "$HOME/.radicle/keys/radicle"
+    fi
+  '';
+
+  systemd.user.services.radicle-node = {
+    Unit.Description = "Radicle node";
+    Service = {
+      ExecStart = "${pkgs.radicle-node}/bin/radicle-node";
+      Environment = ["PATH=${pkgs.lib.makeBinPath [pkgs.git]}" "RUST_LOG=info"];
+      Restart = "on-failure";
+    };
+    Install.WantedBy = ["default.target"];
+  };
 
   home.packages =
     terminalPackages
@@ -162,6 +181,7 @@ in {
     dots = "${clonesOwn}/dots";
     nvim = "${clonesOwn}/nvim";
     notes = "${clonesOwn}/notes";
+    mlabRadicleSeed = "z6MkhWXzth9QTkmC34zcJ83BfEyzwBcKHUqN3GavcGWPkMBj@git.marcel.cool:8776";
 
     mirrorDir = p: {
       name = p;
@@ -193,6 +213,17 @@ in {
       ".newsboat"
     ])
     // {
+      ".radicle/config.json" = {
+        force = true;
+        text = builtins.toJSON {
+          preferredSeeds = [mlabRadicleSeed];
+          node = {
+            alias = "marcelmanz";
+            connect = [mlabRadicleSeed];
+            seedingPolicy.default = "block";
+          };
+        };
+      };
       ".vimrc".source = link "${dots}/.vimrc";
       ".gitconfig".source = link "${dots}/.gitconfig";
       ".ssh/srht_ed25519.pub".source = ./srht_ed25519.pub;
