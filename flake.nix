@@ -154,6 +154,27 @@
         (final: prev: {psysonic = inputs.psysonic.packages.${system}.psysonic;})
         (final: prev: {omnidiff = inputs.omnidiff.packages.${system}.omnidiff;})
         (final: prev: {
+          # Remove once a nixpkgs bump builds these without the overrides (cargo hook regression).
+          mdwatch = prev.mdwatch.overrideAttrs (old: {
+            nativeBuildInputs = (old.nativeBuildInputs or []) ++ [prev.pkg-config];
+            buildInputs = (old.buildInputs or []) ++ [prev.zstd];
+          });
+          xan = prev.xan.overrideAttrs (old: {
+            nativeBuildInputs = (old.nativeBuildInputs or []) ++ [prev.pkg-config];
+            buildInputs = (old.buildInputs or []) ++ [prev.zstd];
+          });
+          gelly = prev.gelly.overrideAttrs (old: {preBuild = (old.preBuild or "") + "unset AWS_LC_SYS_USE_SYSTEM\n";});
+          rabbitmqadmin-ng = prev.rabbitmqadmin-ng.overrideAttrs (old: {preBuild = (old.preBuild or "") + "unset AWS_LC_SYS_USE_SYSTEM\n";});
+          ironbar = prev.ironbar.overrideAttrs (old: {
+            nativeBuildInputs = (old.nativeBuildInputs or []) ++ [prev.pkg-config];
+            buildInputs = (old.buildInputs or []) ++ [prev.libgit2];
+          });
+          radicle-node = prev.radicle-node.overrideAttrs (old: {
+            nativeBuildInputs = (old.nativeBuildInputs or []) ++ [prev.pkg-config];
+            buildInputs = (old.buildInputs or []) ++ [prev.libgit2];
+          });
+        })
+        (final: prev: {
           offtiktok = pkgs.callPackage ./packages/offtiktok/frontend.nix {};
           offtiktokapi = pkgs.callPackage ./packages/offtiktok/backend.nix {};
         })
@@ -208,6 +229,7 @@
         inputs.openlogi.nixosModules.default
         inputs.projectw.nixosModules.default
         {
+          disabledModules = ["programs/openlogi.nix"];
           programs.openlogi.enable = true;
           programs.projectw.enable = true;
           home-manager = {
@@ -229,6 +251,7 @@
         inputs.vpn-confinement.nixosModules.default
         inputs.resona.nixosModules.default
         {
+          disabledModules = ["programs/openlogi.nix"];
           programs.openlogi.enable = true;
         }
         ./hosts/mlab/default.nix

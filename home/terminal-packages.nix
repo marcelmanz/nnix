@@ -23,7 +23,7 @@ with pkgs; [
   bacon
   # screen
   basedpyright
-  gurk-rs
+  # gurk-rs
   bash
   bash-language-server
   bash-preexec
@@ -43,7 +43,7 @@ with pkgs; [
   claude-code
   click
   cliflux
-  codex
+  # codex
   cowsay
   csvlens
   delta
@@ -195,7 +195,7 @@ with pkgs; [
   tailwindcss-language-server
   taplo
   taskwarrior-tui
-  taskwarrior3
+  # taskwarrior3
   tig
   timer
   tldr
