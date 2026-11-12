@@ -40,6 +40,10 @@
   # auth_request, so they never reach Authelia.
   protectedServices = [
     {
+      domain = "agent.marcel.cool";
+      subject = ["group:admins"];
+    }
+    {
       domain = "home.marcel.cool";
       subject = ["group:admins"];
     }

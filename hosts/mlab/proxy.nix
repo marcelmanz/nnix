@@ -6,6 +6,11 @@
   ...
 }: let
   services = {
+    agent = {
+      port = 3100;
+      href = "https://agent.marcel.cool";
+      protected = true;
+    };
     attic = {
       port = 4321;
       href = "https://cache.marcel.cool";

@@ -3,27 +3,17 @@
   pkgs,
   lib,
   inputs,
+  services,
   ...
 }: let
-  synthetic = (builtins.fromJSON (builtins.readFile "${inputs.dots}/.pi/agent/models.json")).providers.synthetic;
   workspace = "/var/lib/agent-sandbox";
   agentUid = 2000;
-  opencodeConfig = pkgs.writeText "opencode.json" (builtins.toJSON {
-    "$schema" = "https://opencode.ai/config.json";
-    provider.synthetic = {
-      npm = "@ai-sdk/openai-compatible";
-      name = "Synthetic";
-      options = {
-        baseURL = synthetic.baseUrl;
-        apiKey = "{env:SYNTHETIC_API_KEY}";
-      };
-      models = builtins.listToAttrs (map (model: {
-          name = model.id;
-          value = {name = model.id;};
-        })
-        synthetic.models);
-    };
-  });
+  bridgePython = pkgs.python3.withPackages (ps: [ps.aiohttp]);
+  bridgeDir = pkgs.runCommand "agent-bridge" {} ''
+    mkdir $out
+    cp ${./agent-sandbox/bridge.py} $out/bridge.py
+    cp ${./agent-sandbox/index.html} $out/index.html
+  '';
   agentSandbox = pkgs.writeShellApplication {
     name = "agent-sandbox";
     text = ''
@@ -46,7 +36,29 @@ in {
     restartUnits = ["container@agent.service"];
   };
 
-  systemd.tmpfiles.rules = ["d ${workspace} 0750 agent-sandbox agent-sandbox -"];
+  systemd.tmpfiles.rules = [
+    "d ${workspace} 0750 agent-sandbox agent-sandbox -"
+    "d ${workspace}/.sessions 0750 agent-sandbox agent-sandbox -"
+    "d ${workspace}/.pi 0750 agent-sandbox agent-sandbox -"
+    "d ${workspace}/.pi/agent 0750 agent-sandbox agent-sandbox -"
+    "L+ ${workspace}/.pi/agent/models.json - - - - ${inputs.dots}/.pi/agent/models.json"
+  ];
+
+  systemd.services.agent-bridge = {
+    description = "Web bridge to pi in the agent sandbox";
+    after = ["container@agent.service"];
+    wantedBy = ["multi-user.target"];
+    path = ["/run/current-system/sw"];
+    environment = {
+      STATE_DIR = "/var/lib/agent-bridge";
+      PORT = toString services.agent.port;
+    };
+    serviceConfig = {
+      ExecStart = "${bridgePython}/bin/python ${bridgeDir}/bridge.py";
+      StateDirectory = "agent-bridge";
+      Restart = "on-failure";
+    };
+  };
 
   networking.nat = {
     enable = true;
@@ -98,7 +110,7 @@ in {
       };
 
       environment.systemPackages = with pkgs; [
-        opencode
+        pi-coding-agent
         git
         gnumake
         gcc
@@ -109,7 +121,10 @@ in {
         jq
         curl
       ];
-      environment.variables.OPENCODE_CONFIG = "${opencodeConfig}";
+      environment.variables = {
+        PI_SKIP_VERSION_CHECK = "1";
+        PI_TELEMETRY = "0";
+      };
       environment.loginShellInit = ''
         set -a
         . /run/agent.env

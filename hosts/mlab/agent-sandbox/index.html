@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent</title>
+<style>
+  :root { color-scheme: light dark; --bg: #fff; --fg: #1c1c1e; --muted: #6b6b70; --line: #d8d8de; --card: #f4f4f7; --accent: #2f6fed; --err: #c43b3b; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #151518; --fg: #e6e6ea; --muted: #9a9aa2; --line: #2e2e34; --card: #1e1e23; --accent: #6b9bff; --err: #ff7b7b; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; height: 100dvh; display: grid; grid-template-columns: 240px 1fr; background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, sans-serif; }
+  aside { border-right: 1px solid var(--line); padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+  main { display: grid; grid-template-rows: 1fr auto; min-width: 0; }
+  #log { overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .session { padding: 6px 8px; border-radius: 6px; cursor: pointer; border: 1px solid transparent; }
+  .session.active { border-color: var(--accent); }
+  .session small { color: var(--muted); display: block; }
+  .msg { white-space: pre-wrap; word-break: break-word; }
+  .user { align-self: flex-end; background: var(--accent); color: #fff; padding: 8px 12px; border-radius: 12px; max-width: 80%; }
+  .tool { background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+  .tool summary { padding: 6px 10px; cursor: pointer; font-family: ui-monospace, monospace; font-size: 13px; }
+  .tool pre { margin: 0; padding: 8px 10px; overflow-x: auto; max-height: 320px; border-top: 1px solid var(--line); font-size: 12px; }
+  .tool.error summary { color: var(--err); }
+  .note { color: var(--muted); font-size: 12px; }
+  form.send { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--line); }
+  textarea { flex: 1; resize: vertical; min-height: 44px; max-height: 200px; padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: inherit; font: inherit; }
+  button, input { font: inherit; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: inherit; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  @media (max-width: 640px) { body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; } aside { border-right: 0; border-bottom: 1px solid var(--line); max-height: 35dvh; } }
+</style>
+</head>
+<body>
+<aside>
+  <form id="new" style="display:flex;flex-direction:column;gap:6px">
+    <input id="name" placeholder="Name" required>
+    <input id="repo" placeholder="https repo to clone (optional)">
+    <button class="primary">New session</button>
+  </form>
+  <div id="sessions"></div>
+</aside>
+<main>
+  <div id="log"></div>
+  <form class="send" id="send">
+    <textarea id="message" placeholder="Prompt" required></textarea>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <button class="primary">Send</button>
+      <button type="button" id="abort">Abort</button>
+    </div>
+  </form>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+let current = null, source = null, tools = new Map(), assistant = null;
+
+async function api(path, options = {}) {
+  const response = await fetch(path, { headers: { "Content-Type": "application/json" }, ...options });
+  if (!response.ok) throw new Error(await response.text());
+  return response.json();
+}
+
+async function refresh() {
+  const list = await api("/api/sessions");
+  $("sessions").replaceChildren(...list.map((s) => {
+    const el = document.createElement("div");
+    el.className = "session" + (s.id === current ? " active" : "");
+    el.textContent = s.name;
+    const state = document.createElement("small");
+    state.textContent = s.running ? "running" : "idle";
+    el.append(state);
+    el.onclick = () => open(s.id);
+    return el;
+  }));
+}
+
+function open(id) {
+  current = id;
+  if (source) source.close();
+  $("log").replaceChildren();
+  tools = new Map(); assistant = null;
+  source = new EventSource(`/api/sessions/${id}/events`);
+  source.onmessage = (event) => render(JSON.parse(event.data));
+  refresh();
+}
+
+function add(el) {
+  const log = $("log");
+  const stick = log.scrollTop + log.clientHeight >= log.scrollHeight - 40;
+  log.append(el);
+  if (stick) log.scrollTop = log.scrollHeight;
+}
+
+function text(result) {
+  return (result?.content || []).map((c) => c.text || "").join("");
+}
+
+function render(record) {
+  switch (record.type) {
+    case "user_prompt": {
+      const el = document.createElement("div");
+      el.className = "msg user"; el.textContent = record.message;
+      assistant = null; add(el); break;
+    }
+    case "message_update": {
+      const delta = record.assistantMessageEvent;
+      if (delta?.type !== "text_delta") break;
+      if (!assistant) { assistant = document.createElement("div"); assistant.className = "msg"; add(assistant); }
+      assistant.textContent += delta.delta; break;
+    }
+    case "message_end":
+      if (record.message?.role === "assistant") assistant = null; break;
+    case "tool_execution_start": {
+      const el = document.createElement("details");
+      el.className = "tool"; el.open = true;
+      const summary = document.createElement("summary");
+      summary.textContent = `${record.toolName} ${record.args?.command || JSON.stringify(record.args)}`;
+      const out = document.createElement("pre");
+      el.append(summary, out); tools.set(record.toolCallId, { el, out });
+      assistant = null; add(el); break;
+    }
+    case "tool_execution_update": {
+      const tool = tools.get(record.toolCallId);
+      if (tool) tool.out.textContent = text(record.partialResult); break;
+    }
+    case "tool_execution_end": {
+      const tool = tools.get(record.toolCallId);
+      if (!tool) break;
+      tool.out.textContent = text(record.result);
+      tool.el.open = false;
+      if (record.isError) tool.el.classList.add("error"); break;
+    }
+    case "agent_settled": case "bridge_exit": case "bridge_stderr": {
+      const el = document.createElement("div");
+      el.className = "note";
+      el.textContent = record.type === "agent_settled" ? (record.aborted ? "aborted" : "done") : `${record.type}: ${record.text ?? record.code}`;
+      add(el); refresh(); break;
+    }
+  }
+}
+
+$("new").onsubmit = async (event) => {
+  event.preventDefault();
+  try {
+    const session = await api("/api/sessions", { method: "POST", body: JSON.stringify({ name: $("name").value, repo: $("repo").value }) });
+    $("name").value = ""; $("repo").value = "";
+    open(session.id);
+  } catch (error) { alert(error.message); }
+};
+
+$("send").onsubmit = async (event) => {
+  event.preventDefault();
+  if (!current) return alert("Create or pick a session first");
+  const message = $("message").value;
+  $("message").value = "";
+  await api(`/api/sessions/${current}/prompt`, { method: "POST", body: JSON.stringify({ message }) });
+};
+
+$("message").onkeydown = (event) => {
+  if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) $("send").requestSubmit();
+};
+
+$("abort").onclick = () => current && api(`/api/sessions/${current}/abort`, { method: "POST" });
+
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>
