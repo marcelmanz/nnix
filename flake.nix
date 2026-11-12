@@ -76,6 +76,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     vpn-confinement.url = "github:Maroka-chan/VPN-Confinement";
+    vikunja = {
+      url = "github:go-vikunja/vikunja";
+      flake = false;
+    };
+    vikunja-nightly = {
+      url = "https://dl.vikunja.io/vikunja/unstable/vikunja-unstable-linux-amd64-full.zip";
+      flake = false;
+    };
     resona.url = "git+https://codeberg.org/marcelmanz/resona";
     projectw = {
       url = "git+https://git.marcel.cool/z39znYAkBEASv5SXaMGoFXFTYZwhn.git";
@@ -132,6 +140,7 @@
         (import ./overlays/authelia-pnpm-hash.nix)
         (import ./overlays/open-webui-mcp1.nix)
         (import ./overlays/ostui-vim.nix)
+        (import ./overlays/vikunja.nix {inherit inputs;})
         (final: prev: {tmex = tmexPkg;})
         (final: prev: {
           pir = pir.packages.${system}.pir;
