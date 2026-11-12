@@ -995,6 +995,8 @@
         "resona": "resona",
         "sops-nix": "sops-nix",
         "tmex": "tmex",
+        "vikunja": "vikunja",
+        "vikunja-nightly": "vikunja-nightly",
         "vpn-confinement": "vpn-confinement",
         "xelabash": "xelabash",
         "zuban": "zuban"
@@ -1183,6 +1185,35 @@
         "owner": "marcelmanz",
         "repo": "tmex",
         "type": "github"
+      }
+    },
+    "vikunja": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1794493653,
+        "narHash": "sha256-PJNBRkUTIeLGCbohW0GLUrbqBmJiOFWrzoigSnXMBPU=",
+        "owner": "go-vikunja",
+        "repo": "vikunja",
+        "rev": "00d95ad5898a93c955867f36f695759c5ce54b37",
+        "type": "github"
+      },
+      "original": {
+        "owner": "go-vikunja",
+        "repo": "vikunja",
+        "type": "github"
+      }
+    },
+    "vikunja-nightly": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1794495015,
+        "narHash": "sha256-1jiq9InAdkDw6UyK8FO802mWlCC8XKtUtNlPpAl9j+E=",
+        "type": "tarball",
+        "url": "https://dl.vikunja.io/vikunja/unstable/vikunja-unstable-linux-amd64-full.zip"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://dl.vikunja.io/vikunja/unstable/vikunja-unstable-linux-amd64-full.zip"
       }
     },
     "vpn-confinement": {
