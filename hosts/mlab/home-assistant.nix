@@ -148,6 +148,64 @@
       }
     ];
   };
+  homeDashboard = (pkgs.formats.yaml {}).generate "dashboard-home.yaml" {
+    title = "Home";
+    views = [
+      {
+        title = "Home";
+        path = "home";
+        cards = [
+          {
+            type = "weather-forecast";
+            entity = "weather.forecast_home";
+            forecast_type = "daily";
+          }
+          {
+            type = "vertical-stack";
+            cards = [
+              {
+                type = "heading";
+                heading = "TV";
+              }
+              {
+                type = "grid";
+                columns = 3;
+                square = false;
+                cards = [
+                  {
+                    type = "button";
+                    entity = "switch.xiaomi_tv_box";
+                    name = "TV Box";
+                    tap_action.action = "toggle";
+                  }
+                  {
+                    type = "button";
+                    entity = "switch.xgimi_h3";
+                    name = "Projector";
+                    tap_action.action = "toggle";
+                  }
+                  {
+                    type = "button";
+                    name = "Remote";
+                    icon = "mdi:remote-tv";
+                    show_state = false;
+                    tap_action = {
+                      action = "navigate";
+                      navigation_path = "/dashboard-tv/tv";
+                    };
+                  }
+                ];
+              }
+              {
+                type = "media-control";
+                entity = tvBoxMediaPlayer;
+              }
+            ];
+          }
+        ];
+      }
+    ];
+  };
 in {
   services.home-assistant = {
     enable = true;
@@ -173,6 +231,13 @@ in {
         external_url = services.homeassistant.href;
       };
       "automation ui" = "!include automations.yaml";
+      lovelace.dashboards.dashboard-home = {
+        mode = "yaml";
+        filename = "${homeDashboard}";
+        title = "Home";
+        icon = "mdi:home";
+        show_in_sidebar = true;
+      };
       lovelace.dashboards.dashboard-tv = {
         mode = "yaml";
         filename = "${tvDashboard}";
