@@ -42,6 +42,17 @@
       data.key = key;
     };
   };
+  tvBoxButton = name: icon: command: {
+    type = "button";
+    inherit name icon;
+    show_state = false;
+    tap_action = {
+      action = "perform-action";
+      perform_action = "remote.send_command";
+      target.entity_id = tvBoxRemote;
+      data.command = command;
+    };
+  };
   tvDashboard = (pkgs.formats.yaml {}).generate "dashboard-tv.yaml" {
     title = "TV";
     views = [
@@ -54,45 +65,38 @@
             type = "vertical-stack";
             cards = [
               {
-                type = "custom:universal-remote-card";
-                platform = "Android TV";
-                remote_id = tvBoxRemote;
-                media_player_id = tvBoxMediaPlayer;
-                rows = [
-                  ["back" "home" "power"]
-                  ["dpad"]
-                  ["rewind" "play" "pause" "fast_forward"]
-                  ["volume_down" "volume_mute" "volume_up"]
-                ];
-                custom_actions = [
+                type = "heading";
+                heading = "Xiaomi TV Box";
+              }
+              {
+                type = "grid";
+                columns = 2;
+                square = false;
+                cards = [
                   {
                     type = "button";
-                    name = "power";
+                    entity = "switch.xiaomi_tv_box";
+                    name = "Power";
                     icon = "mdi:power";
-                    tap_action = {
-                      action = "perform-action";
-                      perform_action = "switch.toggle";
-                      target.entity_id = "switch.xiaomi_tv_box";
-                    };
+                    tap_action.action = "toggle";
                   }
-                  {
-                    type = "button";
-                    name = "play";
-                    icon = "mdi:play";
-                    tap_action = {
-                      action = "key";
-                      key = "MEDIA_PLAY";
-                    };
-                  }
-                  {
-                    type = "button";
-                    name = "pause";
-                    icon = "mdi:pause";
-                    tap_action = {
-                      action = "key";
-                      key = "MEDIA_PAUSE";
-                    };
-                  }
+                  (tvBoxButton "Mute" "mdi:volume-mute" "VOLUME_MUTE")
+                ];
+              }
+              {
+                type = "grid";
+                columns = 3;
+                square = false;
+                cards = [
+                  (tvBoxButton "Back" "mdi:arrow-left" "BACK")
+                  (tvBoxButton "Up" "mdi:chevron-up" "DPAD_UP")
+                  (tvBoxButton "Home" "mdi:home" "HOME")
+                  (tvBoxButton "Left" "mdi:chevron-left" "DPAD_LEFT")
+                  (tvBoxButton "OK" "mdi:circle-medium" "DPAD_CENTER")
+                  (tvBoxButton "Right" "mdi:chevron-right" "DPAD_RIGHT")
+                  (tvBoxButton "Vol -" "mdi:volume-minus" "VOLUME_DOWN")
+                  (tvBoxButton "Down" "mdi:chevron-down" "DPAD_DOWN")
+                  (tvBoxButton "Vol +" "mdi:volume-plus" "VOLUME_UP")
                 ];
               }
               {
@@ -105,7 +109,7 @@
               }
               {
                 type = "grid";
-                columns = 4;
+                columns = 3;
                 square = false;
                 cards = [
                   {
@@ -115,6 +119,8 @@
                     icon = "mdi:power";
                     tap_action.action = "toggle";
                   }
+                  (xgimiButton "Input" "mdi:video-input-hdmi" "2102")
+                  (xgimiButton "Settings" "mdi:cog" "2094")
                   (xgimiButton "Menu" "mdi:menu" "139")
                   (xgimiButton "Mute" "mdi:volume-mute" "113")
                   (xgimiButton "Focus" "mdi:image-filter-center-focus" "2099")
@@ -157,9 +163,6 @@ in {
       "androidtv_remote"
       "wake_on_lan"
       "template"
-    ];
-    customLovelaceModules = [
-      pkgs.home-assistant-custom-lovelace-modules.universal-remote-card
     ];
     config = {
       default_config = {};
