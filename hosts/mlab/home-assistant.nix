@@ -130,11 +130,41 @@ in {
               state = "{{ is_state('binary_sensor.xiaomi_tv_box', 'on') }}";
               turn_on = [
                 {
-                  action = "wake_on_lan.send_magic_packet";
-                  data = {
-                    mac = tvBoxMac;
-                    broadcast_address = "192.168.1.255";
+                  repeat = {
+                    sequence = [
+                      {
+                        action = "wake_on_lan.send_magic_packet";
+                        data = {
+                          mac = tvBoxMac;
+                          broadcast_address = "192.168.1.255";
+                        };
+                      }
+                      {
+                        wait_template = "{{ not is_state('${tvBoxMediaPlayer}', 'unavailable') }}";
+                        timeout = "00:00:05";
+                        continue_on_timeout = true;
+                      }
+                    ];
+                    until = [
+                      {
+                        condition = "template";
+                        value_template = "{{ not is_state('${tvBoxMediaPlayer}', 'unavailable') or repeat.index >= 8 }}";
+                      }
+                    ];
                   };
+                }
+                {
+                  condition = "template";
+                  value_template = "{{ not is_state('${tvBoxMediaPlayer}', 'unavailable') }}";
+                }
+                {
+                  action = "remote.send_command";
+                  target.entity_id = tvBoxRemote;
+                  data.command = "KEYCODE_WAKEUP";
+                }
+                {
+                  action = "homeassistant.update_entity";
+                  target.entity_id = "binary_sensor.xiaomi_tv_box";
                 }
               ];
               turn_off = [
