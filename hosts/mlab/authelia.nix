@@ -19,7 +19,7 @@
   # AF_NETLINK, so it would silently yield the v4-only fallback.
   lanNetworks = pkgs.writeShellScript "authelia-lan-networks" ''
     set -euo pipefail
-    prefix=$(${pkgs.iproute2}/bin/ip -6 route show dev ${lanInterface} proto kernel \
+    prefix=$(${pkgs.iproute2}/bin/ip -6 route show dev ${lanInterface} proto ra \
       | ${pkgs.coreutils}/bin/cut -d" " -f1 \
       | ${pkgs.gnugrep}/bin/grep -v "^fe80::" \
       | ${pkgs.coreutils}/bin/head -1 || true)
