@@ -5,6 +5,7 @@
   ...
 }: let
   tvBoxHost = "192.168.1.199";
+  tvBoxMac = "70:68:71:f9:e9:e6";
 in {
   services.home-assistant = {
     enable = true;
@@ -18,6 +19,8 @@ in {
       "google_translate"
       "isal"
       "androidtv_remote"
+      "wake_on_lan"
+      "template"
     ];
     config = {
       default_config = {};
@@ -39,6 +42,34 @@ in {
             device_class = "power";
             scan_interval = 15;
           };
+        }
+      ];
+      wake_on_lan = {};
+      template = [
+        {
+          switch = [
+            {
+              name = "Xiaomi TV Box";
+              unique_id = "xiaomi_tv_box_switch";
+              icon = "mdi:television-box";
+              state = "{{ is_state('binary_sensor.xiaomi_tv_box', 'on') }}";
+              turn_on = [
+                {
+                  action = "wake_on_lan.send_magic_packet";
+                  data = {
+                    mac = tvBoxMac;
+                    broadcast_address = "192.168.1.255";
+                  };
+                }
+              ];
+              turn_off = [
+                {
+                  action = "media_player.turn_off";
+                  target.entity_id = "media_player.living_room_xiao_mitv";
+                }
+              ];
+            }
+          ];
         }
       ];
     };
