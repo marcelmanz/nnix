@@ -27,7 +27,7 @@
                 rows = [
                   ["back" "home" "power"]
                   ["dpad"]
-                  ["rewind" "play_pause" "fast_forward"]
+                  ["rewind" "play" "pause" "fast_forward"]
                   ["volume_down" "volume_mute" "volume_up"]
                 ];
                 custom_actions = [
@@ -39,6 +39,24 @@
                       action = "perform-action";
                       perform_action = "switch.toggle";
                       target.entity_id = "switch.xiaomi_tv_box";
+                    };
+                  }
+                  {
+                    type = "button";
+                    name = "play";
+                    icon = "mdi:play";
+                    tap_action = {
+                      action = "key";
+                      key = "MEDIA_PLAY";
+                    };
+                  }
+                  {
+                    type = "button";
+                    name = "pause";
+                    icon = "mdi:pause";
+                    tap_action = {
+                      action = "key";
+                      key = "MEDIA_PAUSE";
                     };
                   }
                 ];
