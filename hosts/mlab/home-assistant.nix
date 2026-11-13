@@ -8,20 +8,39 @@
   tvBoxMac = "70:68:71:f9:e9:e6";
   tvBoxRemote = "remote.living_room_xiao_mitv";
   tvBoxMediaPlayer = "media_player.living_room_xiao_mitv";
-  xgimiComponent = pkgs.buildHomeAssistantComponent {
-    owner = "manymuch";
-    domain = "xgimi";
-    version = "1.1.4";
-    src = pkgs.fetchFromGitHub {
-      owner = "manymuch";
-      repo = "Xgimi-4-Home-Assistant";
-      rev = "edbaae867e02adcb7cbf7b6e2cac805c4dcd1ec2";
-      hash = "sha256-Rb55QTJHXmoFQs23jGWWeATUQCyZlU7Zr/VWFkCz3Cg=";
+  xgimiHost = "192.168.1.202";
+  xgimiKey = pkgs.writeShellApplication {
+    name = "xgimi-key";
+    runtimeInputs = [pkgs.netcat-openbsd];
+    text = ''
+      case "''${1:-}" in
+        "" | *[!0-9]*) echo "usage: xgimi-key <keycode>" >&2; exit 1 ;;
+      esac
+      printf 'KEYPRESSES:%s' "$1" | nc -u -w 1 ${xgimiHost} 16735
+    '';
+  };
+  xgimiWake = pkgs.writeShellApplication {
+    name = "xgimi-wake";
+    runtimeInputs = [pkgs.bluez pkgs.coreutils];
+    text = ''
+      token=$(cat ${config.sops.secrets.xgimi_ble_token.path})
+      for i in 1 2 3 4 5; do
+        counter=$(printf '%02X' $(( ($(date +%s) + i) % 256 )))
+        btmgmt --index 0 add-adv -d "02010613FF4600''${counter}''${token}" -t 3 1 >/dev/null
+        sleep 3
+      done
+      btmgmt --index 0 rm-adv 1 >/dev/null
+    '';
+  };
+  xgimiButton = name: icon: key: {
+    type = "button";
+    inherit name icon;
+    show_state = false;
+    tap_action = {
+      action = "perform-action";
+      perform_action = "shell_command.xgimi_key";
+      data.key = key;
     };
-    dependencies = with pkgs.home-assistant.python3Packages; [
-      asyncudp
-      dbus-fast
-    ];
   };
   tvDashboard = (pkgs.formats.yaml {}).generate "dashboard-tv.yaml" {
     title = "TV";
@@ -80,6 +99,43 @@
                 type = "media-control";
                 entity = tvBoxMediaPlayer;
               }
+              {
+                type = "heading";
+                heading = "XGIMI H3";
+              }
+              {
+                type = "grid";
+                columns = 4;
+                square = false;
+                cards = [
+                  {
+                    type = "button";
+                    entity = "switch.xgimi_h3";
+                    name = "Power";
+                    icon = "mdi:power";
+                    tap_action.action = "toggle";
+                  }
+                  (xgimiButton "Menu" "mdi:menu" "139")
+                  (xgimiButton "Mute" "mdi:volume-mute" "113")
+                  (xgimiButton "Focus" "mdi:image-filter-center-focus" "2099")
+                ];
+              }
+              {
+                type = "grid";
+                columns = 3;
+                square = false;
+                cards = [
+                  (xgimiButton "Back" "mdi:arrow-left" "48")
+                  (xgimiButton "Up" "mdi:chevron-up" "36")
+                  (xgimiButton "Home" "mdi:home" "35")
+                  (xgimiButton "Left" "mdi:chevron-left" "50")
+                  (xgimiButton "OK" "mdi:circle-medium" "49")
+                  (xgimiButton "Right" "mdi:chevron-right" "37")
+                  (xgimiButton "Vol -" "mdi:volume-minus" "114")
+                  (xgimiButton "Down" "mdi:chevron-down" "38")
+                  (xgimiButton "Vol +" "mdi:volume-plus" "115")
+                ];
+              }
             ];
           }
         ];
@@ -101,9 +157,6 @@ in {
       "androidtv_remote"
       "wake_on_lan"
       "template"
-    ];
-    customComponents = [
-      xgimiComponent
     ];
     customLovelaceModules = [
       pkgs.home-assistant-custom-lovelace-modules.universal-remote-card
@@ -136,7 +189,22 @@ in {
             scan_interval = 15;
           };
         }
+        {
+          binary_sensor = {
+            name = "XGIMI H3";
+            unique_id = "xgimi_h3_power";
+            command = "${pkgs.netcat-openbsd}/bin/nc -z -w 3 ${xgimiHost} 554 && echo on || echo off";
+            payload_on = "on";
+            payload_off = "off";
+            device_class = "power";
+            scan_interval = 15;
+          };
+        }
       ];
+      shell_command = {
+        xgimi_key = "${pkgs.lib.getExe xgimiKey} {{ key }}";
+        xgimi_wake = pkgs.lib.getExe xgimiWake;
+      };
       wake_on_lan = {};
       template = [
         {
@@ -192,11 +260,36 @@ in {
                 }
               ];
             }
+            {
+              name = "XGIMI H3";
+              unique_id = "xgimi_h3_switch";
+              icon = "mdi:projector";
+              state = "{{ is_state('binary_sensor.xgimi_h3', 'on') }}";
+              turn_on = [
+                {action = "shell_command.xgimi_wake";}
+                {
+                  action = "homeassistant.update_entity";
+                  target.entity_id = "binary_sensor.xgimi_h3";
+                }
+              ];
+              turn_off = [
+                {
+                  action = "shell_command.xgimi_key";
+                  data.key = "30";
+                }
+                {
+                  action = "homeassistant.update_entity";
+                  target.entity_id = "binary_sensor.xgimi_h3";
+                }
+              ];
+            }
           ];
         }
       ];
     };
   };
+
+  sops.secrets.xgimi_ble_token.owner = "hass";
 
   systemd.tmpfiles.rules = [
     "f ${config.services.home-assistant.configDir}/automations.yaml 0644 hass hass"
