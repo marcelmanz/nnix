@@ -32,6 +32,28 @@
       btmgmt --index 0 rm-adv 1 >/dev/null
     '';
   };
+  xgimiFocus = pkgs.writeShellApplication {
+    name = "xgimi-focus";
+    runtimeInputs = [pkgs.netcat-openbsd pkgs.coreutils];
+    text = ''
+      case "''${1:-}" in
+        253 | 254) ;;
+        *) echo "usage: xgimi-focus <253|254>" >&2; exit 1 ;;
+      esac
+      printf 'KEYSSTATUS:%s+1' "$1" | nc -u -w 1 ${xgimiHost} 16735
+      sleep 0.3
+      printf 'KEYSSTATUS:%s+0' "$1" | nc -u -w 1 ${xgimiHost} 16735
+    '';
+  };
+  xgimiAdb = pkgs.writeShellApplication {
+    name = "xgimi-adb";
+    runtimeInputs = [pkgs.android-tools];
+    text = ''
+      export HOME=/var/lib/hass
+      adb connect ${xgimiHost}:5555 >/dev/null 2>&1 || true
+      exec adb -s ${xgimiHost}:5555 "$@"
+    '';
+  };
   xgimiButton = name: icon: key: {
     type = "button";
     inherit name icon;
@@ -40,6 +62,25 @@
       action = "perform-action";
       perform_action = "shell_command.xgimi_key";
       data.key = key;
+    };
+  };
+  xgimiActionButton = name: icon: action: {
+    type = "button";
+    inherit name icon;
+    show_state = false;
+    tap_action = {
+      action = "perform-action";
+      perform_action = "shell_command.${action}";
+    };
+  };
+  xgimiFocusButton = name: icon: code: {
+    type = "button";
+    inherit name icon;
+    show_state = false;
+    tap_action = {
+      action = "perform-action";
+      perform_action = "shell_command.xgimi_focus";
+      data.code = code;
     };
   };
   tvBoxButton = name: icon: command: {
@@ -119,11 +160,12 @@
                     icon = "mdi:power";
                     tap_action.action = "toggle";
                   }
-                  (xgimiButton "Input" "mdi:video-input-hdmi" "2102")
-                  (xgimiButton "Settings" "mdi:cog" "2094")
+                  (xgimiActionButton "Input" "mdi:video-input-hdmi" "xgimi_input")
+                  (xgimiActionButton "Settings" "mdi:cog" "xgimi_settings")
                   (xgimiButton "Menu" "mdi:menu" "139")
-                  (xgimiButton "Mute" "mdi:volume-mute" "113")
-                  (xgimiButton "Focus" "mdi:image-filter-center-focus" "2099")
+                  (xgimiActionButton "Autofocus" "mdi:image-filter-center-focus" "xgimi_autofocus")
+                  (xgimiFocusButton "Focus +" "mdi:plus" "253")
+                  (xgimiFocusButton "Focus -" "mdi:minus" "254")
                 ];
               }
               {
@@ -271,7 +313,11 @@ in {
       ];
       shell_command = {
         xgimi_key = "${pkgs.lib.getExe xgimiKey} {{ key }}";
+        xgimi_focus = "${pkgs.lib.getExe xgimiFocus} {{ code }}";
         xgimi_wake = pkgs.lib.getExe xgimiWake;
+        xgimi_settings = "${pkgs.lib.getExe xgimiAdb} shell am start -n com.android.newsettings/com.xgimi.newsettings.mock.MockActivity";
+        xgimi_input = "${pkgs.lib.getExe xgimiAdb} shell am start -n com.mstar.tvsetting/.switchinputsource.PictrueChangeActivity";
+        xgimi_autofocus = "${pkgs.lib.getExe xgimiAdb} shell am broadcast -a com.xgimi.autokst.calitration";
       };
       wake_on_lan = {};
       template = [
