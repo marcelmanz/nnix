@@ -8,6 +8,21 @@
   tvBoxMac = "70:68:71:f9:e9:e6";
   tvBoxRemote = "remote.living_room_xiao_mitv";
   tvBoxMediaPlayer = "media_player.living_room_xiao_mitv";
+  xgimiComponent = pkgs.buildHomeAssistantComponent {
+    owner = "manymuch";
+    domain = "xgimi";
+    version = "1.1.4";
+    src = pkgs.fetchFromGitHub {
+      owner = "manymuch";
+      repo = "Xgimi-4-Home-Assistant";
+      rev = "edbaae867e02adcb7cbf7b6e2cac805c4dcd1ec2";
+      hash = "sha256-Rb55QTJHXmoFQs23jGWWeATUQCyZlU7Zr/VWFkCz3Cg=";
+    };
+    dependencies = with pkgs.home-assistant.python3Packages; [
+      asyncudp
+      dbus-fast
+    ];
+  };
   tvDashboard = (pkgs.formats.yaml {}).generate "dashboard-tv.yaml" {
     title = "TV";
     views = [
@@ -86,6 +101,9 @@ in {
       "androidtv_remote"
       "wake_on_lan"
       "template"
+    ];
+    customComponents = [
+      xgimiComponent
     ];
     customLovelaceModules = [
       pkgs.home-assistant-custom-lovelace-modules.universal-remote-card
