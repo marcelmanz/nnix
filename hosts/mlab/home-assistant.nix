@@ -17,26 +17,35 @@
         type = "panel";
         cards = [
           {
-            type = "custom:universal-remote-card";
-            platform = "Android TV";
-            remote_id = tvBoxRemote;
-            media_player_id = tvBoxMediaPlayer;
-            rows = [
-              ["back" "home" "power"]
-              ["dpad"]
-              ["rewind" "play_pause" "fast_forward"]
-              ["volume_down" "volume_mute" "volume_up"]
-            ];
-            custom_actions = [
+            type = "vertical-stack";
+            cards = [
               {
-                type = "button";
-                name = "power";
-                icon = "mdi:power";
-                tap_action = {
-                  action = "perform-action";
-                  perform_action = "switch.toggle";
-                  target.entity_id = "switch.xiaomi_tv_box";
-                };
+                type = "custom:universal-remote-card";
+                platform = "Android TV";
+                remote_id = tvBoxRemote;
+                media_player_id = tvBoxMediaPlayer;
+                rows = [
+                  ["back" "home" "power"]
+                  ["dpad"]
+                  ["rewind" "play_pause" "fast_forward"]
+                  ["volume_down" "volume_mute" "volume_up"]
+                ];
+                custom_actions = [
+                  {
+                    type = "button";
+                    name = "power";
+                    icon = "mdi:power";
+                    tap_action = {
+                      action = "perform-action";
+                      perform_action = "switch.toggle";
+                      target.entity_id = "switch.xiaomi_tv_box";
+                    };
+                  }
+                ];
+              }
+              {
+                type = "media-control";
+                entity = tvBoxMediaPlayer;
               }
             ];
           }
