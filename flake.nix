@@ -77,7 +77,7 @@
     };
     vpn-confinement.url = "github:Maroka-chan/VPN-Confinement";
     vikunja = {
-      url = "github:go-vikunja/vikunja";
+      url = "github:marcelmanz/vikunja/feat/project-include-subprojects";
       flake = false;
     };
     vikunja-nightly = {
