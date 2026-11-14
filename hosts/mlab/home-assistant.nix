@@ -94,6 +94,20 @@
       data.command = command;
     };
   };
+  tvBoxHoldButton = name: icon: command: {
+    type = "button";
+    inherit name icon;
+    show_state = false;
+    tap_action = {
+      action = "perform-action";
+      perform_action = "remote.send_command";
+      target.entity_id = tvBoxRemote;
+      data = {
+        command = command;
+        hold_secs = 1;
+      };
+    };
+  };
   tvDashboard = (pkgs.formats.yaml {}).generate "dashboard-tv.yaml" {
     title = "TV";
     views = [
@@ -111,7 +125,7 @@
               }
               {
                 type = "grid";
-                columns = 2;
+                columns = 4;
                 square = false;
                 cards = [
                   {
@@ -121,6 +135,8 @@
                     icon = "mdi:power";
                     tap_action.action = "toggle";
                   }
+                  (tvBoxButton "Menu" "mdi:menu" "MENU")
+                  (tvBoxButton "Apps" "mdi:view-grid" "APP_SWITCH")
                   (tvBoxButton "Mute" "mdi:volume-mute" "VOLUME_MUTE")
                 ];
               }
@@ -138,6 +154,25 @@
                   (tvBoxButton "Vol -" "mdi:volume-minus" "VOLUME_DOWN")
                   (tvBoxButton "Down" "mdi:chevron-down" "DPAD_DOWN")
                   (tvBoxButton "Vol +" "mdi:volume-plus" "VOLUME_UP")
+                ];
+              }
+              {
+                type = "grid";
+                columns = 2;
+                square = false;
+                cards = [
+                  (tvBoxHoldButton "Long OK" "mdi:gesture-tap-hold" "DPAD_CENTER")
+                  (tvBoxHoldButton "Long Back" "mdi:keyboard-return" "BACK")
+                ];
+              }
+              {
+                type = "entities";
+                entities = [
+                  {
+                    entity = "input_text.tv_search";
+                    name = "Type on TV";
+                    icon = "mdi:keyboard";
+                  }
                 ];
               }
               {
@@ -163,7 +198,6 @@
                   (xgimiActionButton "Input" "mdi:video-input-hdmi" "xgimi_input")
                   (xgimiActionButton "Settings" "mdi:cog" "xgimi_settings")
                   (xgimiButton "Menu" "mdi:menu" "139")
-                  (xgimiActionButton "Autofocus" "mdi:image-filter-center-focus" "xgimi_autofocus")
                   (xgimiFocusButton "Focus +" "mdi:plus" "253")
                   (xgimiFocusButton "Focus -" "mdi:minus" "254")
                 ];
@@ -273,6 +307,61 @@ in {
         external_url = services.homeassistant.href;
       };
       "automation ui" = "!include automations.yaml";
+      "automation manual" = [
+        {
+          alias = "Turn on TV box when projector turns on";
+          id = "projector_on_box_on";
+          mode = "single";
+          trigger = [
+            {
+              platform = "state";
+              entity_id = "binary_sensor.xgimi_h3";
+              from = "off";
+              to = "on";
+            }
+          ];
+          action = [
+            {
+              action = "switch.turn_on";
+              target.entity_id = "switch.xiaomi_tv_box";
+            }
+          ];
+        }
+        {
+          alias = "Send typed text to TV box";
+          id = "tv_search_send_text";
+          mode = "queued";
+          trigger = [
+            {
+              platform = "state";
+              entity_id = "input_text.tv_search";
+            }
+          ];
+          condition = [
+            {
+              condition = "template";
+              value_template = "{{ trigger.to_state.state not in ['', 'unknown', 'unavailable'] }}";
+            }
+          ];
+          action = [
+            {
+              action = "remote.send_command";
+              target.entity_id = tvBoxRemote;
+              data.command = "text:{{ trigger.to_state.state }}";
+            }
+            {
+              action = "input_text.set_value";
+              target.entity_id = "input_text.tv_search";
+              data.value = "";
+            }
+          ];
+        }
+      ];
+      input_text.tv_search = {
+        name = "Type on TV";
+        max = 200;
+        initial = "";
+      };
       lovelace.dashboards.dashboard-home = {
         mode = "yaml";
         filename = "${homeDashboard}";
@@ -317,7 +406,6 @@ in {
         xgimi_wake = pkgs.lib.getExe xgimiWake;
         xgimi_settings = "${pkgs.lib.getExe xgimiAdb} shell am start -n com.android.newsettings/com.xgimi.newsettings.mock.MockActivity";
         xgimi_input = "${pkgs.lib.getExe xgimiAdb} shell am start -n com.mstar.tvsetting/.switchinputsource.PictrueChangeActivity";
-        xgimi_autofocus = "${pkgs.lib.getExe xgimiAdb} shell am broadcast -a com.xgimi.autokst.calitration";
       };
       wake_on_lan = {};
       template = [
