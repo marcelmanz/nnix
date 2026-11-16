@@ -6,6 +6,11 @@
   ...
 }: let
   services = {
+    agent = {
+      port = 3100;
+      href = "https://agent.marcel.cool";
+      protected = true;
+    };
     attic = {
       port = 4321;
       href = "https://cache.marcel.cool";
@@ -49,6 +54,10 @@
       port = 8082;
       href = "https://home.marcel.cool";
       protected = true;
+    };
+    homeassistant = {
+      port = 8123;
+      href = "https://ha.marcel.cool";
     };
     immich = {
       port = 2283;
@@ -390,7 +399,7 @@ in {
     '';
 
     virtualHosts =
-      (builtins.removeAttrs serviceVirtualHosts ["auth" "jellyfin" "seafile" "azuracast" "live" "livedj" "streamcam" "navidrome" "radicle" "vaultwarden" "offtiktokapi"])
+      (builtins.removeAttrs serviceVirtualHosts ["auth" "jellyfin" "seafile" "azuracast" "live" "livedj" "streamcam" "navidrome" "radicle" "vaultwarden" "offtiktokapi" "homeassistant"])
       // {
         "offtiktok-api.marcel.cool" = let
           base = mkProxyHost "offtiktokapi" services.offtiktokapi;
@@ -424,6 +433,25 @@ in {
                       ''
                       + base.locations."/".extraConfig;
                   };
+              };
+          };
+
+        "ha.marcel.cool" = let
+          base = mkProxyHost "homeassistant" services.homeassistant;
+        in
+          base
+          // {
+            locations."/" =
+              base.locations."/"
+              // {
+                extraConfig =
+                  ''
+                    allow 127.0.0.1;
+                    allow 192.168.1.0/24;
+                    include /var/lib/lan-ipv6-prefix/nginx-allow*.conf;
+                    deny all;
+                  ''
+                  + base.locations."/".extraConfig;
               };
           };
 

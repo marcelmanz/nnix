@@ -10,7 +10,7 @@ in {
       StateDirectory = "lan-ipv6-prefix";
     };
     script = ''
-      prefix=$(ip -6 route show dev ${lanInterface} proto kernel | cut -d" " -f1 | grep -v "^fe80::" | head -1 || true)
+      prefix=$(ip -6 route show dev ${lanInterface} proto ra | cut -d" " -f1 | grep -v "^fe80::" | head -1 || true)
       if [ -z "$prefix" ] || [ "$prefix" = "$(cat ${stateDir}/prefix 2>/dev/null)" ]; then
         exit 0
       fi

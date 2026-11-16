@@ -1190,15 +1190,16 @@
     "vikunja": {
       "flake": false,
       "locked": {
-        "lastModified": 1794493653,
-        "narHash": "sha256-PJNBRkUTIeLGCbohW0GLUrbqBmJiOFWrzoigSnXMBPU=",
-        "owner": "go-vikunja",
+        "lastModified": 1794529398,
+        "narHash": "sha256-vO5KQPqe8pL8zO+AuBcD6RLUSn7uapiVHfNZGhljWnM=",
+        "owner": "marcelmanz",
         "repo": "vikunja",
-        "rev": "00d95ad5898a93c955867f36f695759c5ce54b37",
+        "rev": "0e8d3789ea185156a5d49375bebd97411742e26f",
         "type": "github"
       },
       "original": {
-        "owner": "go-vikunja",
+        "owner": "marcelmanz",
+        "ref": "feat/project-include-subprojects",
         "repo": "vikunja",
         "type": "github"
       }

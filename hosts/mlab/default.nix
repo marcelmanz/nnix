@@ -24,6 +24,7 @@
     ./flaresolverr.nix
     ./dropbox.nix
     ./graphana.nix
+    ./home-assistant.nix
     ./homepage.nix
     ./immich.nix
     ./invidious
@@ -321,6 +322,7 @@
           # networkd's IPv6PrivacyExtensions overrides networking.tempAddresses on
           # interfaces it manages; "yes" prefers a temporary address for outbound.
           IPv6PrivacyExtensions = "yes";
+          IPv6AcceptRA = true;
           # This USB 10G adapter drops carrier for ~5s several times a day (kernel:
           # "atlantic: link change old 10000 new 0"). By default networkd tears the whole IP
           # config down on carrier loss and re-acquires on return ("DHCPv6 lease lost"),
@@ -341,6 +343,7 @@
           LLDP = false; # see 10-lan10g above
           IPv6LinkLocalAddressGenerationMode = "stable-privacy";
           IPv6PrivacyExtensions = "yes"; # see 10-lan10g above
+          IPv6AcceptRA = true;
         };
         ipv6AcceptRAConfig.Token = "prefixstable";
       };
