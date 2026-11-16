@@ -117,6 +117,15 @@ in {
     };
   };
 
+  # Name is started by hyprland.lua; BindsTo pulls in graphical-session.target,
+  # which the GNOME portal backend requires for the Settings interface.
+  systemd.user.targets.nixos-fake-graphical-session = {
+    Unit = {
+      Description = "Hyprland session target for graphical-session dependents";
+      BindsTo = ["graphical-session.target"];
+    };
+  };
+
   systemd.user.services.openlogi-agent = {
     Unit = {
       Description = "OpenLogi background agent (Logitech HID++ device control)";
