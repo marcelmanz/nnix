@@ -8,7 +8,7 @@
   tvBoxMac = "70:68:71:f9:e9:e6";
   tvBoxRemote = "remote.living_room_xiao_mitv";
   tvBoxMediaPlayer = "media_player.living_room_xiao_mitv";
-  xgimiHost = "192.168.1.202";
+  xgimiHost = "192.168.1.206";
   xgimiKey = pkgs.writeShellApplication {
     name = "xgimi-key";
     runtimeInputs = [pkgs.netcat-openbsd];
@@ -404,7 +404,7 @@ in {
         xgimi_key = "${pkgs.lib.getExe xgimiKey} {{ key }}";
         xgimi_focus = "${pkgs.lib.getExe xgimiFocus} {{ code }}";
         xgimi_wake = pkgs.lib.getExe xgimiWake;
-        xgimi_settings = "${pkgs.lib.getExe xgimiAdb} shell am start -n com.android.newsettings/com.xgimi.newsettings.mock.MockActivity";
+        xgimi_settings = "${pkgs.lib.getExe xgimiAdb} shell am startservice -n com.android.newsettings/com.xgimi.newsettings.SettingService -a com.xgimi.settings.SETTINGS";
         xgimi_input = "${pkgs.lib.getExe xgimiAdb} shell am start -n com.mstar.tvsetting/.switchinputsource.PictrueChangeActivity";
       };
       wake_on_lan = {};
@@ -419,6 +419,21 @@ in {
               turn_on = [
                 {
                   repeat = {
+                    count = 3;
+                    sequence = [
+                      {
+                        action = "wake_on_lan.send_magic_packet";
+                        data = {
+                          mac = tvBoxMac;
+                          broadcast_address = "192.168.1.255";
+                        };
+                      }
+                      {delay = "00:00:00.2";}
+                    ];
+                  };
+                }
+                {
+                  repeat = {
                     sequence = [
                       {
                         action = "wake_on_lan.send_magic_packet";
@@ -429,14 +444,14 @@ in {
                       }
                       {
                         wait_template = "{{ not is_state('${tvBoxMediaPlayer}', 'unavailable') }}";
-                        timeout = "00:00:05";
+                        timeout = "00:00:02";
                         continue_on_timeout = true;
                       }
                     ];
                     until = [
                       {
                         condition = "template";
-                        value_template = "{{ not is_state('${tvBoxMediaPlayer}', 'unavailable') or repeat.index >= 8 }}";
+                        value_template = "{{ not is_state('${tvBoxMediaPlayer}', 'unavailable') or repeat.index >= 20 }}";
                       }
                     ];
                   };
