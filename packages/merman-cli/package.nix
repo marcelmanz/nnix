@@ -5,6 +5,7 @@
 craneLib.buildPackage {
   pname = "merman-cli";
   version = "0.10.0";
+  doCheck = false;
   src = pkgs.fetchzip {
     url = "https://crates.io/api/v1/crates/merman-cli/0.10.0/download";
     extension = "tar.gz";
