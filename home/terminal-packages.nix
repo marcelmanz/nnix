@@ -17,6 +17,7 @@ with pkgs; [
   # zuban
   ink-md
   appimage-run
+  merman-cli
   astro-language-server
   atool
   atuin

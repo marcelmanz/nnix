@@ -9,6 +9,7 @@ in
   final: prev: {
     lsv = call "lsv";
     ink-md = call "ink-md";
+    merman-cli = call "merman-cli";
     audio-select = call "audio-select";
     rff = call "rff";
     pulseaudio-next-output = call "pulseaudio-next-output";

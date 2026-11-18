@@ -209,6 +209,7 @@
     packages.${system} = {
       lsv = pkgs.lsv;
       "ink-md" = pkgs.ink-md;
+      "merman-cli" = pkgs."merman-cli";
       "audio-select" = pkgs."audio-select";
       rff = pkgs.rff;
       "reedline-bash" = pkgs."reedline-bash";
