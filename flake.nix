@@ -286,6 +286,7 @@
           inputs.projectw.homeManagerModules.default
           ./home/gui.nix
           ./home/terminal.nix
+          ./home/battery-guard.nix
           ./hosts/work/default.nix
           (
             {
