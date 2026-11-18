@@ -13,6 +13,11 @@
     nixpkgsNitter.url = "github:NixOS/nixpkgs/e7439b6b14ad3cc35d05608ebca9bce01a25f5f8";
     openlogi.url = "github:AprilNEA/OpenLogi?dir=packaging";
     omnidiff.url = "github:ivankovic/omnidiff";
+    ironbar = {
+      url = "github:marcelmanz/ironbar";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.crane.follows = "crane";
+    };
     fenix = {
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -164,6 +169,7 @@
         (final: prev: {"brave-origin" = inputs.brave-origin-channels.packages.${system}.nightly;})
         (final: prev: {psysonic = inputs.psysonic.packages.${system}.psysonic;})
         (final: prev: {omnidiff = inputs.omnidiff.packages.${system}.omnidiff;})
+        (final: prev: {ironbar = inputs.ironbar.packages.${system}.ironbar;})
         (final: prev: {
           # Remove once a nixpkgs bump builds these without the overrides (cargo hook regression).
           mdwatch = prev.mdwatch.overrideAttrs (old: {
@@ -177,10 +183,6 @@
           gelly = prev.gelly.overrideAttrs (old: {preBuild = (old.preBuild or "") + "unset AWS_LC_SYS_USE_SYSTEM\n";});
           rabbitmqadmin-ng = prev.rabbitmqadmin-ng.overrideAttrs (old: {preBuild = (old.preBuild or "") + "unset AWS_LC_SYS_USE_SYSTEM\n";});
           lk-jwt-service = prev.lk-jwt-service.overrideAttrs (old: {preBuild = (old.preBuild or "") + "unset AWS_LC_SYS_USE_SYSTEM\n";});
-          ironbar = prev.ironbar.overrideAttrs (old: {
-            nativeBuildInputs = (old.nativeBuildInputs or []) ++ [prev.pkg-config];
-            buildInputs = (old.buildInputs or []) ++ [prev.libgit2];
-          });
           radicle-node = prev.radicle-node.overrideAttrs (old: {
             nativeBuildInputs = (old.nativeBuildInputs or []) ++ [prev.pkg-config];
             buildInputs = (old.buildInputs or []) ++ [prev.libgit2];

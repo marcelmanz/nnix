@@ -404,7 +404,7 @@ in {
         xgimi_key = "${pkgs.lib.getExe xgimiKey} {{ key }}";
         xgimi_focus = "${pkgs.lib.getExe xgimiFocus} {{ code }}";
         xgimi_wake = pkgs.lib.getExe xgimiWake;
-        xgimi_settings = "${pkgs.lib.getExe xgimiAdb} shell am start -n com.android.newsettings/com.xgimi.newsettings.mock.MockActivity";
+        xgimi_settings = "${pkgs.lib.getExe xgimiAdb} shell am startservice -n com.android.newsettings/com.xgimi.newsettings.SettingService -a com.xgimi.settings.SETTINGS";
         xgimi_input = "${pkgs.lib.getExe xgimiAdb} shell am start -n com.mstar.tvsetting/.switchinputsource.PictrueChangeActivity";
       };
       wake_on_lan = {};

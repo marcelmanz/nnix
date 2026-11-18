@@ -107,6 +107,21 @@
         "type": "github"
       }
     },
+    "flake-compat": {
+      "locked": {
+        "lastModified": 1767039857,
+        "narHash": "sha256-vNpUSpF5Nuw8xvDLj2KCwwksIbjua2LZCqhV1LNRDns=",
+        "owner": "edolstra",
+        "repo": "flake-compat",
+        "rev": "5edf11c44bc78a0d334f6334cdaf7d60d732daab",
+        "type": "github"
+      },
+      "original": {
+        "owner": "edolstra",
+        "repo": "flake-compat",
+        "type": "github"
+      }
+    },
     "flake-parts": {
       "inputs": {
         "nixpkgs-lib": [
@@ -295,6 +310,30 @@
       "original": {
         "owner": "nix-community",
         "repo": "home-manager",
+        "type": "github"
+      }
+    },
+    "ironbar": {
+      "inputs": {
+        "crane": [
+          "crane"
+        ],
+        "flake-compat": "flake-compat",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1795008671,
+        "narHash": "sha256-qBMwly/0FKx7ypRtWWTJwL1HJejqPISEZoDyo9Y6xBE=",
+        "owner": "marcelmanz",
+        "repo": "ironbar",
+        "rev": "5481ad0da56de87a549c68bbfa9a28064b7ac06a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "marcelmanz",
+        "repo": "ironbar",
         "type": "github"
       }
     },
@@ -973,6 +1012,7 @@
         "dots": "dots",
         "fenix": "fenix",
         "home-manager": "home-manager",
+        "ironbar": "ironbar",
         "musnix": "musnix",
         "my-nixpkgs": "my-nixpkgs",
         "myna": "myna",
