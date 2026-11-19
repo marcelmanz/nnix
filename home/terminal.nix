@@ -9,6 +9,12 @@
   homeDir = config.home.homeDirectory;
   pstore = "${homeDir}/clones/own/password-store";
   terminalPackages = import ./terminal-packages.nix {inherit config pkgs pkgsStable;};
+  cowsayFiles = pkgs.fetchFromGitHub {
+    owner = "paulkaefer";
+    repo = "cowsay-files";
+    rev = "66f85b8643f92b94865cd50b202af3da3b2f1a41";
+    hash = "sha256-Sz8N+H0nQvHagGjCqR5oz6OAvJU2j0m/NmkdDoo2bxA=";
+  };
 in {
   home.stateVersion = "26.05";
   programs.home-manager.enable = true;
@@ -23,6 +29,7 @@ in {
     PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
     PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
     USE_GKE_GCLOUD_AUTH_PLUGIN = "True";
+    COWPATH = "${cowsayFiles}/cows:${pkgs.cowsay}/share/cowsay/cows";
   };
 
   services.ollama = {
