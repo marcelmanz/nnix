@@ -273,6 +273,34 @@ in {
         source = link "${dots}/.agents/skills/summarize-changes";
         force = true;
       };
+      ".claude/skills/agent-rules" = {
+        source = link "${dots}/.agents/skills/agent-rules";
+        force = true;
+      };
+      ".claude/skills/changelog-enrich" = {
+        source = link "${dots}/.agents/skills/changelog-enrich";
+        force = true;
+      };
+      ".claude/skills/diagram" = {
+        source = link "${dots}/.agents/skills/diagram";
+        force = true;
+      };
+      ".claude/skills/evaluate-data-fetching" = {
+        source = link "${dots}/.agents/skills/evaluate-data-fetching";
+        force = true;
+      };
+      ".claude/skills/find-skills" = {
+        source = link "${dots}/.agents/skills/find-skills";
+        force = true;
+      };
+      ".claude/skills/package-fallback" = {
+        source = link "${dots}/.agents/skills/package-fallback";
+        force = true;
+      };
+      ".claude/skills/tp-search" = {
+        source = link "${dots}/.agents/skills/tp-search";
+        force = true;
+      };
       ".agents/AGENTS.md".source = link "${dots}/.agents/AGENTS.md";
       ".config/btop/btop.conf".source = link "${dots}/.config/btop/btop.conf";
       ".codex/AGENTS.md".source = link "${dots}/.agents/AGENTS.md";
