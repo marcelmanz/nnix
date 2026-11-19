@@ -1004,6 +1004,22 @@
         "url": "https://codeberg.org/marcelmanz/resona"
       }
     },
+    "ripdrag": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1795089534,
+        "narHash": "sha256-R6z5YoeJbX3/LFDntJO+T0gzlIpeeG0UkcJNVbwpuwY=",
+        "owner": "marcelmanz",
+        "repo": "ripdrag",
+        "rev": "d60c7b0e3ec33ffb35bc30e36b43ba6a8ab0b453",
+        "type": "github"
+      },
+      "original": {
+        "owner": "marcelmanz",
+        "repo": "ripdrag",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "brave-origin-channels": "brave-origin-channels",
@@ -1033,6 +1049,7 @@
         "psysonic": "psysonic",
         "reedline-bash": "reedline-bash",
         "resona": "resona",
+        "ripdrag": "ripdrag",
         "sops-nix": "sops-nix",
         "tmex": "tmex",
         "vikunja": "vikunja",

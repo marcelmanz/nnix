@@ -55,6 +55,10 @@
       url = "github:maxomatic458/reedline-bash";
       flake = false;
     };
+    ripdrag = {
+      url = "github:marcelmanz/ripdrag";
+      flake = false;
+    };
     zuban.url = "github:marcelmanz/zuban";
     nix-on-droid = {
       url = "github:nix-community/nix-on-droid/master";
@@ -170,6 +174,7 @@
         (final: prev: {psysonic = inputs.psysonic.packages.${system}.psysonic;})
         (final: prev: {omnidiff = inputs.omnidiff.packages.${system}.omnidiff;})
         (final: prev: {ironbar = inputs.ironbar.packages.${system}.ironbar;})
+        (final: prev: {ripdrag = prev.ripdrag.overrideAttrs {src = inputs.ripdrag;};})
         (final: prev: {
           # Remove once a nixpkgs bump builds these without the overrides (cargo hook regression).
           mdwatch = prev.mdwatch.overrideAttrs (old: {
