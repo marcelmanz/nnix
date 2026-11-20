@@ -46,7 +46,7 @@
 <body>
 <aside>
   <form id="new" style="display:flex;flex-direction:column;gap:6px">
-    <input id="repo" placeholder="https repo to clone">
+    <input id="repo" placeholder="repo url (https or ssh)">
     <input id="project-id" placeholder="id (default: repo name)" pattern="[a-z][a-z0-9]*(_[a-z0-9]+)*">
     <button class="primary">Add project</button>
   </form>
@@ -60,6 +60,7 @@
     <div style="display:flex;flex-direction:column;gap:6px">
       <button class="primary" id="send-button">Send</button>
       <button type="button" id="abort">Abort</button>
+      <button type="button" id="push">Push</button>
       <button type="button" id="delete">Delete</button>
     </div>
   </form>
@@ -226,6 +227,12 @@ function render(record) {
     }
     case "session_result":
       assistant = null; add(resultCard(record)); refresh(); break;
+    case "bridge_push": {
+      const el = document.createElement("div");
+      el.className = "note";
+      el.textContent = `pushed ${record.text}`;
+      add(el); break;
+    }
     case "bridge_exit": case "bridge_stderr": {
       const el = document.createElement("div");
       el.className = "note";
@@ -266,6 +273,11 @@ $("message").onkeydown = (event) => {
 };
 
 $("abort").onclick = () => current && api(`/api/sessions/${current}/abort`, { method: "POST" });
+
+$("push").onclick = (event) => {
+  if (!current) return;
+  busy(event.currentTarget, () => api(`/api/sessions/${current}/push`, { method: "POST" }));
+};
 
 $("delete").onclick = (event) => {
   if (!current || !confirm(`Delete task ${current}, its worktree and its branch agent/${current}?`)) return;

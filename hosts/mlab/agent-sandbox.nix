@@ -7,6 +7,7 @@
   ...
 }: let
   workspace = "/var/lib/agent-sandbox";
+  mirrors = "/var/lib/agent-bridge/mirrors";
   agentUid = 2000;
   bridgePython = pkgs.python3.withPackages (ps: [ps.aiohttp]);
   bridgeDir = pkgs.runCommand "agent-bridge" {} ''
@@ -39,6 +40,8 @@ in {
   systemd.tmpfiles.rules = [
     "d ${workspace} 0750 agent-sandbox agent-sandbox -"
     "d ${workspace}/.sessions 0750 agent-sandbox agent-sandbox -"
+    "d /var/lib/agent-bridge 0755 root root -"
+    "d ${mirrors} 0755 dev users -"
     "d ${workspace}/.pi 0750 agent-sandbox agent-sandbox -"
     "d ${workspace}/.pi/agent 0750 agent-sandbox agent-sandbox -"
     "L+ ${workspace}/.pi/agent/models.json - - - - ${inputs.dots}/.pi/agent/models.json"
@@ -49,9 +52,10 @@ in {
     after = ["container@agent.service"];
     requires = ["container@agent.service"];
     wantedBy = ["multi-user.target"];
-    path = ["/run/current-system/sw"];
+    path = ["/run/current-system/sw" pkgs.git pkgs.openssh];
     environment = {
       STATE_DIR = "/var/lib/agent-bridge";
+      MIRRORS_DIR = mirrors;
       PORT = toString services.agent.port;
     };
     serviceConfig = {
@@ -92,6 +96,10 @@ in {
         hostPath = workspace;
         isReadOnly = false;
       };
+      "/mirrors" = {
+        hostPath = mirrors;
+        isReadOnly = true;
+      };
       "/run/agent.env" = {
         hostPath = config.sops.templates."agent-sandbox.env".path;
         isReadOnly = true;
@@ -105,9 +113,12 @@ in {
 
       programs.git = {
         enable = true;
-        config.user = {
-          name = "agent";
-          email = "agent@agent.marcel.cool";
+        config = {
+          user = {
+            name = "agent";
+            email = "agent@agent.marcel.cool";
+          };
+          safe.directory = "/mirrors/*";
         };
       };
 

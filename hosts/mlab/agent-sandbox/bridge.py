@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import re
+import tempfile
 import time
 from pathlib import Path
 
@@ -12,8 +13,11 @@ PROJECTS_DIR = STATE_DIR / "projects"
 SESSIONS_DIR = STATE_DIR / "sessions"
 PORT = int(os.environ["PORT"])
 CONTAINER = os.environ.get("CONTAINER", "agent")
+MIRRORS_DIR = Path(os.environ["MIRRORS_DIR"])
+BUNDLES_DIR = STATE_DIR / "bundles"
+GIT_USER = os.environ.get("GIT_USER", "dev")
 INDEX = Path(__file__).with_name("index.html")
-REPO_RE = re.compile(r"^https://[A-Za-z0-9._~:/@%+-]+$")
+REPO_RE = re.compile(r"^(?:(?:https|ssh)://[A-Za-z0-9][A-Za-z0-9._~:/@%+-]*|[A-Za-z0-9][A-Za-z0-9._-]*@[A-Za-z0-9][A-Za-z0-9.-]*:[A-Za-z0-9._~/%+-]+)$")
 PROJECT_ID_RE = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
 SUMMARY_LIMIT = 4000
 
@@ -50,6 +54,37 @@ async def run_in_container(*args):
     )
     output, _ = await proc.communicate()
     return proc.returncode, output.decode(errors="replace")
+
+
+async def run_as_git_user(*args):
+    proc = await asyncio.create_subprocess_exec(
+        "runuser", "-u", GIT_USER, "--", "env", f"HOME=/home/{GIT_USER}", "GIT_TERMINAL_PROMPT=0",
+        "GIT_SSH_COMMAND=ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new", *args,
+        cwd=MIRRORS_DIR, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
+    )
+    output, _ = await proc.communicate()
+    if proc.returncode != 0:
+        raise web.HTTPBadGateway(text=output.decode(errors="replace"))
+    return output.decode(errors="replace")
+
+
+async def read_from_container(*args):
+    proc = await asyncio.create_subprocess_exec(
+        "nixos-container", "run", CONTAINER, "--", "runuser", "-l", "agent", "-c", " ".join(map(_quote, args)),
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+    )
+    output, errors = await proc.communicate()
+    if proc.returncode != 0:
+        raise web.HTTPBadGateway(text=errors.decode(errors="replace"))
+    return output
+
+
+def mirror_path(project_id):
+    return MIRRORS_DIR / f"{project_id}.git"
+
+
+async def update_mirror(project_id):
+    await run_as_git_user("git", "-C", str(mirror_path(project_id)), "fetch", "--quiet", "origin")
 
 
 async def run_or_fail(*args):
@@ -180,7 +215,7 @@ def load_state():
 
 
 def project_id_from_repo(repo):
-    name = repo.rstrip("/").rsplit("/", 1)[-1].removesuffix(".git").lower()
+    name = re.split(r"[/:]", repo.rstrip("/"))[-1].removesuffix(".git").lower()
     name = re.sub(r"[^a-z0-9]+", "_", name).strip("_")
     if name and not name[0].isalpha():
         name = "p_" + name
@@ -206,7 +241,7 @@ async def create_project(request):
     body = await request.json()
     repo = str(body.get("repo") or "").strip()
     if repo and not REPO_RE.match(repo):
-        raise web.HTTPBadRequest(text="repo must be an https url")
+        raise web.HTTPBadRequest(text="repo must be an https://, ssh:// or git@host:path url")
     project_id = str(body.get("id") or "").strip() or project_id_from_repo(repo)
     if not PROJECT_ID_RE.match(project_id):
         raise web.HTTPBadRequest(text="project id must look like word or word_x (lowercase letters, digits, underscores)")
@@ -219,7 +254,10 @@ async def create_project(request):
             raise web.HTTPConflict(text=f"project {project_id} already exists for {projects[project_id]['repo'] or 'an empty repo'}")
         path = project_path(project_id)
         if repo:
-            await run_or_fail("git", "clone", "--", repo, path)
+            mirror = str(mirror_path(project_id))
+            await run_as_git_user("git", "clone", "--quiet", "--bare", "--", repo, mirror)
+            await run_as_git_user("git", "-C", mirror, "config", "remote.origin.fetch", "+refs/heads/*:refs/heads/*")
+            await run_or_fail("git", "clone", "--quiet", "--", f"file:///mirrors/{project_id}.git", path)
         else:
             await run_or_fail("git", "init", "--quiet", path)
             await run_or_fail("git", "-C", path, "commit", "--quiet", "--allow-empty", "-m", "init")
@@ -254,6 +292,7 @@ async def create_session(request):
         path = project_path(project["id"])
         start_point = "HEAD"
         if project["repo"]:
+            await update_mirror(project["id"])
             await run_or_fail("git", "-C", path, "fetch", "--quiet", "origin")
             start_point = "origin/HEAD"
         await run_or_fail("git", "-C", path, "worktree", "add", "--quiet", "-b", branch, worktree_path(session_id), start_point)
@@ -323,6 +362,30 @@ async def stop(request):
     return web.json_response({"ok": True})
 
 
+async def push(request):
+    session = find(request)
+    project = projects[session.project]
+    if not project["repo"]:
+        raise web.HTTPBadRequest(text="this project has no remote to push to")
+    await update_mirror(project["id"])
+    bundle = await read_from_container(
+        "git", "-C", worktree_path(session.id), "bundle", "create", "--quiet", "-", session.branch, "--not", "--remotes=origin",
+    )
+    mirror = str(mirror_path(project["id"]))
+    BUNDLES_DIR.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=BUNDLES_DIR, suffix=".bundle") as bundle_file:
+        bundle_file.write(bundle)
+        bundle_file.flush()
+        os.chmod(bundle_file.name, 0o644)
+        await run_as_git_user(
+            "git", "-c", "fetch.fsckObjects=true", "-C", mirror, "fetch", "--quiet", bundle_file.name,
+            f"refs/heads/{session.branch}:refs/heads/{session.branch}",
+        )
+    output = await run_as_git_user("git", "-C", mirror, "push", "--porcelain", "origin", f"refs/heads/{session.branch}")
+    session.append({"type": "bridge_push", "text": output.strip()})
+    return web.json_response({"ok": True, "output": output})
+
+
 async def delete_session(request):
     session = find(request)
     async with create_lock:
@@ -338,6 +401,11 @@ async def delete_session(request):
         await run_in_container("git", "-C", path, "worktree", "remove", "--force", worktree_path(session.id))
         await run_in_container("git", "-C", path, "worktree", "prune")
         await run_in_container("git", "-C", path, "branch", "-D", session.branch)
+        if projects[session.project]["repo"]:
+            try:
+                await run_as_git_user("git", "-C", str(mirror_path(session.project)), "branch", "-D", session.branch)
+            except web.HTTPBadGateway:
+                pass
         await run_in_container("rm", "-rf", f"/workspace/.sessions/{session.id}")
         (SESSIONS_DIR / f"{session.id}.json").unlink(missing_ok=True)
         session.log_path.unlink(missing_ok=True)
@@ -363,6 +431,7 @@ app.add_routes([
     web.post("/api/sessions/{id}/prompt", prompt),
     web.post("/api/sessions/{id}/abort", abort),
     web.post("/api/sessions/{id}/stop", stop),
+    web.post("/api/sessions/{id}/push", push),
     web.delete("/api/sessions/{id}", delete_session),
 ])
 web.run_app(app, host="127.0.0.1", port=PORT)
