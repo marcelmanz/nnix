@@ -48,7 +48,9 @@ def task_instructions(session):
 
 def save_json(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data))
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.write_text(json.dumps(data))
+    os.replace(temporary, path)
 
 
 async def run_in_container(*args):
@@ -120,8 +122,11 @@ class Session:
         self.deleted = False
         self.waiters = set()
         if self.cursor_path.exists():
-            cursor = json.loads(self.cursor_path.read_text())
-            self.offset, self.running, self.last_text = cursor["offset"], cursor["running"], cursor["last_text"]
+            try:
+                cursor = json.loads(self.cursor_path.read_text())
+                self.offset, self.running, self.last_text = cursor["offset"], cursor["running"], cursor["last_text"]
+            except (ValueError, KeyError):
+                self.offset = self.output_path.stat().st_size if self.output_path.exists() else 0
 
     def meta(self):
         return {
@@ -536,4 +541,4 @@ app.add_routes([
     web.get(r"/{project:[a-z][a-z0-9_]*}", page),
     web.get(r"/{project:[a-z][a-z0-9_]*}/{task:[a-z][a-z0-9_]*}", page),
 ])
-web.run_app(app, host="127.0.0.1", port=PORT)
+web.run_app(app, host="127.0.0.1", port=PORT, shutdown_timeout=2)
