@@ -8,10 +8,12 @@ stick needs both databases and the analysis files:
 PIONEER/rekordbox/exportLibrary.db   OneLibrary / Device Library Plus (newer CDJs)
 PIONEER/rekordbox/export.pdb         legacy database (older CDJ/XDJ)
 PIONEER/USBANLZ/...                  BPM, key and waveform analysis
-Contents/<Artist>/<Album>/<file>     audio
+<Artist>/<Album>/<file>              audio, referenced in place
 ```
 
-`dj-rekordbox` maintains that layout on `mlab` and copies it to a USB stick.
+`dj-rekordbox` writes `PIONEER/` into `/var/lib/media/dj` itself, so the DJ
+folder is a complete stick image. Syncthing sends it to the laptop with the
+music, and copying the folder's contents to a stick is enough.
 It uses [djsync](https://github.com/Pikkol0/djsync) as a Python library for the
 Rekordbox databases and for local BPM/key/waveform analysis. It is packaged in
 `packages/djsync`; the exporter itself is `packages/dj-rekordbox`.
@@ -23,7 +25,7 @@ Rekordbox databases and for local BPM/key/waveform analysis. It is packaged in
 ```sh
 dj-rekordbox export \
   --source /var/lib/media/dj \
-  --root /var/lib/media/dj-rekordbox \
+  --root /var/lib/media/dj \
   --min-age 120 --prune
 ```
 
@@ -32,11 +34,12 @@ dj-rekordbox export \
   process files whose size or mtime changed;
 - files newer than 120 s are skipped so Bandcamp/Syncthing half-written files
   are not imported;
-- tracks deleted from `/var/lib/media/dj` are removed from the export and the
-  databases.
+- tracks deleted from `/var/lib/media/dj` are removed from the databases; the
+  exporter never moves, renames or deletes audio when source and root are the
+  same folder.
 
-The export root is `/var/lib/media/dj-rekordbox`. It is a complete stick image;
-do not point CDJs at `/var/lib/media/dj` directly.
+Wait until the export has finished and Syncthing shows the folder as up to
+date before copying it to a stick, so the databases and analysis files match.
 
 ## Making a stick
 
@@ -48,9 +51,13 @@ exFAT is only read by newer CDJ-2000NXS2/XDJ models; older players show
 # format once (replace /dev/sdX with the whole stick, not a partition)
 sudo mkfs.vfat -F 32 -n CDJ /dev/sdX
 
-# mount it, then copy the prepared export
-dj-rekordbox sync-usb --root /var/lib/media/dj-rekordbox \
-  --dest /run/media/$USER/CDJ --delete
+# mount it, then copy the whole DJ folder (from the laptop's Syncthing copy)
+rsync -rt --modify-window=2 --delete --exclude=.stfolder --exclude=.stversions \
+  --exclude=/DJSync_Backups/ --exclude='/.djsync-export.*' \
+  ~/Music/dj/ /run/media/$USER/CDJ/
+
+# or, with the stick plugged into mlab
+dj-rekordbox sync-usb --dest /run/media/$USER/CDJ --delete
 ```
 
 `sync-usb`:
@@ -62,8 +69,9 @@ dj-rekordbox sync-usb --root /var/lib/media/dj-rekordbox \
 - uses rsync so repeated copies are incremental;
 - writes the marker only after a successful copy.
 
-Use the whole prepared export, including `PIONEER/` **and** `Contents/`.
-`DJSync_Backups/` is deliberately not copied.
+Copy the folder's contents, not the folder: `PIONEER/` must be at the root of
+the stick, next to the artist folders. `DJSync_Backups/` is deliberately not
+copied.
 
 ## Manual commands
 

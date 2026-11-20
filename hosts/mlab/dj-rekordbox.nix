@@ -2,29 +2,24 @@
   pkgs,
   ...
 }: let
-  source = "/var/lib/media/dj";
-  exportRoot = "/var/lib/media/dj-rekordbox";
+  library = "/var/lib/media/dj";
 
   # Keep djsync's own settings/state out of the USB export tree.
   stateDir = "/var/lib/dj-rekordbox";
 in {
   # Rekordbox USB export (OneLibrary exportLibrary.db + legacy export.pdb + ANLZ).
-  # The export is a normal stick image; sync-usb copies it to a mounted FAT32 stick:
+  # Copy the whole folder to a FAT32 stick, or from mlab:
   #   dj-rekordbox sync-usb --dest /run/media/$USER/CDJ --delete
   environment.systemPackages = [pkgs.dj-rekordbox];
 
-  systemd.tmpfiles.rules = [
-    "d ${exportRoot} 2775 root media -"
-  ];
-
   systemd.services.dj-rekordbox = {
-    description = "Mirror ${source} into a Rekordbox USB export";
+    description = "Write a Rekordbox USB export into ${library}";
     after = ["local-fs.target"];
     requires = ["local-fs.target"];
     serviceConfig = {
       Type = "oneshot";
       User = "root";
-      ExecStart = "${pkgs.dj-rekordbox}/bin/dj-rekordbox export --source ${source} --root ${exportRoot} --min-age 120 --prune";
+      ExecStart = "${pkgs.dj-rekordbox}/bin/dj-rekordbox export --source ${library} --root ${library} --min-age 120 --prune";
       StateDirectory = "dj-rekordbox";
       Environment = "DJSYNC_HOME=${stateDir}";
       # First export analyses every track; a large library can take a while.
@@ -36,7 +31,7 @@ in {
       ProtectHome = true;
       PrivateTmp = true;
       NoNewPrivileges = true;
-      ReadWritePaths = [exportRoot stateDir];
+      ReadWritePaths = [library stateDir];
     };
   };
 

@@ -67,6 +67,7 @@ SKIP_DIRS = {
     "System Volume Information",
     "DJSync imported",
     "DJSync_Backups",
+    "PIONEER",
 }
 UNSUPPORTED_AUDIO_EXTS = {
     ".aifc",
@@ -359,6 +360,8 @@ def choose_destination(
 ) -> tuple[Path, str]:
     """Pick a unique path under Contents/. Existing manifest entry wins; otherwise Artist/Album."""
     root = lib.drive.root
+    if source_root == root.resolve():
+        return source_path, lib_rel(root, source_path)
     if previous and previous.get("dest"):
         previous_dest = str(previous["dest"])
         owner = owners.get(previous_dest.casefold())
@@ -618,9 +621,10 @@ def cmd_export(args: argparse.Namespace) -> int:
     if not source.is_dir():
         LOG.error("Source folder does not exist: %s", source)
         return 1
-    if root == source or source in root.parents or root in source.parents:
+    if source in root.parents or root in source.parents:
         LOG.error("The export root and source folder must not contain each other")
         return 1
+    in_place = root == source
 
     with exclusive_lock(root):
         if args.dry_run and not (root / DB_REL).is_file():
@@ -825,7 +829,7 @@ def cmd_export(args: argparse.Namespace) -> int:
                         dest = str(entry.get("dest", ""))
                         try:
                             if cid and cid in tracks_by_id:
-                                lib.delete_track(cid, delete_file=True)
+                                lib.delete_track(cid, delete_file=not in_place)
                             elif dest:
                                 unlink_inside(root, dest)
                             del state["tracks"][rel]
@@ -992,7 +996,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_init = sub.add_parser("init", help="create a blank Rekordbox export")
-    p_init.add_argument("--root", default="/var/lib/media/dj-rekordbox")
+    p_init.add_argument("--root", default="/var/lib/media/dj")
     p_init.add_argument(
         "--force",
         action="store_true",
@@ -1002,7 +1006,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_export = sub.add_parser("export", help="sync a DJ folder into the export")
     p_export.add_argument("--source", default="/var/lib/media/dj")
-    p_export.add_argument("--root", default="/var/lib/media/dj-rekordbox")
+    p_export.add_argument("--root", default="/var/lib/media/dj")
     p_export.add_argument(
         "--min-age",
         type=float,
@@ -1035,11 +1039,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_export.set_defaults(func=cmd_export)
 
     p_status = sub.add_parser("status", help="show library and export.pdb status")
-    p_status.add_argument("--root", default="/var/lib/media/dj-rekordbox")
+    p_status.add_argument("--root", default="/var/lib/media/dj")
     p_status.set_defaults(func=cmd_status)
 
     p_usb = sub.add_parser("sync-usb", help="copy the export to a FAT32 USB stick")
-    p_usb.add_argument("--root", default="/var/lib/media/dj-rekordbox")
+    p_usb.add_argument("--root", default="/var/lib/media/dj")
     p_usb.add_argument("--dest", required=True, help="mount point of the USB stick")
     p_usb.add_argument(
         "--delete",
