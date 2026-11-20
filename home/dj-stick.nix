@@ -25,6 +25,7 @@
       rekordbox="''${DJ_REKORDBOX:-$HOME/Music/dj-rekordbox}"
       syncthingConfig="''${XDG_STATE_HOME:-$HOME/.local/state}/syncthing/config.xml"
       notifyId=0
+      stickStatusFd=""
 
       show() {
         local urgency=$1 title=$2 body=$3
@@ -33,7 +34,15 @@
           --urgency="$urgency" --print-id --replace-id="$notifyId" "$@" "$title" "$body")
       }
 
+      publish() {
+        [ -n "$stickStatusFd" ] || return 0
+        jq -nc --arg state "$1" --argjson percent "$2" --arg detail "$3" \
+          '{state: $state, percent: $percent, detail: $detail, updated: now}' \
+          1>&"$stickStatusFd" 2>/dev/null || true
+      }
+
       fail() {
+        publish failed 0 "$1"
         show critical "Stick not updated" "$1" --expire-time=0
         exit 1
       }
@@ -48,6 +57,7 @@
             lastUpdate=$SECONDS
             show normal "Copying DJ library" "$percent % at $rate, $eta left" \
               --expire-time=0 --hint="int:value:$percent"
+            publish copying "$percent" "$percent % at $rate, $eta left"
           fi
         done
       }
@@ -62,6 +72,14 @@
           "Replace /dj and /PIONEER on the stick with the DJ library? Everything else stays." || true)
         [ "$choice" = copy ] || exit 0
       fi
+
+      trap "" PIPE
+      exec {stickStatusFd}> >(ssh -o BatchMode=yes -o ConnectTimeout=5 mlab \
+        'mkdir -p /run/dj-stick && while IFS= read -r line; do
+          printf "%s\n" "$line" >/run/dj-stick/status.json.tmp &&
+            mv /run/dj-stick/status.json.tmp /run/dj-stick/status.json
+        done' >/dev/null 2>&1 || true)
+      publish checking 0 "Checking the export and Syncthing"
 
       [ -f "$rekordbox/rekordbox/exportLibrary.db" ] ||
         fail "There is no Rekordbox export in $rekordbox yet."
@@ -111,6 +129,7 @@
       trap 'fail "The copy stopped before it finished. Plug the stick in again to retry."' TERM INT
 
       show normal "Copying DJ library" "Starting" --expire-time=0 --hint=int:value:0
+      publish copying 0 "Starting"
       errors=$(mktemp)
       if rsync -rtL --modify-window=2 --delete-before --info=progress2 --no-inc-recursive \
         --filter='P /*' --exclude=.stfolder --exclude=.stversions \
@@ -125,6 +144,7 @@
 
       show normal "Copying DJ library" "Writing the last data to the stick" \
         --expire-time=0 --hint=int:value:100
+      publish syncing 100 "Writing the last data to the stick"
       sync -f "$mountPoint"
       udisksctl unmount --block-device "$device" --no-user-interaction >/dev/null ||
         fail "Copied, but could not unmount $device. Eject it before unplugging."
@@ -135,6 +155,7 @@
       trap - TERM INT
       show normal "Stick ready" \
         "Copied $(numfmt --to=iec "$needed") to /dj and /PIONEER. Safe to unplug." --expire-time=0
+      publish ready 100 "Copied $(numfmt --to=iec "$needed") to /dj and /PIONEER."
     '';
   };
 in {

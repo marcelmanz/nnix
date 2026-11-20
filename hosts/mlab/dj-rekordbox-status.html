@@ -78,6 +78,11 @@ header p, footer { color: var(--muted); margin: 0.25rem 0 0; font-size: 0.875rem
   .verdict h2::before { animation: none !important; }
 }
 .verdict p { margin: 0.5rem 0 0; color: var(--muted); }
+.stick { border-inline-start: 0.375rem solid var(--accent); }
+.stick[data-state="ready"] { --accent: var(--ready); }
+.stick[data-state="stalled"] { --accent: var(--warn); }
+.stick[data-state="failed"] { --accent: var(--bad); }
+.stick progress { margin-bottom: 0.25rem; }
 progress {
   width: 100%;
   height: 0.75rem;
@@ -143,6 +148,14 @@ footer[data-stale="true"] #connection { color: var(--bad); }
       <progress id="progress" value="{{progress-value}}" max="{{progress-max}}" aria-labelledby="progress-heading" aria-describedby="progress-remaining progress-label"></progress>
       <p class="progress-meta"><span id="progress-label">{{progress-label}}</span></p>
       <p class="file" id="progress-current">{{progress-current}}</p>
+    </section>
+
+    <section class="card stick" id="stick-section" data-state="{{stick-state}}" aria-labelledby="copy-heading" {{stick-hidden}}>
+      <h2 id="copy-heading">USB stick</h2>
+      <p class="remaining" id="stick-title">{{stick-title}}</p>
+      <progress id="stick-progress" value="{{stick-progress-value}}" max="100" aria-labelledby="copy-heading" aria-describedby="stick-title stick-detail" {{stick-progress-hidden}}></progress>
+      <p class="tabular" id="stick-detail">{{stick-detail}}</p>
+      <p class="file">Reported by the laptop <time id="stick-updated" datetime="{{stick-updated@}}">{{stick-updated}}</time></p>
     </section>
 
     <section class="card" aria-labelledby="export-heading">
@@ -232,6 +245,12 @@ function apply(view) {
   const bar = byId("progress");
   bar.max = view.progress.max;
   bar.value = view.progress.value;
+  const stick = byId("stick-section");
+  stick.hidden = view.stick.hidden;
+  stick.dataset.state = view.stick.state;
+  const stickBar = byId("stick-progress");
+  stickBar.hidden = view.stick.progress_hidden;
+  stickBar.value = view.stick.value;
 }
 
 function schedule(delay) {

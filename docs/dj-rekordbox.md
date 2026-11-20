@@ -102,6 +102,10 @@ Clicking the button:
   `~/Music/dj-rekordbox`, with a progress bar in the notification;
 - unmounts and powers off the stick, then says it is safe to unplug.
 
+It also sends its progress over SSH to `/run/dj-stick/status.json` on mlab, so
+the status page shows a **USB stick** card while it copies and the last result
+after.
+
 Run it by hand with `dj-stick sdb1`, or `dj-stick --yes sdb1` to skip the
 question.
 

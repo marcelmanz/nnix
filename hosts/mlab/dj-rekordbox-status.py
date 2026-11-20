@@ -23,6 +23,8 @@ FAST_POLL_STATES = {"exporting", "scanning", "sending"}
 SNAPSHOT_TTL = 1.5
 RATE_WINDOW = 300.0
 MIN_RATE_SPAN = 60.0
+STICK_ACTIVE_STATES = {"checking", "copying", "syncing"}
+STICK_STALE_AFTER = {"checking": 120.0, "copying": 60.0, "syncing": 900.0}
 
 
 def unix_timestamp(value: str | None) -> float | None:
@@ -225,10 +227,16 @@ def collect(
     except (OSError, ValueError, ET.ParseError) as exc:
         sync = {"unreachable": str(exc)}
 
+    try:
+        stick = json.loads(Path(options.stick_file).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        stick = {}
+
     return {
         "unit": unit,
         "timer": timer,
         "progress": progress,
+        "stick": stick,
         "remaining": estimator.estimate(progress),
         "sync": sync,
     }
@@ -305,6 +313,34 @@ def verdict(snapshot: dict) -> tuple[str, str, str]:
     )
 
 
+def stick_view(stick: dict) -> dict:
+    state = stick.get("state")
+    updated = stick.get("updated")
+    detail = str(stick.get("detail") or "")
+    if state in STICK_ACTIVE_STATES and updated:
+        if time.time() - updated > STICK_STALE_AFTER[state]:
+            state = "stalled"
+    title = {
+        "checking": "Getting ready to copy",
+        "copying": "Copying to the stick",
+        "syncing": "Writing the last data to the stick",
+        "ready": "Stick ready, safe to unplug",
+        "failed": "Stick not updated",
+        "stalled": "The laptop stopped reporting",
+    }.get(state, "")
+    if state == "stalled":
+        detail = "The copy may have been interrupted. Check the notification on the laptop."
+    return {
+        "hidden": not title,
+        "active": state in STICK_ACTIVE_STATES,
+        "state": state or "",
+        "title": title,
+        "detail": detail,
+        "percent": max(0, min(100, int(stick.get("percent") or 0))),
+        "updated": updated,
+    }
+
+
 def build_view(snapshot: dict) -> dict:
     unit, timer = snapshot["unit"], snapshot["timer"]
     progress, sync = snapshot["progress"], snapshot["sync"]
@@ -352,10 +388,17 @@ def build_view(snapshot: dict) -> dict:
     next_run = timer.get("next")
     last_scan = sync.get("last_scan")
     last_seen = sync.get("last_seen")
+    stick = stick_view(snapshot["stick"])
 
     return {
         "state": state,
-        "fast": state in FAST_POLL_STATES,
+        "fast": state in FAST_POLL_STATES or stick["active"],
+        "stick": {
+            "hidden": stick["hidden"],
+            "state": stick["state"],
+            "progress_hidden": stick["state"] not in ("copying", "syncing"),
+            "value": stick["percent"],
+        },
         "progress": {
             "hidden": state != "exporting",
             "value": processed,
@@ -375,6 +418,8 @@ def build_view(snapshot: dict) -> dict:
             "sync-folder": folder_state,
             "laptop-state": laptop_state,
             "laptop-need": laptop_need,
+            "stick-title": stick["title"],
+            "stick-detail": stick["detail"],
         },
         "times": {
             "export-started": [iso(started), clock(started, "Never")],
@@ -382,6 +427,7 @@ def build_view(snapshot: dict) -> dict:
             "export-next": [iso(next_run), clock(next_run, "Not scheduled")],
             "sync-scan": [iso(last_scan), clock(last_scan, "Never")],
             "laptop-seen": [iso(last_seen), clock(last_seen, "Never")],
+            "stick-updated": [iso(stick["updated"]), clock(stick["updated"], "Never")],
         },
     }
 
@@ -396,6 +442,11 @@ def render(template: str, view: dict) -> str:
     values["progress-hidden"] = "hidden" if progress["hidden"] else ""
     values["progress-value"] = str(progress["value"])
     values["progress-max"] = str(progress["max"])
+    stick = view["stick"]
+    values["stick-hidden"] = "hidden" if stick["hidden"] else ""
+    values["stick-state"] = stick["state"]
+    values["stick-progress-hidden"] = "hidden" if stick["progress_hidden"] else ""
+    values["stick-progress-value"] = str(stick["value"])
     return re.sub(r"\{\{([\w@-]+)\}\}", lambda m: values.get(m.group(1), ""), template)
 
 
@@ -465,6 +516,7 @@ def main() -> None:
     parser.add_argument("--port", type=int, required=True)
     parser.add_argument("--template", required=True)
     parser.add_argument("--progress-file", required=True)
+    parser.add_argument("--stick-file", default="/run/dj-stick/status.json")
     parser.add_argument("--unit", default="dj-rekordbox.service")
     parser.add_argument("--timer", default="dj-rekordbox.timer")
     parser.add_argument("--syncthing-url", default="http://127.0.0.1:8384")
