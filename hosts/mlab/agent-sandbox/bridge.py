@@ -18,6 +18,7 @@ BUNDLES_DIR = STATE_DIR / "bundles"
 GIT_USER = os.environ.get("GIT_USER", "dev")
 INDEX = Path(__file__).with_name("index.html")
 REPO_RE = re.compile(r"^(?:(?:https|ssh)://[A-Za-z0-9][A-Za-z0-9._~:/@%+-]*|[A-Za-z0-9][A-Za-z0-9._-]*@[A-Za-z0-9][A-Za-z0-9.-]*:[A-Za-z0-9._~/%+-]+)$")
+SSH_HOSTS_RE = re.compile(r"^https://(github\.com|codeberg\.org|git\.sr\.ht)/(.+?)/?$")
 PROJECT_ID_RE = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
 SUMMARY_LIMIT = 4000
 
@@ -214,6 +215,15 @@ def load_state():
         sessions[data["id"]] = Session(data["id"], data["project"], data["title"], data["branch"], data["base"], data["created"], data.get("result"))
 
 
+def prefer_ssh(repo):
+    match = SSH_HOSTS_RE.match(repo)
+    return f"git@{match[1]}:{match[2]}" if match else repo
+
+
+def same_repo(a, b):
+    return a.rstrip("/").removesuffix(".git") == b.rstrip("/").removesuffix(".git")
+
+
 def project_id_from_repo(repo):
     name = re.split(r"[/:]", repo.rstrip("/"))[-1].removesuffix(".git").lower()
     name = re.sub(r"[^a-z0-9]+", "_", name).strip("_")
@@ -239,7 +249,7 @@ async def list_projects(request):
 
 async def create_project(request):
     body = await request.json()
-    repo = str(body.get("repo") or "").strip()
+    repo = prefer_ssh(str(body.get("repo") or "").strip())
     if repo and not REPO_RE.match(repo):
         raise web.HTTPBadRequest(text="repo must be an https://, ssh:// or git@host:path url")
     project_id = str(body.get("id") or "").strip() or project_id_from_repo(repo)
@@ -248,7 +258,7 @@ async def create_project(request):
     async with create_lock:
         if repo:
             for project in projects.values():
-                if project["repo"] == repo:
+                if same_repo(project["repo"], repo):
                     return web.json_response(project)
         if project_id in projects:
             raise web.HTTPConflict(text=f"project {project_id} already exists for {projects[project_id]['repo'] or 'an empty repo'}")
