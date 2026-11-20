@@ -5,73 +5,172 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agent</title>
 <style>
-  :root { color-scheme: light dark; --bg: #fff; --fg: #1c1c1e; --muted: #6b6b70; --line: #d8d8de; --card: #f4f4f7; --accent: #2f6fed; --err: #c43b3b; --ok: #2e8b57; }
-  @media (prefers-color-scheme: dark) { :root { --bg: #151518; --fg: #e6e6ea; --muted: #9a9aa2; --line: #2e2e34; --card: #1e1e23; --accent: #6b9bff; --err: #ff7b7b; --ok: #5fd08f; } }
+  :root {
+    color-scheme: light dark;
+    --surface: #fdfbff; --surface-container: #f1f0f6; --surface-container-high: #e9e7ef;
+    --on-surface: #1b1b21; --on-surface-variant: #46464f; --outline-variant: #c7c5d0;
+    --primary: #3f5aa9; --on-primary: #fff; --primary-container: #dbe1ff; --on-primary-container: #00174b;
+    --error: #ba1a1a; --success: #2b6c3f; --radius: 12px;
+    --mono: ui-monospace, "Roboto Mono", "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface: #121318; --surface-container: #1e1f25; --surface-container-high: #292a2f;
+      --on-surface: #e3e2e9; --on-surface-variant: #c7c5d0; --outline-variant: #46464f;
+      --primary: #b4c5ff; --on-primary: #08286f; --primary-container: #264191; --on-primary-container: #dbe1ff;
+      --error: #ffb4ab; --success: #8fd8a0;
+    }
+  }
   * { box-sizing: border-box; }
-  body { margin: 0; height: 100dvh; display: grid; grid-template-columns: 260px 1fr; background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, sans-serif; }
-  aside { border-right: 1px solid var(--line); padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-  main { display: grid; grid-template-rows: auto 1fr auto; min-width: 0; min-height: 0; }
-  header { padding: 10px 16px; border-bottom: 1px solid var(--line); font-family: ui-monospace, monospace; font-size: 13px; color: var(--muted); min-height: 42px; }
-  #log { overflow-y: auto; min-height: 0; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
-  .project { margin-top: 8px; }
-  .project-head { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
-  .project-head button { padding: 2px 8px; font-size: 12px; }
-  .project-head small { color: var(--muted); font-weight: 400; display: block; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px; }
-  .session { padding: 6px 8px; border-radius: 6px; cursor: pointer; border: 1px solid transparent; }
-  .session.active { border-color: var(--accent); }
+  html, body { height: 100%; }
+  body {
+    margin: 0; height: 100dvh; display: grid; grid-template-columns: 248px minmax(0, 1fr); overflow: hidden;
+    background: var(--surface); color: var(--on-surface); font: 14px/1.5 Roboto, system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  button, input, textarea { font: inherit; color: inherit; }
+  button {
+    height: 40px; padding: 0 16px; border-radius: 20px; border: 0; background: transparent; color: var(--primary);
+    font-weight: 500; cursor: pointer; white-space: nowrap; transition: background-color 0.15s;
+  }
+  button:hover { background: color-mix(in srgb, var(--primary) 8%, transparent); }
+  button:disabled { opacity: 0.38; cursor: default; background: transparent; }
+  button.filled { background: var(--primary); color: var(--on-primary); }
+  button.filled:hover { background: color-mix(in srgb, var(--primary) 92%, var(--on-primary)); }
+  button.tonal { background: var(--primary-container); color: var(--on-primary-container); }
+  button.danger { color: var(--error); }
+  button.danger:hover { background: color-mix(in srgb, var(--error) 8%, transparent); }
+  button.icon { width: 40px; padding: 0; display: inline-grid; place-items: center; color: var(--on-surface-variant); }
+  input, textarea {
+    width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--outline-variant); background: transparent;
+  }
+  input:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+
+  aside {
+    background: var(--surface-container); padding: 16px 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px;
+  }
+  #new { display: flex; flex-direction: column; gap: 8px; }
+  .project { display: flex; flex-direction: column; gap: 2px; }
+  .project-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 0 4px 0 12px; font-weight: 500; }
+  .project-head > div { min-width: 0; }
+  .project-head small { color: var(--on-surface-variant); font-weight: 400; display: block; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .project-head button { height: 32px; padding: 0 12px; font-size: 13px; }
+  .session { padding: 8px 12px; border-radius: 20px; cursor: pointer; min-height: 40px; }
+  .session:hover { background: color-mix(in srgb, var(--on-surface) 6%, transparent); }
+  .session.active { background: var(--primary-container); color: var(--on-primary-container); }
   .session .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .session small { color: var(--muted); display: block; font-family: ui-monospace, monospace; font-size: 11px; }
-  .state-working { color: var(--accent) !important; }
-  .state-done { color: var(--ok) !important; }
-  .state-aborted { color: var(--err) !important; }
-  .msg { white-space: pre-wrap; word-break: break-word; }
-  .user { align-self: flex-end; background: var(--accent); color: #fff; padding: 8px 12px; border-radius: 12px; max-width: 80%; }
-  .tool { background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
-  .tool summary { padding: 6px 10px; cursor: pointer; font-family: ui-monospace, monospace; font-size: 13px; }
-  .tool pre { margin: 0; padding: 8px 10px; overflow-x: auto; max-height: 320px; border-top: 1px solid var(--line); font-size: 12px; }
-  .tool.error summary { color: var(--err); }
-  .preview { display: block; color: var(--muted); font-size: 12px; white-space: pre-wrap; word-break: break-word; margin-top: 2px; }
-  .thinking { color: var(--muted); border-left: 2px solid var(--line); padding-left: 10px; }
-  .thinking summary { cursor: pointer; font-size: 12px; font-style: italic; }
+  .session small { display: flex; align-items: center; gap: 6px; color: var(--on-surface-variant); font-size: 12px; }
+  .session small::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .state-working { color: var(--primary) !important; }
+  .state-done { color: var(--success) !important; }
+  .state-aborted { color: var(--error) !important; }
+
+  main { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-width: 0; min-height: 0; }
+  header {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 16px; min-height: 56px;
+    border-bottom: 1px solid var(--outline-variant);
+  }
+  #title { flex: 1; min-width: 0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #actions { display: flex; gap: 4px; flex-wrap: wrap; }
+  #actions[hidden] { display: none; }
+  #menu { display: none; }
+
+  #log {
+    overflow-y: auto; overflow-x: hidden; padding: 16px; display: flex; flex-direction: column; gap: 12px;
+    overflow-wrap: anywhere;
+  }
+  #log > * { min-width: 0; max-width: 100%; }
+  .msg { white-space: pre-wrap; line-height: 1.6; }
+  .user {
+    align-self: flex-end; background: var(--primary-container); color: var(--on-primary-container);
+    padding: 10px 14px; border-radius: 18px 18px 4px 18px; max-width: min(80%, 640px);
+  }
+  details { border-radius: var(--radius); }
+  summary { cursor: pointer; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  .tool { background: var(--surface-container); }
+  .tool summary { padding: 8px 12px; font-family: var(--mono); font-size: 12.5px; }
+  .tool pre {
+    margin: 0; padding: 8px 12px 12px; max-height: 320px; overflow-y: auto; overflow-x: hidden;
+    white-space: pre-wrap; font-family: var(--mono); font-size: 12px; color: var(--on-surface-variant);
+  }
+  .tool.error summary { color: var(--error); }
+  .preview {
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;
+    color: var(--on-surface-variant); font-size: 12px; white-space: pre-wrap; margin-top: 4px;
+  }
+  .command { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+  .tool[open] .command { display: block; }
+  .tool[open] .preview, .thinking[open] .preview { display: none; }
+  .thinking { color: var(--on-surface-variant); border-left: 2px solid var(--outline-variant); border-radius: 0; padding-left: 12px; }
+  .thinking summary { font-size: 12px; font-style: italic; }
   .thinking .msg { font-size: 13px; font-style: italic; margin-top: 4px; }
-  .result { border: 1px solid var(--ok); border-radius: 8px; padding: 10px 12px; }
-  .result.aborted { border-color: var(--err); }
-  .result h3 { margin: 0 0 6px; font-size: 14px; }
-  .result pre { margin: 6px 0 0; padding: 8px; background: var(--card); border-radius: 6px; overflow-x: auto; font-size: 12px; }
-  .note { color: var(--muted); font-size: 12px; }
-  form.send { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--line); }
-  textarea { flex: 1; resize: vertical; min-height: 44px; max-height: 200px; padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: inherit; font: inherit; }
-  button, input { font: inherit; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: inherit; }
-  button:disabled { opacity: 0.5; }
-  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-  @media (max-width: 640px) { body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; } aside { border-right: 0; border-bottom: 1px solid var(--line); max-height: 35dvh; } }
+  .result { background: var(--surface-container); border-left: 4px solid var(--success); border-radius: var(--radius); padding: 12px 16px; }
+  .result.aborted { border-left-color: var(--error); }
+  .result h3 { margin: 0 0 4px; font-size: 14px; font-weight: 500; }
+  .result pre {
+    margin: 4px 0 8px; padding: 8px 12px; background: var(--surface-container-high); border-radius: 8px;
+    white-space: pre-wrap; font-family: var(--mono); font-size: 12px;
+  }
+  .note { color: var(--on-surface-variant); font-size: 12px; }
+
+  .composer { display: flex; align-items: flex-end; gap: 8px; padding: 12px 16px 16px; }
+  .composer textarea { resize: none; min-height: 44px; max-height: 40dvh; border-radius: 22px; padding: 11px 16px; line-height: 1.5; }
+  .composer button { height: 44px; border-radius: 22px; }
+  .scrim { display: none; }
+
+  @media (max-width: 720px) {
+    body { grid-template-columns: minmax(0, 1fr); }
+    aside {
+      position: fixed; inset: 0 auto 0 0; width: min(304px, 85vw); z-index: 2; transform: translateX(-100%);
+      transition: transform 0.2s; box-shadow: 0 8px 24px rgb(0 0 0 / 0.2);
+    }
+    body.nav-open aside { transform: none; }
+    body.nav-open .scrim { display: block; position: fixed; inset: 0; z-index: 1; background: rgb(0 0 0 / 0.32); }
+    #menu { display: inline-grid; margin-left: -8px; }
+    #title { flex-basis: calc(100% - 48px); }
+    #actions { width: 100%; justify-content: space-between; margin: 0 -8px; width: calc(100% + 16px); }
+    header { padding: 8px 12px; }
+    #log { padding: 12px; }
+    .composer { padding: 8px 12px 12px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
-<aside>
-  <form id="new" style="display:flex;flex-direction:column;gap:6px">
-    <input id="repo" placeholder="git@github.com:owner/repo">
-    <input id="project-id" placeholder="id (default: repo name)" pattern="[a-z][a-z0-9]*(_[a-z0-9]+)*">
-    <button class="primary">Add project</button>
+<aside aria-label="Projects">
+  <form id="new">
+    <input id="repo" placeholder="git@github.com:owner/repo" aria-label="Repository">
+    <input id="project-id" placeholder="id (default: repo name)" aria-label="Project id" pattern="[a-z][a-z0-9]*(_[a-z0-9]+)*">
+    <button class="tonal">Add project</button>
   </form>
   <div id="projects"></div>
 </aside>
+<div class="scrim" id="scrim"></div>
 <main>
-  <header id="title">Pick a project and start a task</header>
-  <div id="log"></div>
-  <form class="send" id="send">
-    <textarea id="message" placeholder="Prompt" required></textarea>
-    <div style="display:flex;flex-direction:column;gap:6px">
-      <button class="primary" id="send-button">Send</button>
+  <header>
+    <button type="button" class="icon" id="menu" aria-label="Projects">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </button>
+    <div id="title">Pick a project and start a task</div>
+    <div id="actions" hidden>
+      <button type="button" id="continue">Continue</button>
       <button type="button" id="abort">Abort</button>
       <button type="button" id="push">Push</button>
-      <button type="button" id="delete">Delete</button>
+      <button type="button" class="danger" id="delete">Delete</button>
     </div>
+  </header>
+  <div id="log"></div>
+  <form class="composer" id="send">
+    <textarea id="message" rows="1" placeholder="Describe the task" aria-label="Prompt" required></textarea>
+    <button class="filled" id="send-button">Send</button>
   </form>
 </main>
 <script>
 const $ = (id) => document.getElementById(id);
 let current = null, draftProject = null, source = null, tools = new Map(), assistant = null, thinking = null;
+let following = true, followFrame = 0, userScrollUntil = 0;
 const lastState = new Map();
 
 async function api(path, options = {}) {
@@ -137,24 +236,56 @@ async function refresh() {
   }));
   const active = list.find((s) => s.id === current);
   if (active) $("title").textContent = `${active.id} · ${active.branch} · ${stateOf(active)}`;
+  $("continue").disabled = !active || active.running;
+  $("actions").hidden = !active;
 }
 
-function startDraft(projectId) {
+function projectOf(sessionId) {
+  return sessionId.replace(/_\d+$/, "");
+}
+
+function navigate(path, push) {
+  if (push && location.pathname !== path) history.pushState(null, "", path);
+}
+
+function route() {
+  const [project, task] = decodeURIComponent(location.pathname).split("/").filter(Boolean);
+  if (task) open(task, false);
+  else if (project) startDraft(project, false);
+  else showHome(false);
+}
+
+function showHome(push = true) {
+  navigate("/", push);
+  current = null; draftProject = null;
+  if (source) source.close();
+  source = null;
+  $("log").replaceChildren();
+  $("title").textContent = "Pick a project and start a task";
+  $("send-button").textContent = "Send";
+  refresh();
+}
+
+function startDraft(projectId, push = true) {
+  navigate(`/${projectId}`, push);
   current = null; draftProject = projectId;
   if (source) source.close();
   source = null;
   $("log").replaceChildren();
-  $("title").textContent = `New task in ${projectId} (runs on its own branch and worktree)`;
+  $("title").textContent = `New task in ${projectId}`;
+  document.body.classList.remove("nav-open");
   $("send-button").textContent = "Start task";
   $("message").focus();
   refresh();
 }
 
-function open(id) {
-  current = id; draftProject = null;
+function open(id, push = true) {
+  navigate(`/${projectOf(id)}/${id}`, push);
+  current = id; draftProject = null; following = true;
   if (source) source.close();
   $("log").replaceChildren();
   $("send-button").textContent = "Send";
+  document.body.classList.remove("nav-open");
   tools = new Map(); assistant = null; thinking = null;
   source = new EventSource(`/api/sessions/${id}/events`);
   source.onmessage = (event) => render(JSON.parse(event.data));
@@ -162,11 +293,27 @@ function open(id) {
 }
 
 function add(el) {
-  const log = $("log");
-  const stick = log.scrollTop + log.clientHeight >= log.scrollHeight - 40;
-  log.append(el);
-  if (stick) log.scrollTop = log.scrollHeight;
+  $("log").append(el);
 }
+
+function follow() {
+  if (!following || followFrame) return;
+  followFrame = requestAnimationFrame(() => {
+    followFrame = 0;
+    $("log").scrollTop = $("log").scrollHeight;
+  });
+}
+
+for (const type of ["wheel", "touchmove", "pointerdown", "keydown"]) {
+  $("log").addEventListener(type, () => { userScrollUntil = performance.now() + 1000; }, { passive: true });
+}
+
+$("log").addEventListener("scroll", () => {
+  const log = $("log");
+  const atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 40;
+  if (atBottom) following = true;
+  else if (performance.now() < userScrollUntil) following = false;
+});
 
 function text(result) {
   return (result?.content || []).map((c) => c.text || "").join("");
@@ -218,6 +365,11 @@ function resultCard(record) {
 }
 
 function render(record) {
+  renderRecord(record);
+  follow();
+}
+
+function renderRecord(record) {
   switch (record.type) {
     case "user_prompt": {
       const el = document.createElement("div");
@@ -243,7 +395,10 @@ function render(record) {
       const el = document.createElement("details");
       el.className = "tool"; el.open = true;
       const summary = document.createElement("summary");
-      summary.textContent = `${record.toolName} ${record.args?.command || JSON.stringify(record.args)}`;
+      const command = document.createElement("span");
+      command.className = "command";
+      command.textContent = `${record.toolName} ${record.args?.command || JSON.stringify(record.args)}`;
+      summary.append(command);
       const preview = document.createElement("span");
       preview.className = "preview";
       summary.append(preview);
@@ -274,7 +429,9 @@ function render(record) {
     case "bridge_exit": case "bridge_stderr": {
       const el = document.createElement("div");
       el.className = "note";
-      el.textContent = `${record.type}: ${record.text ?? record.code}`;
+      el.textContent = record.type === "bridge_exit" && record.code === null
+        ? "agent was stopped, press Continue to resume"
+        : `${record.type}: ${record.text ?? record.code}`;
       add(el); refresh(); break;
     }
   }
@@ -303,7 +460,16 @@ $("send").onsubmit = (event) => {
       open(session.id);
     }
     $("message").value = "";
+    $("message").oninput();
   });
+};
+
+$("menu").onclick = () => document.body.classList.toggle("nav-open");
+$("scrim").onclick = () => document.body.classList.remove("nav-open");
+
+$("message").oninput = () => {
+  $("message").style.height = "auto";
+  $("message").style.height = `${$("message").scrollHeight + 2}px`;
 };
 
 $("message").onkeydown = (event) => {
@@ -311,6 +477,11 @@ $("message").onkeydown = (event) => {
 };
 
 $("abort").onclick = () => current && api(`/api/sessions/${current}/abort`, { method: "POST" });
+
+$("continue").onclick = (event) => {
+  if (!current) return;
+  busy(event.currentTarget, () => api(`/api/sessions/${current}/continue`, { method: "POST" }));
+};
 
 $("push").onclick = (event) => {
   if (!current) return;
@@ -321,15 +492,12 @@ $("delete").onclick = (event) => {
   if (!current || !confirm(`Delete task ${current}, its worktree and its branch agent/${current}?`)) return;
   busy(event.currentTarget, async () => {
     await api(`/api/sessions/${current}`, { method: "DELETE" });
-    if (source) source.close();
-    source = null; current = null;
-    $("log").replaceChildren();
-    $("title").textContent = "Pick a project and start a task";
-    await refresh();
+    showHome();
   });
 };
 
-refresh();
+window.addEventListener("popstate", route);
+route();
 setInterval(refresh, 5000);
 </script>
 </body>

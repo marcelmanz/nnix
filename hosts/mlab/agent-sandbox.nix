@@ -80,6 +80,9 @@ in {
       || iptables -I FORWARD 1 -i ve-agent -d 172.16.0.0/12 -j DROP
   '';
 
+  # Reload switches the running container to its new system without killing tasks; bind mount or network changes need a manual restart.
+  systemd.services."container@agent".reloadIfChanged = true;
+
   systemd.services."container@agent".serviceConfig = {
     MemoryMax = "8G";
     CPUQuota = "400%";

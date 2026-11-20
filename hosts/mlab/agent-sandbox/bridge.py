@@ -1,7 +1,9 @@
 import asyncio
+import errno
 import json
 import os
 import re
+import shutil
 import tempfile
 import time
 from pathlib import Path
@@ -21,6 +23,7 @@ REPO_RE = re.compile(r"^(?:(?:https|ssh)://[A-Za-z0-9][A-Za-z0-9._~:/@%+-]*|[A-Z
 SSH_HOSTS_RE = re.compile(r"^https://(github\.com|codeberg\.org|git\.sr\.ht)/(.+?)/?$")
 PROJECT_ID_RE = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
 SUMMARY_LIMIT = 4000
+CONTINUE_PROMPT = "You were interrupted. Check the state of the worktree and continue the task where you left off."
 
 projects = {}
 sessions = {}
@@ -105,16 +108,25 @@ class Session:
         self.created = created
         self.result = result
         self.log_path = SESSIONS_DIR / f"{session_id}.jsonl"
-        self.proc = None
+        self.input_path = SESSIONS_DIR / f"{session_id}.in"
+        self.output_path = SESSIONS_DIR / f"{session_id}.out"
+        self.cursor_path = SESSIONS_DIR / f"{session_id}.cursor"
+        self.unit = f"agent-task-{session_id}.service"
+        self.tailer = None
+        self.offset = 0
         self.running = False
+        self.exited = False
         self.last_text = ""
         self.deleted = False
         self.waiters = set()
+        if self.cursor_path.exists():
+            cursor = json.loads(self.cursor_path.read_text())
+            self.offset, self.running, self.last_text = cursor["offset"], cursor["running"], cursor["last_text"]
 
     def meta(self):
         return {
             "id": self.id, "project": self.project, "title": self.title, "branch": self.branch, "created": self.created,
-            "running": self.running, "alive": self.proc is not None, "result": self.result,
+            "running": self.running, "alive": self.attached(), "result": self.result,
         }
 
     def save(self):
@@ -122,6 +134,9 @@ class Session:
             "id": self.id, "project": self.project, "title": self.title, "branch": self.branch, "base": self.base,
             "created": self.created, "result": self.result,
         })
+
+    def save_cursor(self):
+        save_json(self.cursor_path, {"offset": self.offset, "running": self.running, "last_text": self.last_text})
 
     def append(self, record):
         if self.deleted:
@@ -137,50 +152,95 @@ class Session:
         with self.log_path.open() as log:
             return log.read().splitlines()[start:]
 
+    def attached(self):
+        return self.tailer is not None and not self.tailer.done()
+
+    def has_unread_output(self):
+        return self.output_path.exists() and self.output_path.stat().st_size > self.offset
+
+    async def unit_active(self):
+        proc = await asyncio.create_subprocess_exec("systemctl", "is-active", "--quiet", self.unit)
+        return await proc.wait() == 0
+
+    def attach(self):
+        if not self.attached():
+            self.exited = False
+            self.tailer = asyncio.create_task(self.tail())
+
     async def start(self):
-        if self.proc is not None:
+        if await self.unit_active():
+            self.attach()
             return
+        if not self.input_path.exists():
+            os.mkfifo(self.input_path, 0o600)
         inner = " ".join([
-            "cd", _quote(worktree_path(self.id)), "&&", "exec", "pi", "--mode", "rpc",
+            "cd", _quote(worktree_path(self.id)), "&&", "exec", "pi", "--mode", "rpc", "--continue",
             "--session-dir", _quote(f"/workspace/.sessions/{self.id}"),
             "--append-system-prompt", _quote(task_instructions(self)),
         ])
-        self.proc = await asyncio.create_subprocess_exec(
-            "nixos-container", "run", CONTAINER, "--", "runuser", "-l", "agent", "-c", inner,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            limit=64 * 1024 * 1024,
+        runner = (
+            'exec 3<>"$1"; nixos-container run "$2" -- runuser -l agent -c "$3" <&3 >>"$4" 2>&1; '
+            'echo "{\\"type\\": \\"bridge_exit\\", \\"code\\": $?}" >>"$4"'
         )
-        asyncio.create_task(self.pump_stdout(self.proc))
-        asyncio.create_task(self.pump_stderr(self.proc))
+        proc = await asyncio.create_subprocess_exec(
+            "systemd-run", "--quiet", "--collect", f"--unit={self.unit}", f"--setenv=PATH={os.environ['PATH']}",
+            "--", shutil.which("sh"), "-c", runner, "agent-task", str(self.input_path), CONTAINER, inner, str(self.output_path),
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
+        )
+        output, _ = await proc.communicate()
+        if proc.returncode != 0:
+            raise web.HTTPBadGateway(text=output.decode(errors="replace"))
+        self.attach()
 
-    async def pump_stdout(self, proc):
-        while line := await proc.stdout.readline():
-            try:
-                record = json.loads(line)
-            except ValueError:
-                record = {"type": "bridge_stdout", "text": line.decode(errors="replace")}
-            kind = record.get("type")
-            if kind == "agent_start":
-                self.running = True
-                self.result = None
-            elif kind == "message_end" and record.get("message", {}).get("role") == "assistant":
-                text = "".join(c.get("text", "") for c in record["message"].get("content", []) if c.get("type") == "text")
-                if text.strip():
-                    self.last_text = text
-            self.append(record)
-            if kind == "agent_settled":
-                self.running = False
-                await self.finish(aborted=bool(record.get("aborted")))
-        code = await proc.wait()
-        self.running = False
-        self.proc = None
-        self.append({"type": "bridge_exit", "code": code})
+    def read_output_line(self, output):
+        output.seek(self.offset)
+        line = output.readline()
+        if not line.endswith(b"\n"):
+            return None
+        return line
 
-    async def pump_stderr(self, proc):
-        while line := await proc.stderr.readline():
-            self.append({"type": "bridge_stderr", "text": line.decode(errors="replace")})
+    async def tail(self):
+        self.output_path.touch()
+        last_check = 0
+        with self.output_path.open("rb") as output:
+            while not self.deleted:
+                line = self.read_output_line(output)
+                if line is None:
+                    if time.monotonic() - last_check < 2:
+                        await asyncio.sleep(0.2)
+                        continue
+                    last_check = time.monotonic()
+                    if await self.unit_active() or (line := self.read_output_line(output)) is not None:
+                        continue
+                    break
+                self.offset += len(line)
+                await self.handle(line)
+                self.save_cursor()
+        if not self.exited and not self.deleted:
+            self.running = False
+            self.save_cursor()
+            self.append({"type": "bridge_exit", "code": None})
+
+    async def handle(self, line):
+        try:
+            record = json.loads(line)
+        except ValueError:
+            record = {"type": "bridge_stderr", "text": line.decode(errors="replace")}
+        kind = record.get("type")
+        if kind == "agent_start":
+            self.running = True
+            self.result = None
+        elif kind == "message_end" and record.get("message", {}).get("role") == "assistant":
+            text = "".join(c.get("text", "") for c in record["message"].get("content", []) if c.get("type") == "text")
+            if text.strip():
+                self.last_text = text
+        elif kind == "bridge_exit":
+            self.running = False
+            self.exited = True
+        self.append(record)
+        if kind == "agent_settled":
+            self.running = False
+            await self.finish(aborted=bool(record.get("aborted")))
 
     async def finish(self, aborted):
         path = worktree_path(self.id)
@@ -200,8 +260,26 @@ class Session:
 
     async def send(self, command):
         await self.start()
-        self.proc.stdin.write(json.dumps(command).encode() + b"\n")
-        await self.proc.stdin.drain()
+        data = json.dumps(command).encode() + b"\n"
+        for _ in range(50):
+            try:
+                fd = os.open(self.input_path, os.O_WRONLY | os.O_NONBLOCK)
+                break
+            except OSError as error:
+                if error.errno != errno.ENXIO:
+                    raise
+                await asyncio.sleep(0.1)
+        else:
+            raise web.HTTPBadGateway(text="agent did not start reading its input")
+        try:
+            os.set_blocking(fd, True)
+            os.write(fd, data)
+        finally:
+            os.close(fd)
+
+    async def stop(self):
+        proc = await asyncio.create_subprocess_exec("systemctl", "stop", self.unit, stderr=asyncio.subprocess.DEVNULL)
+        await proc.wait()
 
 
 def load_state():
@@ -240,6 +318,12 @@ def find(request):
 
 
 async def index(request):
+    return web.FileResponse(INDEX)
+
+
+async def page(request):
+    if request.match_info["project"] == "api":
+        raise web.HTTPNotFound()
     return web.FileResponse(INDEX)
 
 
@@ -358,17 +442,24 @@ async def prompt(request):
     return web.json_response({"ok": True})
 
 
+async def resume(request):
+    session = find(request)
+    if session.running:
+        raise web.HTTPConflict(text="task is still working")
+    await send_prompt(session, CONTINUE_PROMPT)
+    return web.json_response({"ok": True})
+
+
 async def abort(request):
     session = find(request)
-    if session.proc is not None:
+    if await session.unit_active():
         await session.send({"type": "abort"})
     return web.json_response({"ok": True})
 
 
 async def stop(request):
     session = find(request)
-    if session.proc is not None:
-        session.proc.stdin.close()
+    await session.stop()
     return web.json_response({"ok": True})
 
 
@@ -401,12 +492,9 @@ async def delete_session(request):
     async with create_lock:
         session.deleted = True
         sessions.pop(session.id, None)
-        if session.proc is not None:
-            session.proc.stdin.close()
-            try:
-                await asyncio.wait_for(session.proc.wait(), timeout=5)
-            except asyncio.TimeoutError:
-                session.proc.terminate()
+        await session.stop()
+        if session.tailer is not None:
+            session.tailer.cancel()
         path = project_path(session.project)
         await run_in_container("git", "-C", path, "worktree", "remove", "--force", worktree_path(session.id))
         await run_in_container("git", "-C", path, "worktree", "prune")
@@ -418,19 +506,20 @@ async def delete_session(request):
                 pass
         await run_in_container("rm", "-rf", f"/workspace/.sessions/{session.id}")
         (SESSIONS_DIR / f"{session.id}.json").unlink(missing_ok=True)
-        session.log_path.unlink(missing_ok=True)
+        for path in (session.log_path, session.input_path, session.output_path, session.cursor_path):
+            path.unlink(missing_ok=True)
     return web.json_response({"ok": True})
 
 
-async def shutdown(app):
+async def reattach(app):
     for session in sessions.values():
-        if session.proc is not None:
-            session.proc.terminate()
+        if session.has_unread_output() or await session.unit_active():
+            session.attach()
 
 
 load_state()
 app = web.Application()
-app.on_shutdown.append(shutdown)
+app.on_startup.append(reattach)
 app.add_routes([
     web.get("/", index),
     web.get("/api/projects", list_projects),
@@ -439,9 +528,12 @@ app.add_routes([
     web.get("/api/sessions", list_sessions),
     web.get("/api/sessions/{id}/events", events),
     web.post("/api/sessions/{id}/prompt", prompt),
+    web.post("/api/sessions/{id}/continue", resume),
     web.post("/api/sessions/{id}/abort", abort),
     web.post("/api/sessions/{id}/stop", stop),
     web.post("/api/sessions/{id}/push", push),
     web.delete("/api/sessions/{id}", delete_session),
+    web.get(r"/{project:[a-z][a-z0-9_]*}", page),
+    web.get(r"/{project:[a-z][a-z0-9_]*}/{task:[a-z][a-z0-9_]*}", page),
 ])
 web.run_app(app, host="127.0.0.1", port=PORT)
