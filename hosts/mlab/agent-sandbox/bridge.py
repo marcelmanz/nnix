@@ -2,33 +2,89 @@ import asyncio
 import json
 import os
 import re
-import secrets
 import time
 from pathlib import Path
 
 from aiohttp import web
 
 STATE_DIR = Path(os.environ["STATE_DIR"])
+PROJECTS_DIR = STATE_DIR / "projects"
+SESSIONS_DIR = STATE_DIR / "sessions"
 PORT = int(os.environ["PORT"])
 CONTAINER = os.environ.get("CONTAINER", "agent")
 INDEX = Path(__file__).with_name("index.html")
 REPO_RE = re.compile(r"^https://[A-Za-z0-9._~:/@%+-]+$")
+PROJECT_ID_RE = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
+SUMMARY_LIMIT = 4000
 
+projects = {}
 sessions = {}
+create_lock = asyncio.Lock()
+
+
+def worktree_path(session_id):
+    return f"/workspace/worktrees/{session_id}"
+
+
+def project_path(project_id):
+    return f"/workspace/projects/{project_id}"
+
+
+def task_instructions(session):
+    return (
+        f"You are working unattended in a git worktree on branch {session.branch}. "
+        "Nobody is watching, so don't ask questions: make reasonable choices and note them. "
+        "Commit your work on this branch when done, and end with a short summary of what you did and what is left."
+    )
+
+
+def save_json(path, data):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data))
+
+
+async def run_in_container(*args):
+    proc = await asyncio.create_subprocess_exec(
+        "nixos-container", "run", CONTAINER, "--", "runuser", "-l", "agent", "-c", " ".join(map(_quote, args)),
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
+    )
+    output, _ = await proc.communicate()
+    return proc.returncode, output.decode(errors="replace")
+
+
+async def run_or_fail(*args):
+    code, output = await run_in_container(*args)
+    if code != 0:
+        raise web.HTTPBadGateway(text=output)
+    return output
 
 
 class Session:
-    def __init__(self, session_id, name, created):
+    def __init__(self, session_id, project, title, branch, base, created, result=None):
         self.id = session_id
-        self.name = name
+        self.title = title
+        self.project = project
+        self.branch = branch
+        self.base = base
         self.created = created
-        self.log_path = STATE_DIR / f"{session_id}.jsonl"
+        self.result = result
+        self.log_path = SESSIONS_DIR / f"{session_id}.jsonl"
         self.proc = None
         self.running = False
+        self.last_text = ""
         self.waiters = set()
 
     def meta(self):
-        return {"id": self.id, "name": self.name, "created": self.created, "running": self.running, "alive": self.proc is not None}
+        return {
+            "id": self.id, "project": self.project, "title": self.title, "branch": self.branch, "created": self.created,
+            "running": self.running, "alive": self.proc is not None, "result": self.result,
+        }
+
+    def save(self):
+        save_json(SESSIONS_DIR / f"{self.id}.json", {
+            "id": self.id, "project": self.project, "title": self.title, "branch": self.branch, "base": self.base,
+            "created": self.created, "result": self.result,
+        })
 
     def append(self, record):
         with self.log_path.open("a") as log:
@@ -45,7 +101,11 @@ class Session:
     async def start(self):
         if self.proc is not None:
             return
-        inner = f"cd /workspace/{self.id} && exec pi --mode rpc --session-dir /workspace/.sessions/{self.id}"
+        inner = " ".join([
+            "cd", _quote(worktree_path(self.id)), "&&", "exec", "pi", "--mode", "rpc",
+            "--session-dir", _quote(f"/workspace/.sessions/{self.id}"),
+            "--append-system-prompt", _quote(task_instructions(self)),
+        ])
         self.proc = await asyncio.create_subprocess_exec(
             "nixos-container", "run", CONTAINER, "--", "runuser", "-l", "agent", "-c", inner,
             stdin=asyncio.subprocess.PIPE,
@@ -65,9 +125,15 @@ class Session:
             kind = record.get("type")
             if kind == "agent_start":
                 self.running = True
-            elif kind == "agent_settled":
-                self.running = False
+                self.result = None
+            elif kind == "message_end" and record.get("message", {}).get("role") == "assistant":
+                text = "".join(c.get("text", "") for c in record["message"].get("content", []) if c.get("type") == "text")
+                if text.strip():
+                    self.last_text = text
             self.append(record)
+            if kind == "agent_settled":
+                self.running = False
+                await self.finish(aborted=bool(record.get("aborted")))
         code = await proc.wait()
         self.running = False
         self.proc = None
@@ -77,17 +143,45 @@ class Session:
         while line := await proc.stderr.readline():
             self.append({"type": "bridge_stderr", "text": line.decode(errors="replace")})
 
+    async def finish(self, aborted):
+        path = worktree_path(self.id)
+        _, commits = await run_in_container("git", "-C", path, "log", "--oneline", f"{self.base}..HEAD")
+        _, diffstat = await run_in_container("git", "-C", path, "diff", "--stat", self.base)
+        _, status = await run_in_container("git", "-C", path, "status", "--short")
+        self.result = {
+            "aborted": aborted,
+            "finished": time.time(),
+            "summary": self.last_text[-SUMMARY_LIMIT:],
+            "commits": commits.strip(),
+            "diffstat": diffstat.strip(),
+            "uncommitted": status.strip(),
+        }
+        self.save()
+        self.append({"type": "session_result", **self.result})
+
     async def send(self, command):
         await self.start()
         self.proc.stdin.write(json.dumps(command).encode() + b"\n")
         await self.proc.stdin.drain()
 
 
-def load_sessions():
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    for meta_file in STATE_DIR.glob("*.meta.json"):
+def load_state():
+    PROJECTS_DIR.mkdir(parents=True, exist_ok=True)
+    SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
+    for meta_file in PROJECTS_DIR.glob("*.json"):
         data = json.loads(meta_file.read_text())
-        sessions[data["id"]] = Session(data["id"], data["name"], data["created"])
+        projects[data["id"]] = data
+    for meta_file in SESSIONS_DIR.glob("*.json"):
+        data = json.loads(meta_file.read_text())
+        sessions[data["id"]] = Session(data["id"], data["project"], data["title"], data["branch"], data["base"], data["created"], data.get("result"))
+
+
+def project_id_from_repo(repo):
+    name = repo.rstrip("/").rsplit("/", 1)[-1].removesuffix(".git").lower()
+    name = re.sub(r"[^a-z0-9]+", "_", name).strip("_")
+    if name and not name[0].isalpha():
+        name = "p_" + name
+    return name
 
 
 def find(request):
@@ -101,28 +195,71 @@ async def index(request):
     return web.FileResponse(INDEX)
 
 
+async def list_projects(request):
+    return web.json_response(sorted(projects.values(), key=lambda p: p["id"]))
+
+
+async def create_project(request):
+    body = await request.json()
+    repo = str(body.get("repo") or "").strip()
+    if repo and not REPO_RE.match(repo):
+        raise web.HTTPBadRequest(text="repo must be an https url")
+    project_id = str(body.get("id") or "").strip() or project_id_from_repo(repo)
+    if not PROJECT_ID_RE.match(project_id):
+        raise web.HTTPBadRequest(text="project id must look like word or word_x (lowercase letters, digits, underscores)")
+    async with create_lock:
+        if repo:
+            for project in projects.values():
+                if project["repo"] == repo:
+                    return web.json_response(project)
+        if project_id in projects:
+            raise web.HTTPConflict(text=f"project {project_id} already exists for {projects[project_id]['repo'] or 'an empty repo'}")
+        path = project_path(project_id)
+        if repo:
+            await run_or_fail("git", "clone", "--", repo, path)
+        else:
+            await run_or_fail("git", "init", "--quiet", path)
+            await run_or_fail("git", "-C", path, "commit", "--quiet", "--allow-empty", "-m", "init")
+        project = {"id": project_id, "repo": repo, "created": time.time()}
+        save_json(PROJECTS_DIR / f"{project_id}.json", project)
+        projects[project_id] = project
+    return web.json_response(project)
+
+
 async def list_sessions(request):
     return web.json_response(sorted((s.meta() for s in sessions.values()), key=lambda m: -m["created"]))
 
 
+def next_session_id(project_id):
+    number = 1
+    while f"{project_id}_{number}" in sessions:
+        number += 1
+    return f"{project_id}_{number}"
+
+
 async def create_session(request):
+    project = projects.get(request.match_info["project"])
+    if project is None:
+        raise web.HTTPNotFound()
     body = await request.json()
-    name = str(body.get("name") or "session")[:80]
-    repo = str(body.get("repo") or "").strip()
-    if repo and not REPO_RE.match(repo):
-        raise web.HTTPBadRequest(text="repo must be an https url")
-    session_id = secrets.token_hex(6)
-    clone = ["git", "clone", "--", repo, f"/workspace/{session_id}"] if repo else ["mkdir", f"/workspace/{session_id}"]
-    proc = await asyncio.create_subprocess_exec(
-        "nixos-container", "run", CONTAINER, "--", "runuser", "-l", "agent", "-c", " ".join(map(_quote, clone)),
-        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
-    )
-    output, _ = await proc.communicate()
-    if proc.returncode != 0:
-        raise web.HTTPBadGateway(text=output.decode(errors="replace"))
-    session = Session(session_id, name, time.time())
-    (STATE_DIR / f"{session_id}.meta.json").write_text(json.dumps({"id": session_id, "name": name, "created": session.created}))
-    sessions[session_id] = session
+    message = str(body.get("message") or "").strip()
+    if not message:
+        raise web.HTTPBadRequest(text="prompt is required")
+    async with create_lock:
+        session_id = next_session_id(project["id"])
+        branch = f"agent/{session_id}"
+        path = project_path(project["id"])
+        start_point = "HEAD"
+        if project["repo"]:
+            await run_or_fail("git", "-C", path, "fetch", "--quiet", "origin")
+            start_point = "origin/HEAD"
+        await run_or_fail("git", "-C", path, "worktree", "add", "--quiet", "-b", branch, worktree_path(session_id), start_point)
+        base = (await run_or_fail("git", "-C", worktree_path(session_id), "rev-parse", "HEAD")).strip()
+        title = message.splitlines()[0][:80]
+        session = Session(session_id, project["id"], title, branch, base, time.time())
+        session.save()
+        sessions[session_id] = session
+    await send_prompt(session, message)
     return web.json_response(session.meta())
 
 
@@ -154,14 +291,18 @@ async def events(request):
     return response
 
 
+async def send_prompt(session, message):
+    command = {"type": "prompt", "message": message}
+    if session.running:
+        command["streamingBehavior"] = "steer"
+    session.append({"type": "user_prompt", "message": message, "timestamp": time.time()})
+    await session.send(command)
+
+
 async def prompt(request):
     session = find(request)
     body = await request.json()
-    command = {"type": "prompt", "message": str(body["message"])}
-    if session.running:
-        command["streamingBehavior"] = "steer"
-    session.append({"type": "user_prompt", "message": command["message"], "timestamp": time.time()})
-    await session.send(command)
+    await send_prompt(session, str(body["message"]))
     return web.json_response({"ok": True})
 
 
@@ -185,13 +326,15 @@ async def shutdown(app):
             session.proc.terminate()
 
 
-load_sessions()
+load_state()
 app = web.Application()
 app.on_shutdown.append(shutdown)
 app.add_routes([
     web.get("/", index),
+    web.get("/api/projects", list_projects),
+    web.post("/api/projects", create_project),
+    web.post("/api/projects/{project}/sessions", create_session),
     web.get("/api/sessions", list_sessions),
-    web.post("/api/sessions", create_session),
     web.get("/api/sessions/{id}/events", events),
     web.post("/api/sessions/{id}/prompt", prompt),
     web.post("/api/sessions/{id}/abort", abort),

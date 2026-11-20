@@ -67,6 +67,7 @@ with pkgs; [
   fish
   fixjson
   flyctl
+  fortune
   frogmouth
   fx
   fzf

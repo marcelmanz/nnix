@@ -47,6 +47,7 @@ in {
   systemd.services.agent-bridge = {
     description = "Web bridge to pi in the agent sandbox";
     after = ["container@agent.service"];
+    requires = ["container@agent.service"];
     wantedBy = ["multi-user.target"];
     path = ["/run/current-system/sw"];
     environment = {
@@ -82,7 +83,7 @@ in {
   };
 
   containers.agent = {
-    autoStart = false;
+    autoStart = true;
     privateNetwork = true;
     hostAddress = "10.233.1.1";
     localAddress = "10.233.1.2";
@@ -101,6 +102,14 @@ in {
       networking.useHostResolvConf = lib.mkForce false;
       networking.nameservers = ["1.1.1.1" "8.8.8.8"];
       services.resolved.enable = false;
+
+      programs.git = {
+        enable = true;
+        config.user = {
+          name = "agent";
+          email = "agent@agent.marcel.cool";
+        };
+      };
 
       users.users.agent = {
         isNormalUser = true;
