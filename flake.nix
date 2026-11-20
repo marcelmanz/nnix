@@ -159,6 +159,8 @@
         (final: prev: {nuit = nu-alias-converter.packages.${system}.default;})
         (import ./overlays/rust.nix {inherit pkgs crane inputs;})
         (final: prev: {hax = import ./packages/hax/package.nix {inherit pkgs;};})
+        (final: prev: {djsync = import ./packages/djsync/package.nix {inherit pkgs;};})
+        (final: prev: {dj-rekordbox = import ./packages/dj-rekordbox/package.nix {inherit pkgs;};})
         (final: prev: {haralyzer = import ./packages/haralyzer/package.nix {inherit pkgs;};})
         (final: prev: {pinentry-rbw = import ./packages/pinentry-rbw/package.nix {inherit pkgs;};})
         (final: prev: {discogs2xlsx = import ./packages/discogs2xlsx/package.nix {inherit pkgs;};})
@@ -224,6 +226,8 @@
       "git-commit-search" = pkgs."git-commit-search";
       "nitter-session" = pkgs."nitter-session";
       hax = pkgs.hax;
+      djsync = pkgs.djsync;
+      dj-rekordbox = pkgs.dj-rekordbox;
       mautrix-whatsapp = pkgs.mautrix-whatsapp;
       # Commented out due to cycles
       # Commented out due to cycles
