@@ -26,6 +26,27 @@
     '';
   };
 
+  djFatNames = pkgs.writeShellApplication {
+    name = "dj-fat-names";
+    runtimeInputs = [pkgs.findutils pkgs.coreutils];
+    text = ''
+      root="''${1:-/var/lib/media/dj}"
+      find "$root" -mindepth 1 -depth \( -name '*[<>:"\\|?*]*' -o -name '*[. ]' \) -print0 |
+        while IFS= read -r -d "" path; do
+          name=''${path##*/}
+          fatName=''${name//[<>:\"\\|?*]/-}
+          while [[ $fatName == *[.\ ] ]]; do fatName=''${fatName%?}; done
+          if [ -z "$fatName" ] || [ "$fatName" = "$name" ]; then continue; fi
+          if [ -e "''${path%/*}/$fatName" ]; then
+            echo "dj-fat-names: not renaming $path, $fatName exists" >&2
+            continue
+          fi
+          mv -n -- "$path" "''${path%/*}/$fatName"
+          echo "dj-fat-names: $path -> $fatName"
+        done
+    '';
+  };
+
   beetsMusicDir = "/var/lib/beets-music";
   beetsMusicConfig = pkgs.writeText "beets-music.yaml" ''
     directory: /var/lib/media/music
@@ -141,6 +162,7 @@ in {
       pipx run bandcampsync -c /run/bandcamp_cookies_filtered.txt -d /var/lib/media/music -f flac --skip-hidden
       pipx run bandcampsync -c /run/bandcamp_cookies_filtered.txt -d /var/lib/media/dj -f aiff-lossless --skip-hidden
       rm /run/bandcamp_cookies_filtered.txt
+      ${djFatNames}/bin/dj-fat-names /var/lib/media/dj
       # bandcampsync's own mkdir/writes don't inherit the media group or give
       # group/world access; syncthing (group media) needs read on files and
       # write on directories (to rename-normalize Unicode filenames), and tagr
@@ -289,7 +311,7 @@ in {
     '';
   };
 
-  environment.systemPackages = [djEnrich musicBeet musicBeetImport djGenres];
+  environment.systemPackages = [djEnrich musicBeet musicBeetImport djGenres djFatNames];
 
   systemd.timers.bandcampsync = {
     wantedBy = ["timers.target"];
