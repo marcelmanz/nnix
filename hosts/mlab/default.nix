@@ -61,6 +61,7 @@
     ./syncthing.nix
     ./tagr.nix
     ./tiktok-follow
+    ./tv-mouse.nix
     ./uptime-kuma.nix
     ./vaultwarden.nix
     ./vikunja.nix
