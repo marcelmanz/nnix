@@ -27,12 +27,12 @@ dj-rekordbox export \
   --min-age 120 --prune
 ```
 
-* oneshot, root, every 30 minutes and 10 minutes after boot;
-* the first run analyses every track (can take a long time), later runs only
+- oneshot, root, every 30 minutes and 10 minutes after boot;
+- the first run analyses every track (can take a long time), later runs only
   process files whose size or mtime changed;
-* files newer than 120 s are skipped so Bandcamp/Syncthing half-written files
+- files newer than 120 s are skipped so Bandcamp/Syncthing half-written files
   are not imported;
-* tracks deleted from `/var/lib/media/dj` are removed from the export and the
+- tracks deleted from `/var/lib/media/dj` are removed from the export and the
   databases.
 
 The export root is `/var/lib/media/dj-rekordbox`. It is a complete stick image;
@@ -55,12 +55,12 @@ dj-rekordbox sync-usb --root /var/lib/media/dj-rekordbox \
 
 `sync-usb`:
 
-* refuses a destination that already contains a Rekordbox library unless it has
+- refuses a destination that already contains a Rekordbox library unless it has
   the `.dj-rekordbox-export` marker (or `--force` is given);
-* rejects NTFS/ext4 and warns about exFAT;
-* checks free space (64 MiB margin);
-* uses rsync so repeated copies are incremental;
-* writes the marker only after a successful copy.
+- rejects NTFS/ext4 and warns about exFAT;
+- checks free space (64 MiB margin);
+- uses rsync so repeated copies are incremental;
+- writes the marker only after a successful copy.
 
 Use the whole prepared export, including `PIONEER/` **and** `Contents/`.
 `DJSync_Backups/` is deliberately not copied.
@@ -80,19 +80,19 @@ would change.
 
 ## What about other tools?
 
-* **pyrekordbox / rbox** manage the desktop Rekordbox `master.db`, not a CDJ
+- **pyrekordbox / rbox** manage the desktop Rekordbox `master.db`, not a CDJ
   stick, so they are not a drop-in USB exporter.
-* **openboxxx** is a beta that writes only `export.pdb`; it was not confirmed
+- **openboxxx** is a beta that writes only `export.pdb`; it was not confirmed
   on real CDJ hardware.
-* **Rekordbox under Wine** works for the GUI, but is fragile and not
+- **Rekordbox under Wine** works for the GUI, but is fragile and not
   scriptable/headless.
 
 ## Limitations
 
-* OGG/Opus/WMA/MP4/M4A and similar files are skipped with a warning; CDJs do not
+- OGG/Opus/WMA/MP4/M4A and similar files are skipped with a warning; CDJs do not
   play them from a Rekordbox stick. AIFF, FLAC, MP3, WAV and M4A (AAC) are the
   useful formats.
-* Analysis is done on `mlab` (numpy + ffmpeg), not by Rekordbox. BPM/key values
+- Analysis is done on `mlab` (numpy + ffmpeg), not by Rekordbox. BPM/key values
   can differ slightly from Rekordbox's own analyser.
-* Genre playlists are written under a top-level `DJSync` folder (`Genres/<genre>`).
-* Always test a new stick on the actual player before a gig.
+- Genre playlists are written under a top-level `DJSync` folder (`Genres/<genre>`).
+- Always test a new stick on the actual player before a gig.

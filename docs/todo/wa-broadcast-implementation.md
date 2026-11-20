@@ -197,7 +197,7 @@ py-modules = ["wa_broadcast"]
 - `status(db, all=False)` / `retry(db, id)` / `forget(db, id)` — thin SQL.
 - `cli:main(argv)` — dispatch subcommands.
 - **Self-check** (ponytail rule, one runnable check, no framework): a `if
-__name__ == "__main__" and os.environ.get("WA_SELFTEST")` block that opens a
+  __name__ == "__main__" and os.environ.get("WA_SELFTEST")` block that opens a
   temp DB, enqueues two rows, fakes a 429 + a success, asserts status flips to
   `retry`/`sent` and `next_retry_at` set correctly. Exits non-zero on mismatch.
 
