@@ -362,6 +362,13 @@
             };
           }
           {
+            "DJ Export" = {
+              icon = "mdi-usb-flash-drive";
+              href = services.djexport.href;
+              description = "Rekordbox export and stick readiness";
+            };
+          }
+          {
             Status = {
               icon = "uptime-kuma";
               href = "${services.status.href}/status/mlab";

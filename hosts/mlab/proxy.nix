@@ -41,6 +41,11 @@
       href = "https://chaptarr.marcel.cool";
       vpn = "pia";
     };
+    djexport = {
+      port = 8297;
+      href = "https://djexport.marcel.cool";
+      protected = true;
+    };
     grafana = {
       port = 3005;
       href = "https://grafana.marcel.cool";

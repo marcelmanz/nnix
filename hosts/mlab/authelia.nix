@@ -84,6 +84,10 @@
       subject = ["group:admins"];
     }
     {
+      domain = "djexport.marcel.cool";
+      subject = ["group:admins"];
+    }
+    {
       domain = "nitter.marcel.cool";
       subject = ["group:admins" "group:nitter"];
     }

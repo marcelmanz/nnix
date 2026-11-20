@@ -236,6 +236,30 @@ def atomic_write(path: Path, data: bytes) -> None:
         tmp.unlink(missing_ok=True)
 
 
+class ExportProgress:
+    """JSON snapshot of a running export for the status page; a no-op without a path."""
+
+    def __init__(self, path: Path | None, min_interval: float = 1.0) -> None:
+        self.path = path
+        self.min_interval = min_interval
+        self.last_write = 0.0
+        self.fields: dict[str, Any] = {"started": time.time()}
+
+    def update(self, force: bool = False, **fields: Any) -> None:
+        if self.path is None:
+            return
+        self.fields.update(fields)
+        now = time.time()
+        if not force and now - self.last_write < self.min_interval:
+            return
+        self.fields["updated"] = now
+        self.last_write = now
+        try:
+            atomic_write(self.path, json.dumps(self.fields).encode("utf-8"))
+        except OSError as exc:
+            LOG.debug("Cannot write progress file %s: %s", self.path, exc)
+
+
 @contextmanager
 def exclusive_lock(root: Path) -> Iterator[None]:
     """One exporter / USB copy at a time. Blocking: a second run waits instead of failing."""
@@ -630,6 +654,10 @@ def cmd_export(args: argparse.Namespace) -> int:
         if args.dry_run and not (root / DB_REL).is_file():
             LOG.error("No export at %s yet; run export without --dry-run once", root)
             return 1
+        progress = ExportProgress(
+            None if args.dry_run or not args.progress_file else Path(args.progress_file)
+        )
+        progress.update(force=True, phase="scanning")
         created = False if args.dry_run else ensure_blank(root, force=args.force_init)
         state = load_state(root)
         present: set[str] = set()
@@ -659,6 +687,9 @@ def cmd_export(args: argparse.Namespace) -> int:
             "failed": 0,
             "removed": 0,
         }
+        progress.update(
+            force=True, phase="exporting", total=len(audio), processed=0, counts=counts
+        )
         with open_library(root, read_only=args.dry_run) as lib:
             tracks_by_id, by_path = refresh_library_maps(lib)
             owners: dict[str, str] = {}
@@ -672,6 +703,7 @@ def cmd_export(args: argparse.Namespace) -> int:
                 dirty = 0
                 now = time.time()
                 for index, (rel, path) in enumerate(audio, start=1):
+                    progress.update(processed=index - 1, current=rel)
                     try:
                         st = path.stat()
                     except OSError as exc:
@@ -821,6 +853,9 @@ def cmd_export(args: argparse.Namespace) -> int:
                             exc_info=args.verbose > 1,
                         )
 
+                progress.update(
+                    force=True, phase="finishing", processed=len(audio), current=None
+                )
                 if args.prune and not args.dry_run:
                     for rel, entry in list(state.get("tracks", {}).items()):
                         if rel in present:
@@ -868,6 +903,13 @@ def cmd_export(args: argparse.Namespace) -> int:
                     counts["failed"],
                     lib.track_count(),
                     status.state,
+                )
+                progress.update(
+                    force=True,
+                    phase="done",
+                    finished=time.time(),
+                    pdb=status.state,
+                    tracks=lib.track_count(),
                 )
                 if status.state in ("stale", "unsupported"):
                     return 1
@@ -1035,6 +1077,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_export.add_argument(
         "--dry-run", action="store_true", help="show what would change, do not write"
+    )
+    p_export.add_argument(
+        "--progress-file", help="keep a JSON progress snapshot here (status page)"
     )
     p_export.set_defaults(func=cmd_export)
 
