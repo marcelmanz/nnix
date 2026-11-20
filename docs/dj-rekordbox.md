@@ -35,6 +35,9 @@ dj-rekordbox export \
 - oneshot, root, every 30 minutes and 10 minutes after boot;
 - the first run analyses every track (can take a long time), later runs only
   process files whose size or mtime changed;
+- tracks that need analysis are analysed ahead by up to 4 worker processes
+  (djsync's analysis pool, `DJSYNC_ANALYSIS_WORKERS` lowers it); database
+  writes stay in one process, in order;
 - files newer than 120 s are skipped so Bandcamp/Syncthing half-written files
   are not imported;
 - tracks deleted from `/var/lib/media/dj` are removed from the databases; the
