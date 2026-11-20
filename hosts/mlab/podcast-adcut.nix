@@ -11,8 +11,8 @@ in {
     environment = {
       PODCAST_DIR = "/var/lib/media/podcasts";
       SHOWS_FILE = "${shows}";
-      # logs the planned cuts without touching the files
-      DRY_RUN = "1";
+      # unset/0 = actually cut the files; set to "1" to only log planned cuts
+      DRY_RUN = "0";
     };
     serviceConfig = {
       Type = "oneshot";
