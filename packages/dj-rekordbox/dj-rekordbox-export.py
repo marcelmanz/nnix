@@ -324,6 +324,7 @@ def ensure_blank(root: Path, force: bool = False) -> bool:
         and not force
         # An export root should be dedicated. Refuse to drop a template into a random non-empty tree.
         and (root / "PIONEER").exists()
+        and any((root / "PIONEER").iterdir())
     ):
         raise SystemExit(
             f"{root} already contains a PIONEER tree but no exportLibrary.db; "

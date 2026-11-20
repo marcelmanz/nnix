@@ -21,9 +21,11 @@
   '';
 
   moveInPlaceExport = pkgs.writeShellScript "dj-rekordbox-move-in-place-export" ''
-    if [ -d ${library}/PIONEER ] && [ ! -e ${stickRoot}/PIONEER ]; then
+    if [ -f ${library}/PIONEER/rekordbox/exportLibrary.db ] &&
+      [ ! -e ${stickRoot}/PIONEER/rekordbox/exportLibrary.db ]; then
+      rmdir ${stickRoot}/PIONEER 2>/dev/null || true
       for name in PIONEER DJSync_Backups .djsync-export.json; do
-        if [ -e "${library}/$name" ]; then
+        if [ -e "${library}/$name" ] && [ ! -e "${stickRoot}/$name" ]; then
           mv "${library}/$name" ${stickRoot}/
         fi
       done

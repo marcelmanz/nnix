@@ -80,6 +80,21 @@ def systemd_properties(unit: str, *names: str) -> dict[str, str]:
     return dict(line.split("=", 1) for line in output.splitlines() if "=" in line)
 
 
+def next_timer_elapse(timer: str) -> float | None:
+    try:
+        output = subprocess.run(
+            ["systemctl", "list-timers", "--all", "--output=json", timer],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        ).stdout
+        entries = json.loads(output or "[]")
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        return None
+    next_usec = entries[0].get("next") if entries else None
+    return next_usec / 1e6 if next_usec else None
+
+
 class Syncthing:
     def __init__(self, url: str, config_path: Path) -> None:
         self.url = url.rstrip("/")
@@ -109,7 +124,7 @@ def collect(options: argparse.Namespace, syncthing: Syncthing) -> dict:
         "ExecMainStartTimestamp",
         "ExecMainExitTimestamp",
     )
-    timer = systemd_properties(options.timer, "NextElapseUSecRealtime")
+    timer = {"next": next_timer_elapse(options.timer)}
     try:
         progress = json.loads(Path(options.progress_file).read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -274,7 +289,7 @@ def build_view(snapshot: dict) -> dict:
 
     started = unix_timestamp(unit.get("ExecMainStartTimestamp"))
     finished = progress.get("finished")
-    next_run = unix_timestamp(timer.get("NextElapseUSecRealtime"))
+    next_run = timer.get("next")
     last_scan = sync.get("last_scan")
     last_seen = sync.get("last_seen")
 
