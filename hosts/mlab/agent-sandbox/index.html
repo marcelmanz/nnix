@@ -30,6 +30,10 @@
   .tool summary { padding: 6px 10px; cursor: pointer; font-family: ui-monospace, monospace; font-size: 13px; }
   .tool pre { margin: 0; padding: 8px 10px; overflow-x: auto; max-height: 320px; border-top: 1px solid var(--line); font-size: 12px; }
   .tool.error summary { color: var(--err); }
+  .preview { display: block; color: var(--muted); font-size: 12px; white-space: pre-wrap; word-break: break-word; margin-top: 2px; }
+  .thinking { color: var(--muted); border-left: 2px solid var(--line); padding-left: 10px; }
+  .thinking summary { cursor: pointer; font-size: 12px; font-style: italic; }
+  .thinking .msg { font-size: 13px; font-style: italic; margin-top: 4px; }
   .result { border: 1px solid var(--ok); border-radius: 8px; padding: 10px 12px; }
   .result.aborted { border-color: var(--err); }
   .result h3 { margin: 0 0 6px; font-size: 14px; }
@@ -67,7 +71,7 @@
 </main>
 <script>
 const $ = (id) => document.getElementById(id);
-let current = null, draftProject = null, source = null, tools = new Map(), assistant = null;
+let current = null, draftProject = null, source = null, tools = new Map(), assistant = null, thinking = null;
 const lastState = new Map();
 
 async function api(path, options = {}) {
@@ -151,7 +155,7 @@ function open(id) {
   if (source) source.close();
   $("log").replaceChildren();
   $("send-button").textContent = "Send";
-  tools = new Map(); assistant = null;
+  tools = new Map(); assistant = null; thinking = null;
   source = new EventSource(`/api/sessions/${id}/events`);
   source.onmessage = (event) => render(JSON.parse(event.data));
   refresh();
@@ -166,6 +170,29 @@ function add(el) {
 
 function text(result) {
   return (result?.content || []).map((c) => c.text || "").join("");
+}
+
+function firstLine(value) {
+  const line = value.trim().split("\n")[0];
+  return line.length > 140 ? line.slice(0, 140) + "..." : line;
+}
+
+function lastLines(value, count) {
+  return value.trimEnd().split("\n").filter((line) => line.trim()).slice(-count).join("\n");
+}
+
+function thinkingBlock() {
+  const el = document.createElement("details");
+  el.className = "thinking"; el.open = true;
+  const summary = document.createElement("summary");
+  summary.textContent = "thinking";
+  const preview = document.createElement("span");
+  preview.className = "preview";
+  summary.append(preview);
+  const body = document.createElement("div");
+  body.className = "msg";
+  el.append(summary, body);
+  return { el, body, preview };
 }
 
 function resultCard(record) {
@@ -199,19 +226,29 @@ function render(record) {
     }
     case "message_update": {
       const delta = record.assistantMessageEvent;
+      if (delta?.type === "thinking_start") { thinking = thinkingBlock(); assistant = null; add(thinking.el); break; }
+      if (delta?.type === "thinking_delta" && thinking) { thinking.body.textContent += delta.delta; break; }
+      if (delta?.type === "thinking_end" && thinking) {
+        thinking.el.open = false;
+        thinking.preview.textContent = firstLine(thinking.body.textContent);
+        thinking = null; break;
+      }
       if (delta?.type !== "text_delta") break;
       if (!assistant) { assistant = document.createElement("div"); assistant.className = "msg"; add(assistant); }
       assistant.textContent += delta.delta; break;
     }
     case "message_end":
-      if (record.message?.role === "assistant") assistant = null; break;
+      if (record.message?.role === "assistant") { assistant = null; thinking = null; } break;
     case "tool_execution_start": {
       const el = document.createElement("details");
       el.className = "tool"; el.open = true;
       const summary = document.createElement("summary");
       summary.textContent = `${record.toolName} ${record.args?.command || JSON.stringify(record.args)}`;
+      const preview = document.createElement("span");
+      preview.className = "preview";
+      summary.append(preview);
       const out = document.createElement("pre");
-      el.append(summary, out); tools.set(record.toolCallId, { el, out });
+      el.append(summary, out); tools.set(record.toolCallId, { el, out, preview });
       assistant = null; add(el); break;
     }
     case "tool_execution_update": {
@@ -223,6 +260,7 @@ function render(record) {
       if (!tool) break;
       tool.out.textContent = text(record.result);
       tool.el.open = false;
+      tool.preview.textContent = lastLines(tool.out.textContent, 3);
       if (record.isError) tool.el.classList.add("error"); break;
     }
     case "session_result":
