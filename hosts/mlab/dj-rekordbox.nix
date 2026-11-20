@@ -58,7 +58,7 @@ in {
       Type = "oneshot";
       User = "root";
       ExecStartPre = "+${moveInPlaceExport}";
-      ExecStart = "${pkgs.dj-rekordbox}/bin/dj-rekordbox export --source ${stickLibrary} --root ${stickRoot} --min-age 120 --prune --progress-file ${progressFile}";
+      ExecStart = "${pkgs.dj-rekordbox}/bin/dj-rekordbox export --source ${stickLibrary} --root ${stickRoot} --min-age 120 --prune --full-check-hour 3 --progress-file ${progressFile}";
       ExecStartPost = "-${rescanLibrary}";
       StateDirectory = "dj-rekordbox";
       Environment = "DJSYNC_HOME=${stateDir}";

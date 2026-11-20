@@ -204,6 +204,18 @@ def analysis_candidates(
     return candidates
 
 
+def analysis_file_missing(root: Path, track: Any) -> bool:
+    analysis_path = getattr(track, "analysis_path", None)
+    return bool(analysis_path) and not (root / analysis_path.lstrip("/")).is_file()
+
+
+def full_check_due(state: dict[str, Any], hour: int) -> bool:
+    """Once per night: in the given local hour, if the last full check is over 12 h old."""
+    if hour < 0 or time.localtime().tm_hour != hour:
+        return False
+    return time.time() - float(state.get("last_full_check") or 0) > 12 * 3600
+
+
 def read_info(path: Path) -> ImportInfo:
     """Read tags from AIFF/FLAC/WAV/MP3/M4A.
 
@@ -712,6 +724,9 @@ def cmd_export(args: argparse.Namespace) -> int:
         progress.update(force=True, phase="scanning")
         created = False if args.dry_run else ensure_blank(root, force=args.force_init)
         state = load_state(root)
+        full_check = not args.dry_run and full_check_due(state, args.full_check_hour)
+        if full_check:
+            LOG.info("Full check: every track is read and verified")
         present: set[str] = set()
         audio, present, unsupported = scan_source(source)
         if args.limit and args.limit > 0:
@@ -741,7 +756,12 @@ def cmd_export(args: argparse.Namespace) -> int:
             "too_long": 0,
         }
         progress.update(
-            force=True, phase="exporting", total=len(audio), processed=0, counts=counts
+            force=True,
+            phase="exporting",
+            total=len(audio),
+            processed=0,
+            counts=counts,
+            full_check=full_check,
         )
         with open_library(root, read_only=args.dry_run) as lib:
             tracks_by_id, by_path = refresh_library_maps(lib)
@@ -805,7 +825,8 @@ def cmd_export(args: argparse.Namespace) -> int:
                     # Tag writers (dj-enrich, dj-genres, tagr) change mtime, so a
                     # stat match is a reliable "nothing to do" signal.
                     if (
-                        previous
+                        not full_check
+                        and previous
                         and previous_track
                         and previous_track.is_analysed
                         and previous_dest is not None
@@ -854,12 +875,14 @@ def cmd_export(args: argparse.Namespace) -> int:
                             continue
 
                         ensure_export_file(path, dest)
+                        relinked = reanalysed = False
                         if (
                             previous_track
                             and previous_dest_rel
                             and previous_dest_rel.casefold() != dest_rel.casefold()
                         ):
                             previous_track = lib.relink_track(previous_cid, dest)
+                            relinked = True
                             by_path.pop(previous_dest_rel.casefold(), None)
                             by_path[dest_rel.casefold()] = dest_rel
                             LOG.info("~ %s moved %s -> %s", rel, previous_dest_rel, dest_rel)
@@ -873,7 +896,12 @@ def cmd_export(args: argparse.Namespace) -> int:
                             meta=info.meta,
                         )
                         cid = int(track.content_id)
-                        if source_changed or not track.is_analysed:
+                        if (
+                            source_changed
+                            or not track.is_analysed
+                            or analysis_file_missing(root, track)
+                        ):
+                            reanalysed = True
                             # add_track() reuses an existing row without refreshing its fileSize/ANLZ.
                             if existed and source_changed:
                                 try:
@@ -923,14 +951,20 @@ def cmd_export(args: argparse.Namespace) -> int:
                         owners[dest_rel.casefold()] = rel
                         by_path[dest_rel.casefold()] = dest_rel
                         tracks_by_id[cid] = track
-                        counts["updated" if existed else "added"] += 1
                         dirty += 1
-                        LOG.info(
-                            "+ %s -> %s%s",
-                            rel,
-                            dest_rel,
-                            " (updated)" if existed else "",
-                        )
+                        if existed and not (
+                            source_changed or tags_changed or relinked or reanalysed
+                        ):
+                            counts["unchanged"] += 1
+                            LOG.debug("= %s (checked)", rel)
+                        else:
+                            counts["updated" if existed else "added"] += 1
+                            LOG.info(
+                                "+ %s -> %s%s",
+                                rel,
+                                dest_rel,
+                                " (updated)" if existed else "",
+                            )
                         if lib.last_problems:
                             LOG.warning(
                                 "  partial analysis: %s", "; ".join(lib.last_problems)
@@ -977,6 +1011,8 @@ def cmd_export(args: argparse.Namespace) -> int:
                         LOG.error("Genre playlist sync failed: %s", exc)
 
             if not args.dry_run:
+                if full_check:
+                    state["last_full_check"] = time.time()
                 save_state(root, state)
                 status = lib.pdb_status()
                 if status.state not in ("ok", "absent", "off"):
@@ -1175,6 +1211,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_export.add_argument(
         "--progress-file", help="keep a JSON progress snapshot here (status page)"
+    )
+    p_export.add_argument(
+        "--full-check-hour",
+        type=int,
+        default=-1,
+        help="once a night in this local hour, verify every track instead of trusting size/mtime",
     )
     p_export.add_argument(
         "--max-duration",

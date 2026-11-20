@@ -242,7 +242,9 @@ def verdict(snapshot: dict) -> tuple[str, str, str]:
         total = int(progress.get("total") or 0)
         processed = int(progress.get("processed") or 0)
         phase = progress.get("phase", "starting")
-        if phase == "exporting" and total:
+        if phase == "exporting" and total and progress.get("full_check"):
+            detail = f"Nightly full check: verifying track {processed:,} of {total:,}."
+        elif phase == "exporting" and total:
             detail = f"Checking track {processed:,} of {total:,}."
         elif phase == "scanning":
             detail = "Looking for new and changed tracks."

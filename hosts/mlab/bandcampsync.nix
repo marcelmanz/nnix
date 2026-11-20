@@ -22,7 +22,7 @@
     text = ''
       if [ "$#" -eq 0 ]; then set -- /var/lib/media/dj /var/lib/media/music; fi
       python3 ${./dj-enrich.py} "$@" || true  # tagger crash must not block rsgain/navidrome rescan
-      rsgain easy "$@" || true  # replaygain; tolerate unsupported files
+      rsgain easy -S "$@" || true  # replaygain; tolerate unsupported files
     '';
   };
 
