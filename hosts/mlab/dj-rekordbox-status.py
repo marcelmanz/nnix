@@ -13,6 +13,7 @@ import time
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
+from collections import deque
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -20,6 +21,8 @@ from pathlib import Path
 RUNNING_STATES = {"activating", "active", "reloading", "deactivating"}
 FAST_POLL_STATES = {"exporting", "scanning", "sending"}
 SNAPSHOT_TTL = 1.5
+RATE_WINDOW = 300.0
+MIN_RATE_SPAN = 60.0
 
 
 def unix_timestamp(value: str | None) -> float | None:
@@ -95,6 +98,51 @@ def next_timer_elapse(timer: str) -> float | None:
     return next_usec / 1e6 if next_usec else None
 
 
+class RemainingTimeEstimator:
+    """Recent export speed; unchanged tracks are near-instant, so the overall average misleads."""
+
+    def __init__(self) -> None:
+        self.started: float | None = None
+        self.samples: deque[tuple[float, int]] = deque()
+
+    def estimate(self, progress: dict) -> float | None:
+        if progress.get("phase") != "exporting":
+            return None
+        started, updated = progress.get("started"), progress.get("updated")
+        processed = int(progress.get("processed") or 0)
+        remaining = int(progress.get("total") or 0) - processed
+        if not started or not updated:
+            return None
+        if started != self.started:
+            self.started = started
+            self.samples.clear()
+        if not self.samples or self.samples[-1] != (updated, processed):
+            self.samples.append((updated, processed))
+        while len(self.samples) > 2 and updated - self.samples[1][0] >= RATE_WINDOW:
+            self.samples.popleft()
+
+        oldest_time, oldest_processed = self.samples[0]
+        done, elapsed = processed - oldest_processed, updated - oldest_time
+        if elapsed < MIN_RATE_SPAN or done <= 0:
+            return None
+        return remaining * elapsed / done
+
+
+def remaining_text(seconds: float | None, phase: str | None) -> str:
+    if phase == "scanning":
+        return "Looking for new tracks"
+    if phase == "finishing":
+        return "Finishing up"
+    if seconds is None:
+        return "Estimating time left"
+    minutes = round(seconds / 60)
+    if minutes < 1:
+        return "Less than a minute left"
+    if minutes < 60:
+        return f"About {minutes} min left"
+    return f"About {minutes // 60} h {minutes % 60} min left"
+
+
 class Syncthing:
     def __init__(self, url: str, config_path: Path) -> None:
         self.url = url.rstrip("/")
@@ -115,7 +163,11 @@ class Syncthing:
             return json.load(response)
 
 
-def collect(options: argparse.Namespace, syncthing: Syncthing) -> dict:
+def collect(
+    options: argparse.Namespace,
+    syncthing: Syncthing,
+    estimator: RemainingTimeEstimator,
+) -> dict:
     unit = systemd_properties(
         options.unit,
         "ActiveState",
@@ -173,7 +225,13 @@ def collect(options: argparse.Namespace, syncthing: Syncthing) -> dict:
     except (OSError, ValueError, ET.ParseError) as exc:
         sync = {"unreachable": str(exc)}
 
-    return {"unit": unit, "timer": timer, "progress": progress, "sync": sync}
+    return {
+        "unit": unit,
+        "timer": timer,
+        "progress": progress,
+        "remaining": estimator.estimate(progress),
+        "sync": sync,
+    }
 
 
 def verdict(snapshot: dict) -> tuple[str, str, str]:
@@ -306,6 +364,9 @@ def build_view(snapshot: dict) -> dict:
             "verdict-detail": detail,
             "progress-label": f"{processed:,} / {total:,} tracks" if total else "Starting",
             "progress-current": progress.get("current") or "",
+            "progress-remaining": remaining_text(
+                snapshot["remaining"], progress.get("phase")
+            ),
             "export-state": export_state,
             "export-summary": summary,
             "export-library": library,
@@ -357,12 +418,13 @@ def serve(options: argparse.Namespace) -> None:
     policy = content_security_policy(template)
     syncthing = Syncthing(options.syncthing_url, Path(options.syncthing_config))
     lock = threading.Lock()
+    estimator = RemainingTimeEstimator()
     cache: dict = {"at": 0.0, "view": None}
 
     def current_view() -> dict:
         with lock:
             if cache["view"] is None or time.monotonic() - cache["at"] > SNAPSHOT_TTL:
-                cache["view"] = build_view(collect(options, syncthing))
+                cache["view"] = build_view(collect(options, syncthing, estimator))
                 cache["at"] = time.monotonic()
             return cache["view"]
 

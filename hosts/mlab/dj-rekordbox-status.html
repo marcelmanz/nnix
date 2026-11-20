@@ -83,6 +83,12 @@ progress {
   height: 0.75rem;
   accent-color: var(--busy);
 }
+.remaining {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
 .progress-meta { display: flex; justify-content: space-between; gap: 1rem; margin: 0.5rem 0 0; }
 .file {
   margin: 0.25rem 0 0;
@@ -133,7 +139,8 @@ footer[data-stale="true"] #connection { color: var(--bad); }
 
     <section class="card" id="progress-section" aria-labelledby="progress-heading" {{progress-hidden}}>
       <h2 id="progress-heading">Progress</h2>
-      <progress id="progress" value="{{progress-value}}" max="{{progress-max}}" aria-labelledby="progress-heading" aria-describedby="progress-label"></progress>
+      <p class="remaining" id="progress-remaining">{{progress-remaining}}</p>
+      <progress id="progress" value="{{progress-value}}" max="{{progress-max}}" aria-labelledby="progress-heading" aria-describedby="progress-remaining progress-label"></progress>
       <p class="progress-meta"><span id="progress-label">{{progress-label}}</span></p>
       <p class="file" id="progress-current">{{progress-current}}</p>
     </section>

@@ -53,6 +53,7 @@ in {
     after = ["local-fs.target"];
     requires = ["local-fs.target"];
     unitConfig.RequiresMountsFor = [stickLibrary];
+    restartIfChanged = false;
     serviceConfig = {
       Type = "oneshot";
       User = "root";

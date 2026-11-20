@@ -145,6 +145,8 @@ would change.
 - OGG/Opus/WMA/MP4/M4A and similar files are skipped with a warning; CDJs do not
   play them from a Rekordbox stick. AIFF, FLAC, MP3, WAV and M4A (AAC) are the
   useful formats.
+- Tracks longer than 30 minutes (gapless albums, mixes) are skipped and removed
+  from the export; change the limit with `--max-duration`, `0` turns it off.
 - Analysis is done on `mlab` (numpy + ffmpeg), not by Rekordbox. BPM/key values
   can differ slightly from Rekordbox's own analyser.
 - Genre playlists are written under a top-level `DJSync` folder (`Genres/<genre>`).

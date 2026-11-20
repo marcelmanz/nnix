@@ -41,6 +41,7 @@ from contextlib import contextmanager, nullcontext
 from pathlib import Path
 from typing import Any
 
+from djsync.analysis.pool import prefetching
 from djsync.core import genre_playlists
 from djsync.core.importer import ImportInfo, is_audio
 from djsync.db import RekordboxUsbLibrary
@@ -151,6 +152,56 @@ def _id3_first(tags: Any, *frame_ids: str) -> str:
             if text:
                 return text
     return ""
+
+
+def audio_duration(path: Path) -> float | None:
+    try:
+        import mutagen
+
+        audio = mutagen.File(str(path))
+        return float(audio.info.length) if audio is not None else None
+    except Exception as exc:  # noqa: BLE001 - unknown length: let the analysis decide
+        LOG.debug("Length not read (%s): %s", path.name, exc)
+        return None
+
+
+def analysis_candidates(
+    audio: list[tuple[str, Path]],
+    state: dict[str, Any],
+    tracks_by_id: dict[int, Any],
+    now: float,
+    args: argparse.Namespace,
+) -> list[Path]:
+    """Tracks the export loop will analyse, for worker processes to analyse ahead.
+
+    Mirrors the loop's skip rules; a wrong guess only costs speed, never correctness.
+    """
+    candidates = []
+    for rel, path in audio:
+        try:
+            st = path.stat()
+        except OSError:
+            continue
+        if args.min_age > 0 and now - st.st_mtime < args.min_age:
+            continue
+        previous = state.get("tracks", {}).get(rel)
+        previous_track = (
+            tracks_by_id.get(int(previous.get("content_id") or 0)) if previous else None
+        )
+        source_changed = bool(
+            previous
+            and (
+                previous.get("size") != st.st_size
+                or previous.get("mtime_ns") != st.st_mtime_ns
+            )
+        )
+        if previous_track and previous_track.is_analysed and not source_changed:
+            continue
+        duration = audio_duration(path)
+        if args.max_duration > 0 and (duration or 0) > args.max_duration:
+            continue
+        candidates.append(path)
+    return candidates
 
 
 def read_info(path: Path) -> ImportInfo:
@@ -687,6 +738,7 @@ def cmd_export(args: argparse.Namespace) -> int:
             "young": 0,
             "failed": 0,
             "removed": 0,
+            "too_long": 0,
         }
         progress.update(
             force=True, phase="exporting", total=len(audio), processed=0, counts=counts
@@ -700,11 +752,20 @@ def cmd_export(args: argparse.Namespace) -> int:
                     owners[dest.casefold()] = rel
 
             batch = nullcontext() if args.dry_run else lib.long_batch()
-            with batch:
+            now = time.time()
+            prefetch_paths = (
+                analysis_candidates(audio, state, tracks_by_id, now, args)
+                if in_place and not args.dry_run
+                else []
+            )
+            prefetch_index = {str(p): i for i, p in enumerate(prefetch_paths)}
+            prefetch = prefetching(prefetch_paths, getattr(lib, "ffmpeg_location", None))
+            with batch, prefetch as analysis_ahead:
                 dirty = 0
-                now = time.time()
                 for index, (rel, path) in enumerate(audio, start=1):
                     progress.update(processed=index - 1, current=rel)
+                    if analysis_ahead is not None and str(path) in prefetch_index:
+                        analysis_ahead.advance(prefetch_index[str(path)])
                     try:
                         st = path.stat()
                     except OSError as exc:
@@ -750,9 +811,30 @@ def cmd_export(args: argparse.Namespace) -> int:
                         and previous_dest is not None
                         and previous_dest.is_file()
                         and not source_changed
+                        and "duration" in previous
+                        and not (
+                            args.max_duration > 0
+                            and (previous["duration"] or 0) > args.max_duration
+                        )
                     ):
                         counts["unchanged"] += 1
                         LOG.debug("= %s", rel)
+                        continue
+
+                    duration = audio_duration(path)
+                    if args.max_duration > 0 and (duration or 0) > args.max_duration:
+                        counts["too_long"] += 1
+                        LOG.info("Skipping %s: %.0f min long", rel, duration / 60)
+                        if previous and not args.dry_run:
+                            try:
+                                if previous_track:
+                                    lib.delete_track(
+                                        previous_cid, delete_file=not in_place
+                                    )
+                                del state["tracks"][rel]
+                                counts["removed"] += 1
+                            except Exception as exc:  # noqa: BLE001 - keep going
+                                LOG.error("Failed to remove %s: %s", rel, exc)
                         continue
 
                     try:
@@ -831,6 +913,7 @@ def cmd_export(args: argparse.Namespace) -> int:
                             "size": st.st_size,
                             "mtime_ns": st.st_mtime_ns,
                             "tags": tags_hash,
+                            "duration": duration,
                             "title": info.title,
                             "artist": info.artist,
                             "album": info.album or "",
@@ -903,13 +986,14 @@ def cmd_export(args: argparse.Namespace) -> int:
                         getattr(status, "detail", ""),
                     )
                 LOG.info(
-                    "Done: %d added, %d updated, %d unchanged, %d removed, %d young, %d failed; "
-                    "%d tracks, export.pdb=%s",
+                    "Done: %d added, %d updated, %d unchanged, %d removed, %d young, "
+                    "%d too long, %d failed; %d tracks, export.pdb=%s",
                     counts["added"],
                     counts["updated"],
                     counts["unchanged"],
                     counts["removed"],
                     counts["young"],
+                    counts["too_long"],
                     counts["failed"],
                     lib.track_count(),
                     status.state,
@@ -1091,6 +1175,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_export.add_argument(
         "--progress-file", help="keep a JSON progress snapshot here (status page)"
+    )
+    p_export.add_argument(
+        "--max-duration",
+        type=float,
+        default=1800.0,
+        help="skip tracks longer than N seconds, 0 for no limit (default: 30 min)",
     )
     p_export.set_defaults(func=cmd_export)
 
