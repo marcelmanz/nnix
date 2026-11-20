@@ -233,6 +233,7 @@ in {
       };
       ".vimrc".source = link "${dots}/.vimrc";
       ".gitconfig".source = link "${dots}/.gitconfig";
+      ".gitconfig-github".source = link "${dots}/.gitconfig-github";
       ".ssh/srht_ed25519.pub".source = ./srht_ed25519.pub;
       ".gitignore".source = link "${dots}/.gitignore";
       ".bashrc".source = link "${dots}/.bashrc";
