@@ -16,6 +16,7 @@ in {
     ../../home/i3.nix
     ../../home/bandcamp-cookies.nix
     ../../home/syncthing.nix
+    ../../home/dj-stick.nix
   ];
 
   # Route Settings to the GNOME backend: gtk answers Read but never emits

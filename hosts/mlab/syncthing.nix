@@ -39,6 +39,14 @@
     type = "sendonly";
   };
 
+  services.syncthing.settings.folders."dj-rekordbox" = {
+    path = "/var/lib/media/dj-stick/PIONEER";
+    id = "dj-rekordbox";
+    devices = ["nixos"];
+    type = "sendonly";
+    markerName = "rekordbox";
+  };
+
   # live show recordings (mkv, written by azuracast-live-record) shared to laptop.
   # No extra permissions needed: the dir is 2775 root:media like dj above, and the
   # syncthing user is already in media. A show still being recorded syncs as it grows.

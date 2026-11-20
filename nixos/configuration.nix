@@ -302,6 +302,7 @@
   # the group directly instead.
   services.udev.extraRules = ''
     SUBSYSTEM=="hidraw", ATTRS{idVendor}=="2b73", ATTRS{idProduct}=="0045", GROUP="users", MODE="0660"
+    ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_TYPE}=="vfat", ENV{ID_FS_LABEL}=="FIESTA", TAG+="systemd", ENV{SYSTEMD_USER_WANTS}+="dj-stick@%k.service"
   '';
 
   musnix.enable = false;

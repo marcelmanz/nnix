@@ -2,18 +2,21 @@
 
 The DJ master library is `/var/lib/media/dj` on `mlab` (AIFF from Bandcamp,
 tagged by `dj-enrich`). CDJs do not read a plain folder: a Rekordbox-prepared
-stick needs both databases and the analysis files:
+stick needs both databases and the analysis files at its root:
 
 ```
 PIONEER/rekordbox/exportLibrary.db   OneLibrary / Device Library Plus (newer CDJs)
 PIONEER/rekordbox/export.pdb         legacy database (older CDJ/XDJ)
 PIONEER/USBANLZ/...                  BPM, key and waveform analysis
-<Artist>/<Album>/<file>              audio, referenced in place
+dj/<Artist>/<Album>/<file>           audio
 ```
 
-`dj-rekordbox` writes `PIONEER/` into `/var/lib/media/dj` itself, so the DJ
-folder is a complete stick image. Syncthing sends it to the laptop with the
-music, and copying the folder's contents to a stick is enough.
+The databases store each track's path relative to the stick root, so the
+export is built in a folder with exactly that layout:
+`/var/lib/media/dj-stick`. Its `dj/` is a read-only bind mount of
+`/var/lib/media/dj`, so tracks are referenced in place and the exporter cannot
+change the music.
+
 It uses [djsync](https://github.com/Pikkol0/djsync) as a Python library for the
 Rekordbox databases and for local BPM/key/waveform analysis. It is packaged in
 `packages/djsync`; the exporter itself is `packages/dj-rekordbox`.
@@ -24,8 +27,8 @@ Rekordbox databases and for local BPM/key/waveform analysis. It is packaged in
 
 ```sh
 dj-rekordbox export \
-  --source /var/lib/media/dj \
-  --root /var/lib/media/dj \
+  --source /var/lib/media/dj-stick/dj \
+  --root /var/lib/media/dj-stick \
   --min-age 120 --prune
 ```
 
@@ -35,29 +38,72 @@ dj-rekordbox export \
 - files newer than 120 s are skipped so Bandcamp/Syncthing half-written files
   are not imported;
 - tracks deleted from `/var/lib/media/dj` are removed from the databases; the
-  exporter never moves, renames or deletes audio when source and root are the
-  same folder.
+  exporter never moves, renames or deletes audio in place.
 
-Wait until the export has finished and Syncthing shows the folder as up to
-date before copying it to a stick, so the databases and analysis files match.
+Before the first run it moves an export left in `/var/lib/media/dj` by the
+earlier in-place layout into `/var/lib/media/dj-stick`. The exporter then
+relinks those tracks to `/dj/...` and keeps their analysis.
+
+Syncthing sends two folders to the laptop:
+
+- `dj-library`: `/var/lib/media/dj` to `~/Music/dj`, the music;
+- `dj-rekordbox`: `/var/lib/media/dj-stick/PIONEER` to `~/Music/dj-rekordbox`,
+  the databases and analysis.
+
+## Status page
+
+<https://djexport.marcel.cool> (Authelia, `group:admins`) shows whether the
+library is ready to copy. It is served by `dj-rekordbox-status` and combines:
+
+- the export's progress file, `/var/lib/dj-rekordbox/progress.json`;
+- the `dj-rekordbox` service and timer state from systemd;
+- Syncthing's REST API for both folders and the laptop device.
+
+It shows **Ready to copy** only when:
+
+- the last export finished cleanly;
+- Syncthing has scanned `dj-rekordbox` since the export finished;
+- the laptop is connected and has everything in both folders.
+
+After each export the service asks Syncthing to rescan `dj-rekordbox`, so this
+does not wait for the hourly full scan.
 
 ## Making a stick
 
 The stick must be **FAT32** (MBR, one partition) for basically all CDJs.
 exFAT is only read by newer CDJ-2000NXS2/XDJ models; older players show
-`NO USB` / `E-8307 DEVICE NO RESPONSE` for exFAT or NTFS.
+`NO USB` / `E-8307 DEVICE NO RESPONSE` for exFAT or NTFS. Format it once
+(replace `/dev/sdX` with the whole stick, not a partition):
 
 ```sh
-# format once (replace /dev/sdX with the whole stick, not a partition)
-sudo mkfs.vfat -F 32 -n CDJ /dev/sdX
+sudo mkfs.vfat -F 32 -n FIESTA /dev/sdX
+```
 
-# mount it, then copy the whole DJ folder (from the laptop's Syncthing copy)
-rsync -rt --modify-window=2 --delete --exclude=.stfolder --exclude=.stversions \
-  --exclude=/DJSync_Backups/ --exclude='/.djsync-export.*' \
-  ~/Music/dj/ /run/media/$USER/CDJ/
+Only `/dj` and `/PIONEER` on the stick belong to the export. Everything else on
+it is left alone.
 
-# or, with the stick plugged into mlab
-dj-rekordbox sync-usb --dest /run/media/$USER/CDJ --delete
+### Automatic copy on the laptop
+
+Plug in a FAT32 stick labelled `FIESTA` and a notification offers **Replace with
+DJ library**. A udev rule in `nixos/configuration.nix` starts the
+`dj-stick@<partition>` user service from `home/dj-stick.nix`.
+
+Clicking the button:
+
+- refuses while an export runs on mlab or Syncthing is still receiving files;
+- mounts the stick, checks it is FAT32 and that the library fits;
+- makes `/dj` an exact copy of `~/Music/dj` and `/PIONEER` an exact copy of
+  `~/Music/dj-rekordbox`, with a progress bar in the notification;
+- unmounts and powers off the stick, then says it is safe to unplug.
+
+Run it by hand with `dj-stick sdb1`, or `dj-stick --yes sdb1` to skip the
+question.
+
+### From mlab
+
+```sh
+dj-rekordbox sync-usb --root /var/lib/media/dj-stick \
+  --dest /run/media/$USER/FIESTA --delete
 ```
 
 `sync-usb`:
@@ -66,12 +112,11 @@ dj-rekordbox sync-usb --dest /run/media/$USER/CDJ --delete
   the `.dj-rekordbox-export` marker (or `--force` is given);
 - rejects NTFS/ext4 and warns about exFAT;
 - checks free space (64 MiB margin);
-- uses rsync so repeated copies are incremental;
+- uses rsync so repeated copies are incremental, and `--delete` never removes
+  top-level folders that are not part of the export;
 - writes the marker only after a successful copy.
 
-Copy the folder's contents, not the folder: `PIONEER/` must be at the root of
-the stick, next to the artist folders. `DJSync_Backups/` is deliberately not
-copied.
+`DJSync_Backups/` is deliberately not copied.
 
 ## Manual commands
 
@@ -79,7 +124,7 @@ copied.
 dj-rekordbox init   --root /tmp/cdj-test
 dj-rekordbox export --source /path/to/dj --root /tmp/cdj-test --min-age 0 -v
 dj-rekordbox status --root /tmp/cdj-test
-dj-rekordbox sync-usb --root /tmp/cdj-test --dest /run/media/$USER/CDJ --delete
+dj-rekordbox sync-usb --root /tmp/cdj-test --dest /run/media/$USER/FIESTA --delete
 ```
 
 `status` prints track/playlist counts and whether the legacy `export.pdb` is

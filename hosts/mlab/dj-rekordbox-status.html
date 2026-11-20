@@ -166,12 +166,10 @@ footer[data-stale="true"] #connection { color: var(--bad); }
         <summary id="stick-heading">How to make a stick</summary>
         <ol>
           <li>Wait for <strong>Ready to copy</strong>.</li>
-          <li>Format the stick as FAT32 once: <code>sudo mkfs.vfat -F 32 -n CDJ /dev/sdX</code></li>
-          <li>Copy the contents of the folder to the root of the stick:</li>
+          <li>Format the stick as FAT32 once: <code>sudo mkfs.vfat -F 32 -n FIESTA /dev/sdX</code></li>
+          <li>Plug the stick into the laptop and click <strong>Replace with DJ library</strong> in the notification. It replaces <code>/dj</code> and <code>/PIONEER</code> on the stick and leaves everything else alone.</li>
+          <li>Without the notification, run <code>dj-stick sdb1</code> with the stick's partition.</li>
         </ol>
-        <pre><code>rsync -rt --modify-window=2 --delete --exclude=.stfolder --exclude=.stversions \
-  --exclude=/DJSync_Backups/ --exclude='/.djsync-export.*' \
-  ~/Music/dj/ /run/media/$USER/CDJ/</code></pre>
       </details>
     </section>
   </main>

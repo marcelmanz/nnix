@@ -115,27 +115,43 @@ def collect(options: argparse.Namespace, syncthing: Syncthing) -> dict:
     except (OSError, ValueError):
         progress = {}
 
+    folders = [options.library_folder, options.export_folder]
     try:
-        folder = syncthing.get("/rest/db/status", folder=options.folder)
-        folder_stats = syncthing.get("/rest/stats/folder").get(options.folder, {})
-        completion = syncthing.get(
-            "/rest/db/completion", folder=options.folder, device=options.device
-        )
+        statuses = [syncthing.get("/rest/db/status", folder=f) for f in folders]
+        completions = [
+            syncthing.get("/rest/db/completion", folder=f, device=options.device)
+            for f in folders
+        ]
+        export_stats = syncthing.get("/rest/stats/folder").get(options.export_folder, {})
         connection = (
             syncthing.get("/rest/system/connections")
             .get("connections", {})
             .get(options.device, {})
         )
         device_stats = syncthing.get("/rest/stats/device").get(options.device, {})
+        busy = [status.get("state", "unknown") for status in statuses]
         sync = {
-            "state": folder.get("state", "unknown"),
-            "error": folder.get("error") or "",
-            "last_scan": syncthing_timestamp(folder_stats.get("lastScan")),
-            "completion": float(completion.get("completion", 0)),
-            "need_bytes": int(completion.get("needBytes", 0)),
-            "need_items": int(completion.get("needItems", 0))
-            + int(completion.get("needDeletes", 0)),
-            "remote_state": completion.get("remoteState", "valid"),
+            "state": next((state for state in busy if state != "idle"), "idle"),
+            "error": "; ".join(
+                f"{f}: {status['error']}"
+                for f, status in zip(folders, statuses)
+                if status.get("error")
+            ),
+            "last_scan": syncthing_timestamp(export_stats.get("lastScan")),
+            "completion": min(float(c.get("completion", 0)) for c in completions),
+            "need_bytes": sum(int(c.get("needBytes", 0)) for c in completions),
+            "need_items": sum(
+                int(c.get("needItems", 0)) + int(c.get("needDeletes", 0))
+                for c in completions
+            ),
+            "remote_state": next(
+                (
+                    c.get("remoteState")
+                    for c in completions
+                    if c.get("remoteState", "valid") != "valid"
+                ),
+                "valid",
+            ),
             "connected": bool(connection.get("connected")),
             "last_seen": syncthing_timestamp(device_stats.get("lastSeen")),
         }
@@ -188,7 +204,17 @@ def verdict(snapshot: dict) -> tuple[str, str, str]:
             "The export is done. Turn on the laptop so Syncthing can send it.",
         )
     if sync["remote_state"] == "paused":
-        return "offline", "Folder paused on the laptop", "Resume dj-library in Syncthing."
+        return (
+            "offline",
+            "Folder paused on the laptop",
+            "Resume dj-library and dj-rekordbox in Syncthing.",
+        )
+    if sync["remote_state"] == "notSharing":
+        return (
+            "offline",
+            "Laptop is missing a folder",
+            "Rebuild the laptop so Syncthing shares dj-library and dj-rekordbox.",
+        )
     if sync["completion"] < 100 or sync["need_bytes"] or sync["need_items"]:
         return (
             "sending",
@@ -200,7 +226,7 @@ def verdict(snapshot: dict) -> tuple[str, str, str]:
     return (
         "ready",
         "Ready to copy",
-        "The laptop has the full export. Copy ~/Music/dj to the stick.",
+        "The laptop has the full export. Plug in the FIESTA stick to copy it.",
     )
 
 
@@ -364,7 +390,8 @@ def main() -> None:
     parser.add_argument("--timer", default="dj-rekordbox.timer")
     parser.add_argument("--syncthing-url", default="http://127.0.0.1:8384")
     parser.add_argument("--syncthing-config", required=True)
-    parser.add_argument("--folder", default="dj-library")
+    parser.add_argument("--library-folder", default="dj-library")
+    parser.add_argument("--export-folder", default="dj-rekordbox")
     parser.add_argument("--device", required=True, help="laptop Syncthing device ID")
     serve(parser.parse_args())
 

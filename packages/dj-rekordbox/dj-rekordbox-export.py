@@ -384,7 +384,7 @@ def choose_destination(
 ) -> tuple[Path, str]:
     """Pick a unique path under Contents/. Existing manifest entry wins; otherwise Artist/Album."""
     root = lib.drive.root
-    if source_root == root.resolve():
+    if source_root == root.resolve() or root.resolve() in source_root.parents:
         return source_path, lib_rel(root, source_path)
     if previous and previous.get("dest"):
         previous_dest = str(previous["dest"])
@@ -645,10 +645,10 @@ def cmd_export(args: argparse.Namespace) -> int:
     if not source.is_dir():
         LOG.error("Source folder does not exist: %s", source)
         return 1
-    if source in root.parents or root in source.parents:
-        LOG.error("The export root and source folder must not contain each other")
+    if source in root.parents:
+        LOG.error("The export root must not be inside the source folder")
         return 1
-    in_place = root == source
+    in_place = root == source or root in source.parents
 
     with exclusive_lock(root):
         if args.dry_run and not (root / DB_REL).is_file():
@@ -771,6 +771,15 @@ def cmd_export(args: argparse.Namespace) -> int:
                             continue
 
                         ensure_export_file(path, dest)
+                        if (
+                            previous_track
+                            and previous_dest_rel
+                            and previous_dest_rel.casefold() != dest_rel.casefold()
+                        ):
+                            previous_track = lib.relink_track(previous_cid, dest)
+                            by_path.pop(previous_dest_rel.casefold(), None)
+                            by_path[dest_rel.casefold()] = dest_rel
+                            LOG.info("~ %s moved %s -> %s", rel, previous_dest_rel, dest_rel)
                         existed = bool(previous_track or dest_rel.casefold() in by_path)
 
                         track = lib.add_track(
@@ -995,6 +1004,7 @@ def cmd_sync_usb(args: argparse.Namespace) -> int:
             "--human-readable",
             "--info=progress2",
             "--modify-window=2",
+            "--filter=P /*",
             "--exclude=/DJSync_Backups/",
             f"--exclude=/{STATE_NAME}",
             f"--exclude=/{LOCK_NAME}",

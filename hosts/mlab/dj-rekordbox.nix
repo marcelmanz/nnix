@@ -5,6 +5,8 @@
   ...
 }: let
   library = "/var/lib/media/dj";
+  stickRoot = "/var/lib/media/dj-stick";
+  stickLibrary = "${stickRoot}/dj";
 
   # Keep djsync's own settings/state out of the USB export tree.
   stateDir = "/var/lib/dj-rekordbox";
@@ -15,22 +17,45 @@
   rescanLibrary = pkgs.writeShellScript "dj-rekordbox-rescan" ''
     key=$(${pkgs.gnused}/bin/sed -n 's:.*<apikey>\(.*\)</apikey>.*:\1:p' ${syncthingConfig})
     ${pkgs.curl}/bin/curl -fsS -X POST -H "X-API-Key: $key" \
-      "http://${syncthing.guiAddress}/rest/db/scan?folder=dj-library"
+      "http://${syncthing.guiAddress}/rest/db/scan?folder=dj-rekordbox"
+  '';
+
+  moveInPlaceExport = pkgs.writeShellScript "dj-rekordbox-move-in-place-export" ''
+    if [ -d ${library}/PIONEER ] && [ ! -e ${stickRoot}/PIONEER ]; then
+      for name in PIONEER DJSync_Backups .djsync-export.json; do
+        if [ -e "${library}/$name" ]; then
+          mv "${library}/$name" ${stickRoot}/
+        fi
+      done
+      rm -f ${library}/.djsync-export.lock
+    fi
   '';
 in {
   # Rekordbox USB export (OneLibrary exportLibrary.db + legacy export.pdb + ANLZ).
   # Copy the whole folder to a FAT32 stick, or from mlab:
-  #   dj-rekordbox sync-usb --dest /run/media/$USER/CDJ --delete
+  #   dj-rekordbox sync-usb --root ${stickRoot} --dest /run/media/$USER/FIESTA --delete
   environment.systemPackages = [pkgs.dj-rekordbox];
 
+  systemd.tmpfiles.rules = [
+    "d ${stickRoot} 2775 root media -"
+  ];
+
+  fileSystems.${stickLibrary} = {
+    device = library;
+    fsType = "none";
+    options = ["bind" "ro"];
+  };
+
   systemd.services.dj-rekordbox = {
-    description = "Write a Rekordbox USB export into ${library}";
+    description = "Write a Rekordbox USB export of ${library} into ${stickRoot}";
     after = ["local-fs.target"];
     requires = ["local-fs.target"];
+    unitConfig.RequiresMountsFor = [stickLibrary];
     serviceConfig = {
       Type = "oneshot";
       User = "root";
-      ExecStart = "${pkgs.dj-rekordbox}/bin/dj-rekordbox export --source ${library} --root ${library} --min-age 120 --prune --progress-file ${progressFile}";
+      ExecStartPre = "+${moveInPlaceExport}";
+      ExecStart = "${pkgs.dj-rekordbox}/bin/dj-rekordbox export --source ${stickLibrary} --root ${stickRoot} --min-age 120 --prune --progress-file ${progressFile}";
       ExecStartPost = "-${rescanLibrary}";
       StateDirectory = "dj-rekordbox";
       Environment = "DJSYNC_HOME=${stateDir}";
@@ -43,7 +68,7 @@ in {
       ProtectHome = true;
       PrivateTmp = true;
       NoNewPrivileges = true;
-      ReadWritePaths = [library stateDir];
+      ReadWritePaths = [stickRoot stateDir];
     };
   };
 
@@ -78,6 +103,8 @@ in {
         "--syncthing-url http://${syncthing.guiAddress}"
         "--syncthing-config ${syncthingConfig}"
         "--device ${syncthing.settings.devices.nixos.id}"
+        "--library-folder dj-library"
+        "--export-folder dj-rekordbox"
       ];
       Restart = "on-failure";
       RestartSec = "5s";
