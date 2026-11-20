@@ -38,6 +38,9 @@ dj-rekordbox export \
 - tracks that need analysis are analysed ahead by up to 4 worker processes
   (djsync's analysis pool, `DJSYNC_ANALYSIS_WORKERS` lowers it); database
   writes stay in one process, in order;
+- once a night (the run in the 03:00 hour, `--full-check-hour 3`) every track
+  is read and verified instead of trusting size and mtime: tags are compared,
+  the length is checked and missing analysis files are analysed again;
 - files newer than 120 s are skipped so Bandcamp/Syncthing half-written files
   are not imported;
 - tracks deleted from `/var/lib/media/dj` are removed from the databases; the
