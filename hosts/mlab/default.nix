@@ -20,6 +20,7 @@
     ./brave-origin-bump.nix
     ./calibre.nix
     ./ddclient.nix
+    ./dj-rekordbox.nix
     ./filebrowser.nix
     ./flaresolverr.nix
     ./dropbox.nix

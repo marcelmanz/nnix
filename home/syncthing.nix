@@ -21,6 +21,12 @@
         # mlab is the source of truth, don't send deletes back
         type = "receiveonly";
       };
+      folders."dj-rekordbox" = {
+        id = "dj-rekordbox";
+        path = "~/Music/dj-rekordbox";
+        devices = ["mlab"];
+        type = "receiveonly";
+      };
       folders."live-recordings" = {
         id = "live-recordings";
         path = "~/Sync/live-recordings";

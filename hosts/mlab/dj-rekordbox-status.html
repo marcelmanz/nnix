@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f7f9">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#111418">
+<meta name="description" content="Rekordbox export and Syncthing status for the DJ library">
+<title>{{verdict-title}} · DJ export</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23222'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%23ddd'/%3E%3C/svg%3E">
+<noscript><meta http-equiv="refresh" content="30"></noscript>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#f6f7f9, #111418);
+  --surface: light-dark(#ffffff, #1b1f24);
+  --text: light-dark(#1b1f24, #e8eaed);
+  --muted: light-dark(#56606c, #a7b0bb);
+  --border: light-dark(#dde1e6, #2e353d);
+  --ready: light-dark(#1d7a3a, #5fd38c);
+  --busy: light-dark(#1f5fbf, #84b4ff);
+  --warn: light-dark(#8f5400, #f2b84b);
+  --bad: light-dark(#b3261e, #ff8f85);
+  --accent: var(--busy);
+  --radius: 0.75rem;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 1rem/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.stack { display: grid; gap: 1rem; }
+.page {
+  max-width: 42rem;
+  margin-inline: auto;
+  padding: clamp(1rem, 4vw, 2rem) 1rem 2rem;
+  display: grid;
+  gap: 1rem;
+}
+h1 { font-size: 1.25rem; margin: 0; }
+h2 { font-size: 1rem; margin: 0 0 0.75rem; }
+header p, footer { color: var(--muted); margin: 0.25rem 0 0; font-size: 0.875rem; }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+}
+.verdict { border-inline-start: 0.375rem solid var(--accent); }
+.verdict[data-state="ready"] { --accent: var(--ready); }
+.verdict[data-state="offline"], .verdict[data-state="unknown"] { --accent: var(--warn); }
+.verdict[data-state="failed"] { --accent: var(--bad); }
+.verdict h2 {
+  font-size: clamp(1.375rem, 5vw, 1.75rem);
+  line-height: 1.2;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+.verdict h2::before {
+  content: "";
+  flex: none;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.verdict:is([data-state="exporting"], [data-state="scanning"], [data-state="sending"]) h2::before {
+  animation: pulse 1.6s ease-in-out infinite;
+}
+@keyframes pulse { 50% { opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) {
+  .verdict h2::before { animation: none !important; }
+}
+.verdict p { margin: 0.5rem 0 0; color: var(--muted); }
+progress {
+  width: 100%;
+  height: 0.75rem;
+  accent-color: var(--busy);
+}
+.remaining {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.progress-meta { display: flex; justify-content: space-between; gap: 1rem; margin: 0.5rem 0 0; }
+.file {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+  min-height: 1.3em;
+}
+dl {
+  display: grid;
+  grid-template-columns: minmax(7rem, max-content) 1fr;
+  gap: 0.5rem 1rem;
+  margin: 0;
+}
+dt { color: var(--muted); }
+dd { margin: 0; overflow-wrap: anywhere; }
+.tabular, progress + .progress-meta { font-variant-numeric: tabular-nums; }
+details summary { cursor: pointer; font-weight: 600; }
+details summary:focus-visible { outline: 2px solid var(--busy); outline-offset: 0.25rem; border-radius: 0.25rem; }
+details ol { padding-inline-start: 1.25rem; }
+code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.875em; }
+pre {
+  margin: 0.5rem 0 0;
+  padding: 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  overflow-x: auto;
+}
+footer[data-stale="true"] #connection { color: var(--bad); }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>Rekordbox export</h1>
+    <p>DJ library on mlab, sent to the laptop by Syncthing.</p>
+  </header>
+
+  <main class="stack">
+    <section class="card verdict" id="verdict" data-state="{{state}}" aria-labelledby="verdict-title">
+      <div role="status" aria-atomic="true">
+        <h2 id="verdict-title">{{verdict-title}}</h2>
+      </div>
+      <p id="verdict-detail">{{verdict-detail}}</p>
+    </section>
+
+    <section class="card" id="progress-section" aria-labelledby="progress-heading" {{progress-hidden}}>
+      <h2 id="progress-heading">Progress</h2>
+      <p class="remaining" id="progress-remaining">{{progress-remaining}}</p>
+      <progress id="progress" value="{{progress-value}}" max="{{progress-max}}" aria-labelledby="progress-heading" aria-describedby="progress-remaining progress-label"></progress>
+      <p class="progress-meta"><span id="progress-label">{{progress-label}}</span></p>
+      <p class="file" id="progress-current">{{progress-current}}</p>
+    </section>
+
+    <section class="card" aria-labelledby="export-heading">
+      <h2 id="export-heading">Export on mlab</h2>
+      <dl>
+        <dt>State</dt><dd id="export-state">{{export-state}}</dd>
+        <dt>Started</dt><dd><time id="export-started" datetime="{{export-started@}}">{{export-started}}</time></dd>
+        <dt>Finished</dt><dd><time id="export-finished" datetime="{{export-finished@}}">{{export-finished}}</time></dd>
+        <dt>Last run</dt><dd class="tabular" id="export-summary">{{export-summary}}</dd>
+        <dt>Library</dt><dd class="tabular" id="export-library">{{export-library}}</dd>
+        <dt>Next run</dt><dd><time id="export-next" datetime="{{export-next@}}">{{export-next}}</time></dd>
+      </dl>
+    </section>
+
+    <section class="card" aria-labelledby="sync-heading">
+      <h2 id="sync-heading">Syncthing</h2>
+      <dl>
+        <dt>Folder</dt><dd id="sync-folder">{{sync-folder}}</dd>
+        <dt>Last scan</dt><dd><time id="sync-scan" datetime="{{sync-scan@}}">{{sync-scan}}</time></dd>
+        <dt>Laptop</dt><dd id="laptop-state">{{laptop-state}}</dd>
+        <dt>Laptop has</dt><dd class="tabular" id="laptop-need">{{laptop-need}}</dd>
+        <dt>Last seen</dt><dd><time id="laptop-seen" datetime="{{laptop-seen@}}">{{laptop-seen}}</time></dd>
+      </dl>
+    </section>
+
+    <section class="card" aria-labelledby="stick-heading">
+      <details>
+        <summary id="stick-heading">How to make a stick</summary>
+        <ol>
+          <li>Wait for <strong>Ready to copy</strong>.</li>
+          <li>Format the stick as FAT32 once: <code>sudo mkfs.vfat -F 32 -n FIESTA /dev/sdX</code></li>
+          <li>Plug the stick into the laptop and click <strong>Replace with DJ library</strong> in the notification. It replaces <code>/dj</code> and <code>/PIONEER</code> on the stick and leaves everything else alone.</li>
+          <li>Without the notification, run <code>dj-stick sdb1</code> with the stick's partition.</li>
+        </ol>
+      </details>
+    </section>
+  </main>
+
+  <footer id="footer" data-stale="false">
+    <span id="connection">Live</span> · updated <time id="updated">just now</time>
+  </footer>
+</div>
+<script>
+const FAST_STATES = new Set(["exporting", "scanning", "sending"]);
+const byId = (id) => document.getElementById(id);
+const relativeFormat = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+const absoluteFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
+const UNITS = [["day", 86400], ["hour", 3600], ["minute", 60], ["second", 1]];
+let lastUpdate = new Date();
+let timer;
+
+function relative(date) {
+  const seconds = (date - Date.now()) / 1000;
+  if (Math.abs(seconds) < 10) return "just now";
+  for (const [unit, size] of UNITS) {
+    if (Math.abs(seconds) >= size) return relativeFormat.format(Math.round(seconds / size), unit);
+  }
+}
+
+function showTime(element, iso, fallback) {
+  if (!iso) {
+    element.removeAttribute("datetime");
+    element.removeAttribute("title");
+    element.textContent = fallback;
+    return;
+  }
+  const date = new Date(iso);
+  element.dateTime = iso;
+  element.title = absoluteFormat.format(date);
+  element.textContent = relative(date);
+}
+
+function setText(id, text) {
+  const element = byId(id);
+  if (element && element.textContent !== text) element.textContent = text;
+}
+
+function apply(view) {
+  byId("verdict").dataset.state = view.state;
+  document.title = view.fields["verdict-title"] + " · DJ export";
+  for (const [id, text] of Object.entries(view.fields)) setText(id, text);
+  for (const [id, [iso, fallback]] of Object.entries(view.times)) {
+    const element = byId(id);
+    if (element) showTime(element, iso, fallback);
+  }
+  byId("progress-section").hidden = view.progress.hidden;
+  const bar = byId("progress");
+  bar.max = view.progress.max;
+  bar.value = view.progress.value;
+}
+
+function schedule(delay) {
+  clearTimeout(timer);
+  if (!document.hidden) timer = setTimeout(refresh, delay);
+}
+
+async function refresh() {
+  let delay = 10000;
+  try {
+    const response = await fetch("/api/status", { cache: "no-store", signal: AbortSignal.timeout(5000) });
+    if (!response.ok) throw new Error("HTTP " + response.status);
+    const view = await response.json();
+    apply(view);
+    lastUpdate = new Date();
+    byId("footer").dataset.stale = "false";
+    setText("connection", "Live");
+    if (view.fast) delay = 2000;
+  } catch {
+    byId("footer").dataset.stale = "true";
+    setText("connection", "Can't reach mlab, retrying (reload if you were logged out)");
+  }
+  showTime(byId("updated"), lastUpdate.toISOString(), "just now");
+  schedule(delay);
+}
+
+for (const element of document.querySelectorAll("time[datetime]")) {
+  if (element.getAttribute("datetime")) showTime(element, element.dateTime, element.textContent);
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) clearTimeout(timer);
+  else refresh();
+});
+schedule(FAST_STATES.has(byId("verdict").dataset.state) ? 2000 : 10000);
+</script>
+</body>
+</html>
