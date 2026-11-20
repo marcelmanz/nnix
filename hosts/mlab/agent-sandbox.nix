@@ -119,7 +119,7 @@ in {
         config = {
           user = {
             name = "agent";
-            email = "github@marcel.cool";
+            email = "62728887+marcelmanz@users.noreply.github.com";
           };
           safe.directory = "/mirrors/*";
         };
