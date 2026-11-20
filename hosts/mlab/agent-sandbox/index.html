@@ -60,6 +60,7 @@
     <div style="display:flex;flex-direction:column;gap:6px">
       <button class="primary" id="send-button">Send</button>
       <button type="button" id="abort">Abort</button>
+      <button type="button" id="delete">Delete</button>
     </div>
   </form>
 </main>
@@ -265,6 +266,18 @@ $("message").onkeydown = (event) => {
 };
 
 $("abort").onclick = () => current && api(`/api/sessions/${current}/abort`, { method: "POST" });
+
+$("delete").onclick = (event) => {
+  if (!current || !confirm(`Delete task ${current}, its worktree and its branch agent/${current}?`)) return;
+  busy(event.currentTarget, async () => {
+    await api(`/api/sessions/${current}`, { method: "DELETE" });
+    if (source) source.close();
+    source = null; current = null;
+    $("log").replaceChildren();
+    $("title").textContent = "Pick a project and start a task";
+    await refresh();
+  });
+};
 
 refresh();
 setInterval(refresh, 5000);

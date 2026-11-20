@@ -72,6 +72,7 @@ class Session:
         self.proc = None
         self.running = False
         self.last_text = ""
+        self.deleted = False
         self.waiters = set()
 
     def meta(self):
@@ -87,6 +88,8 @@ class Session:
         })
 
     def append(self, record):
+        if self.deleted:
+            return
         with self.log_path.open("a") as log:
             log.write(json.dumps(record) + "\n")
         for waiter in self.waiters:
@@ -320,6 +323,27 @@ async def stop(request):
     return web.json_response({"ok": True})
 
 
+async def delete_session(request):
+    session = find(request)
+    async with create_lock:
+        session.deleted = True
+        sessions.pop(session.id, None)
+        if session.proc is not None:
+            session.proc.stdin.close()
+            try:
+                await asyncio.wait_for(session.proc.wait(), timeout=5)
+            except asyncio.TimeoutError:
+                session.proc.terminate()
+        path = project_path(session.project)
+        await run_in_container("git", "-C", path, "worktree", "remove", "--force", worktree_path(session.id))
+        await run_in_container("git", "-C", path, "worktree", "prune")
+        await run_in_container("git", "-C", path, "branch", "-D", session.branch)
+        await run_in_container("rm", "-rf", f"/workspace/.sessions/{session.id}")
+        (SESSIONS_DIR / f"{session.id}.json").unlink(missing_ok=True)
+        session.log_path.unlink(missing_ok=True)
+    return web.json_response({"ok": True})
+
+
 async def shutdown(app):
     for session in sessions.values():
         if session.proc is not None:
@@ -339,5 +363,6 @@ app.add_routes([
     web.post("/api/sessions/{id}/prompt", prompt),
     web.post("/api/sessions/{id}/abort", abort),
     web.post("/api/sessions/{id}/stop", stop),
+    web.delete("/api/sessions/{id}", delete_session),
 ])
 web.run_app(app, host="127.0.0.1", port=PORT)
