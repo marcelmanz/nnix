@@ -32,6 +32,7 @@
     ./jellyfin.nix
     ./kittygram.nix
     ./lan-ipv6-prefix.nix
+    ./laptop-netconsole.nix
     ./livekit.nix
     ./matrix.nix
     ./metube.nix
@@ -61,6 +62,7 @@
     ./syncthing.nix
     ./tagr.nix
     ./tiktok-follow
+    ./tv-mouse.nix
     ./uptime-kuma.nix
     ./vaultwarden.nix
     ./vikunja.nix

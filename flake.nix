@@ -155,6 +155,7 @@
         (import ./overlays/ostui-vim.nix)
         (import ./overlays/vikunja.nix {inherit inputs;})
         (import ./overlays/ladybird.nix {inherit inputs;})
+        (import ./overlays/pyprland-workspace-id.nix)
         (final: prev: {tmex = tmexPkg;})
         (final: prev: {
           pir = pir.packages.${system}.pir;
