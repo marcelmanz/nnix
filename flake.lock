@@ -337,6 +337,22 @@
         "type": "github"
       }
     },
+    "ladybird": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1795456700,
+        "narHash": "sha256-UBWs2xFeOfaYAB9BCGwxyeUtJ4a3Jpvki/XLrr9JCP4=",
+        "owner": "LadybirdBrowser",
+        "repo": "ladybird",
+        "rev": "9b0603ab09b999895e0b9309391dfa7387e8d62d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "LadybirdBrowser",
+        "repo": "ladybird",
+        "type": "github"
+      }
+    },
     "musnix": {
       "inputs": {
         "nixpkgs": "nixpkgs_2"
@@ -1029,6 +1045,7 @@
         "fenix": "fenix",
         "home-manager": "home-manager",
         "ironbar": "ironbar",
+        "ladybird": "ladybird",
         "musnix": "musnix",
         "my-nixpkgs": "my-nixpkgs",
         "myna": "myna",

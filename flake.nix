@@ -59,6 +59,10 @@
       url = "github:marcelmanz/ripdrag";
       flake = false;
     };
+    ladybird = {
+      url = "github:LadybirdBrowser/ladybird";
+      flake = false;
+    };
     zuban.url = "github:marcelmanz/zuban";
     nix-on-droid = {
       url = "github:nix-community/nix-on-droid/master";
@@ -150,6 +154,7 @@
         (import ./overlays/open-webui-mcp1.nix)
         (import ./overlays/ostui-vim.nix)
         (import ./overlays/vikunja.nix {inherit inputs;})
+        (import ./overlays/ladybird.nix {inherit inputs;})
         (final: prev: {tmex = tmexPkg;})
         (final: prev: {
           pir = pir.packages.${system}.pir;

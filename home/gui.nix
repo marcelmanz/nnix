@@ -69,6 +69,7 @@ in {
     qbittorrent
     # radicle-desktop
     ripdrag
+    ladybird
     roboto
     roboto-mono
     roboto-serif
