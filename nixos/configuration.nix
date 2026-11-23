@@ -12,6 +12,10 @@
 
   boot = {
     binfmt.emulatedSystems = ["aarch64-linux"];
+    # Cezanne: scanout from GTT causes flicker, blank-and-recover and hard hangs
+    kernelParams = ["amdgpu.sg_display=0"];
+    kernelModules = ["netconsole"];
+    kernel.sysctl."kernel.printk" = "7 4 1 7";
     loader = {
       systemd-boot.enable = true;
       efi.canTouchEfiVariables = true;
@@ -180,6 +184,38 @@
       ethernet.macAddress = "random";
       plugins = with pkgs; [networkmanager-openvpn];
       insertNameservers = ["1.1.1.1" "8.8.8.8"];
+      # Kernel log to mlab (laptop-netconsole.nix there), only when mlab is on this LAN
+      dispatcherScripts = [
+        {
+          source = pkgs.writeShellScript "netconsole-mlab" ''
+            target=/sys/kernel/config/netconsole/mlab
+            current=$(cat "$target/dev_name" 2>/dev/null)
+            if [ "$2" = down ] && [ "$1" = "$current" ]; then
+              echo 0 > "$target/enabled"
+              exec "$0" wlp3s0 up
+            fi
+            [ "$2" = up ] || [ "$2" = dhcp4-change ] || exit 0
+            # Prefer a wired link: Wi-Fi only takes over when the cable is gone
+            case "$1" in
+              wl*) [ -n "$current" ] && [ "$current" != "$1" ] && [ "$(cat "/sys/class/net/$current/carrier" 2>/dev/null)" = 1 ] && exit 0 ;;
+            esac
+            mlab_ip=192.168.1.140
+            mlab_mac=80:3f:5d:fd:d0:35
+            ip=${pkgs.iproute2}/bin/ip
+            ${pkgs.iputils}/bin/ping -c1 -W2 -I "$1" "$mlab_ip" >/dev/null 2>&1 || exit 0
+            $ip neigh show "$mlab_ip" dev "$1" | grep -qi "lladdr $mlab_mac" || exit 0
+            local_ip=$($ip -4 -o addr show dev "$1" | ${pkgs.gawk}/bin/awk '{split($4, a, "/"); print a[1]; exit}')
+            mkdir -p "$target"
+            echo 0 > "$target/enabled"
+            echo "$1" > "$target/dev_name"
+            echo "$local_ip" > "$target/local_ip"
+            echo "$mlab_ip" > "$target/remote_ip"
+            echo 6666 > "$target/remote_port"
+            echo "$mlab_mac" > "$target/remote_mac"
+            echo 1 > "$target/enabled"
+          '';
+        }
+      ];
     };
   };
   services.openssh = {
@@ -494,6 +530,7 @@
 
   users.users.marcel.openssh.authorizedKeys.keys = [
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHe+ZUUCwet0+uaGYfr3hE4zNVASmQPWuoGpk5QAbKG4 nix-on-droid@localhost"
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFOV3aJpB4vMnB/K83FphMp7fTLKmObYMzRiA98hocw4 root@mlab"
   ];
 
   system.stateVersion = "26.05";

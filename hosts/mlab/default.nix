@@ -32,6 +32,7 @@
     ./jellyfin.nix
     ./kittygram.nix
     ./lan-ipv6-prefix.nix
+    ./laptop-netconsole.nix
     ./livekit.nix
     ./matrix.nix
     ./metube.nix

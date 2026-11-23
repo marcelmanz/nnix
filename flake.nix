@@ -150,6 +150,7 @@
         (import ./overlays/open-webui-mcp1.nix)
         (import ./overlays/ostui-vim.nix)
         (import ./overlays/vikunja.nix {inherit inputs;})
+        (import ./overlays/pyprland-workspace-id.nix)
         (final: prev: {tmex = tmexPkg;})
         (final: prev: {
           pir = pir.packages.${system}.pir;
