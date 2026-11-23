@@ -163,6 +163,7 @@ with pkgs; [
   pwgen
   rabbitmqadmin-ng
   radicle-node
+  reptyr
   reedline-bash
   hax
   rbw
