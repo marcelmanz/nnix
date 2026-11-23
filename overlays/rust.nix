@@ -14,5 +14,6 @@ in
     rff = call "rff";
     pulseaudio-next-output = call "pulseaudio-next-output";
     git-commit-search = call "git-commit-search";
+    ferrosonic = call "ferrosonic";
     reedline-bash = import ../packages/reedline-bash/package.nix {inherit craneLib pkgs inputs;};
   }

@@ -175,6 +175,7 @@ with pkgs; [
   rich-cli
   ripgrep
   rmpc
+  ferrosonic
   ruby
   rustup
   s-tui
