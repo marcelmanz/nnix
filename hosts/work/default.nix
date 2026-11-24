@@ -123,6 +123,49 @@ in {
     Unit = {
       Description = "Hyprland session target for graphical-session dependents";
       BindsTo = ["graphical-session.target"];
+      Wants = ["graphical-session-pre.target"];
+      After = ["graphical-session-pre.target"];
+      PropagatesStopTo = ["graphical-session.target"];
+    };
+  };
+
+  services.swayosd.enable = true;
+
+  systemd.user.services.pyprland = {
+    Unit = {
+      Description = "Pyprland Hyprland extensions daemon";
+      After = ["graphical-session.target"];
+      PartOf = ["graphical-session.target"];
+    };
+
+    Install = {
+      WantedBy = ["graphical-session.target"];
+    };
+
+    Service = {
+      ExecStart = "${pkgs.pyprland}/bin/pypr";
+      Restart = "always";
+      RestartSec = 1;
+      KillMode = "process";
+    };
+  };
+
+  systemd.user.services.ironbar = {
+    Unit = {
+      Description = "Ironbar status bar";
+      After = ["graphical-session.target"];
+      PartOf = ["graphical-session.target"];
+    };
+
+    Install = {
+      WantedBy = ["graphical-session.target"];
+    };
+
+    Service = {
+      ExecStart = "${pkgs.ironbar}/bin/ironbar";
+      Restart = "on-failure";
+      RestartSec = 1;
+      KillMode = "process";
     };
   };
 

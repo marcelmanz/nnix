@@ -156,6 +156,7 @@
         (import ./overlays/vikunja.nix {inherit inputs;})
         (import ./overlays/ladybird.nix {inherit inputs;})
         (import ./overlays/pyprland-workspace-id.nix)
+        (import ./overlays/pyprland-ipc-close.nix)
         (final: prev: {tmex = tmexPkg;})
         (final: prev: {
           pir = pir.packages.${system}.pir;
