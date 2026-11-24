@@ -628,6 +628,7 @@ in {
     ".config/hypr/hyprlock.conf".source = link "${dots}/.config/hypr/hyprlock.conf";
     ".config/hypr/hyprpaper.conf".source = link "${dots}/.config/hypr/hyprpaper.conf";
     ".config/hypr/keybinds.lua".source = link "${dots}/.config/hypr/keybinds.lua";
+    ".config/hypr/layouts.lua".source = link "${dots}/.config/hypr/layouts.lua";
     ".config/hypr/monitors.conf".source = link "${dots}/.config/hypr/monitors.conf";
     ".config/pypr/config.toml".source = link "${dots}/.config/pypr/config.toml";
     ".config/hypr/workspaces.conf".source = link "${dots}/.config/hypr/workspaces.conf";
