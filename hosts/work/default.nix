@@ -165,7 +165,6 @@ in {
       ExecStart = "${pkgs.ironbar}/bin/ironbar";
       Restart = "on-failure";
       RestartSec = 1;
-      KillMode = "process";
     };
   };
 
