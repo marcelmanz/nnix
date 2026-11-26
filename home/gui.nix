@@ -133,6 +133,24 @@ in {
 
   services.kanshi.enable = true;
 
+  systemd.user.services.ironbar = {
+    Unit = {
+      Description = "Ironbar status bar";
+      After = ["graphical-session.target"];
+      PartOf = ["graphical-session.target"];
+    };
+
+    Install = {
+      WantedBy = ["graphical-session.target"];
+    };
+
+    Service = {
+      ExecStart = "${pkgs.ironbar}/bin/ironbar";
+      Restart = "on-failure";
+      RestartSec = 1;
+    };
+  };
+
   programs.firefox = {
     enable = true;
 
