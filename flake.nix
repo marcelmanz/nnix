@@ -201,6 +201,12 @@
             nativeBuildInputs = (old.nativeBuildInputs or []) ++ [prev.pkg-config];
             buildInputs = (old.buildInputs or []) ++ [prev.zstd];
           });
+          symposium = prev.symposium.overrideAttrs (old: {
+            nativeBuildInputs = (old.nativeBuildInputs or []) ++ [prev.pkg-config];
+            buildInputs = (old.buildInputs or []) ++ [prev.zstd];
+            # Flaky in the sandbox: ETXTBSY when spawning a just-written binary.
+            checkFlags = (old.checkFlags or []) ++ ["--skip=auto_update_re_execs_on_hook"];
+          });
           gelly = prev.gelly.overrideAttrs (old: {preBuild = (old.preBuild or "") + "unset AWS_LC_SYS_USE_SYSTEM\n";});
           rabbitmqadmin-ng = prev.rabbitmqadmin-ng.overrideAttrs (old: {preBuild = (old.preBuild or "") + "unset AWS_LC_SYS_USE_SYSTEM\n";});
           lk-jwt-service = prev.lk-jwt-service.overrideAttrs (old: {preBuild = (old.preBuild or "") + "unset AWS_LC_SYS_USE_SYSTEM\n";});

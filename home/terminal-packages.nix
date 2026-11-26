@@ -6,6 +6,8 @@
 }:
 with pkgs; [
   # aider-chat
+  # codex
+  # gurk-rs
   # helix
   # helix
   # libreoffice
@@ -14,17 +16,16 @@ with pkgs; [
   # pi-undo-redo
   # pi-undo-redo
   # rff
+  # screen
+  # taskwarrior3
   # zuban
-  ink-md
+  android-tools
   appimage-run
-  merman-cli
   astro-language-server
   atool
   atuin
   bacon
-  # screen
   basedpyright
-  # gurk-rs
   bash
   bash-language-server
   bash-preexec
@@ -33,10 +34,10 @@ with pkgs; [
   bind
   biome
   bitpr
+  bkt
   bluetuith
   bottom
   btop
-  bkt
   carapace
   carl
   cbfmt
@@ -46,14 +47,13 @@ with pkgs; [
   claude-code
   click
   cliflux
-  # codex
   cowsay
   csvlens
   delta
-  discogs2xlsx
   deno
   difftastic
   direnv
+  discogs2xlsx
   dprint
   duf
   dump
@@ -65,12 +65,14 @@ with pkgs; [
   fastfetch
   fd
   fennel-ls
+  ferrosonic
   ffmpeg
   fish
   fixjson
   flyctl
   fortune
   frogmouth
+  fx
   fx
   fzf
   fzy
@@ -81,31 +83,28 @@ with pkgs; [
   gh
   git-cliff
   git-commit-search
-  gitFull
   git-lfs
-  vja
+  gitFull
   glirc
   glow
   gnumake
-  sayonara
   gping
   gst_all_1.gstreamer
   haralyzer
+  hax
   hcloud
   htmlq
   htop
   hyprland-workspaces
   imagemagick
-  w3m
+  ink-md
   iptables
   jaq
   java-language-server
+  jless
   jq
   jqp
-  fx
-  jless
   jujutsu
-  rumdl
   just
   killall
   kubectl
@@ -123,6 +122,7 @@ with pkgs; [
   mdwatch
   mdx-language-server
   mediainfo
+  merman-cli
   moor
   mpc
   murex
@@ -132,6 +132,7 @@ with pkgs; [
   nftables
   nil
   nix-diff
+  nix-prefetch-git
   nix-search-cli
   nixfmt
   nnn
@@ -140,8 +141,6 @@ with pkgs; [
   nuit
   nushell
   nwg-displays
-  tea
-  nix-prefetch-git
   omnidiff
   onefetch
   opencode
@@ -150,10 +149,11 @@ with pkgs; [
   pamixer
   parted
   pass-wayland
-  waypipe
   passff-host
   patchutils
   pfetch
+  pi-coding-agent
+  pir
   pkgsStable.slsk-batchdl
   playerctl
   poppler-utils
@@ -162,29 +162,29 @@ with pkgs; [
   prettierd
   pulseaudio-next-output
   pulseaudioFull
+  pulsemixer
   pwgen
   rabbitmqadmin-ng
   radicle-node
-  reptyr
-  reedline-bash
-  hax
   rbw
-  rofi-rbw
-  android-tools
-  scrcpy
   rclone
+  reedline-bash
   repgrep
+  reptyr
   rich-cli
   ripgrep
   rmpc
-  ferrosonic
+  rofi-rbw
   ruby
+  rumdl
   rustup
   s-tui
+  sayonara
+  scrcpy
+  sdbus-cpp_2
   sendme
   shellcheck
   shfmt
-  sdbus-cpp_2
   slskd
   socat
   solargraph
@@ -197,11 +197,12 @@ with pkgs; [
   starship
   stylua
   svelte-language-server
+  symposium
   sysz
   tailwindcss-language-server
   taplo
   taskwarrior-tui
-  # taskwarrior3
+  tea
   tig
   timer
   tldr
@@ -219,17 +220,21 @@ with pkgs; [
   v4l-utils
   vale
   vale-ls
+  vja
   vscode-langservers-extracted
   vtsls
   w3m
+  w3m
   watchexec
+  waypipe
   wikipedia-cli
-  xlsx2csv
   wireguard-tools
+  wiremix
   wlr-layout-ui
   wlr-randr
   wob
   xan
+  xlsx2csv
   yt-dlp
   ytfzf
   zbar
@@ -238,10 +243,6 @@ with pkgs; [
   zk
   zoxide
   zsh
-  pi-coding-agent
-  pir
-  pulsemixer
-  wiremix
   (pkgs.python3.withPackages (ps:
     with ps; [
       python-lsp-server
