@@ -98,6 +98,12 @@
       flake = false;
     };
     resona.url = "git+https://codeberg.org/marcelmanz/resona";
+    bitpr = {
+      url = "git+https://codeberg.org/marcelmanz/bitpr";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.crane.follows = "crane";
+      inputs.fenix.follows = "fenix";
+    };
     projectw = {
       url = "git+https://git.marcel.cool/z39znYAkBEASv5SXaMGoFXFTYZwhn.git";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -176,6 +182,7 @@
         (final: prev: {retrosmart-cursors = import ./packages/retrosmart-cursors/package.nix {inherit pkgs;};})
         (final: prev: {zuban = inputs.zuban.packages.${system}.default;})
         (final: prev: {cliflux = inputs.cliflux.packages.${system}.default;})
+        (final: prev: {bitpr = inputs.bitpr.packages.${system}.default;})
         (final: prev: {
           protonmail-desktop = inputs.my-nixpkgs.legacyPackages.${system}.protonmail-desktop;
         })

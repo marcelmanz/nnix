@@ -32,9 +32,11 @@ with pkgs; [
   beets
   bind
   biome
+  bitpr
   bluetuith
   bottom
   btop
+  bkt
   carapace
   carl
   cbfmt

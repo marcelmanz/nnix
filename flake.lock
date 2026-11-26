@@ -1,5 +1,31 @@
 {
   "nodes": {
+    "bitpr": {
+      "inputs": {
+        "crane": [
+          "crane"
+        ],
+        "fenix": [
+          "fenix"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1795689125,
+        "narHash": "sha256-XyFkgNd0bCuqqnrZMNM3vFflU7q+drwnCRsUMyxFl8U=",
+        "ref": "refs/heads/main",
+        "rev": "5c317e8a9cdf689c5494414e6c6c5ac934f27055",
+        "revCount": 18,
+        "type": "git",
+        "url": "https://codeberg.org/marcelmanz/bitpr"
+      },
+      "original": {
+        "type": "git",
+        "url": "https://codeberg.org/marcelmanz/bitpr"
+      }
+    },
     "brave-origin-channels": {
       "inputs": {
         "nixpkgs": [
@@ -1038,6 +1064,7 @@
     },
     "root": {
       "inputs": {
+        "bitpr": "bitpr",
         "brave-origin-channels": "brave-origin-channels",
         "cliflux": "cliflux",
         "crane": "crane",
