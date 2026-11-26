@@ -13,11 +13,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795693296,
-        "narHash": "sha256-pRe/5k5kpXaZKQf9hJNy31sr81KstD4lppEPvDnGzKo=",
+        "lastModified": 1795704570,
+        "narHash": "sha256-ebkOPSEE44GS4S99qDhd082WiPdJgHkLXhoG5aozeCg=",
         "ref": "refs/heads/main",
-        "rev": "6f86bb36be432fd3266850dc9af1ec554a20dd7e",
-        "revCount": 33,
+        "rev": "a6c673c5d604e5632d50ede2ad05f7f61ef06e72",
+        "revCount": 47,
         "type": "git",
         "url": "https://codeberg.org/marcelmanz/bitpr"
       },
