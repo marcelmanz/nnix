@@ -54,6 +54,15 @@
       exec adb -s ${xgimiHost}:5555 "$@"
     '';
   };
+  tvBoxAdb = pkgs.writeShellApplication {
+    name = "tv-box-adb";
+    runtimeInputs = [pkgs.android-tools];
+    text = ''
+      export HOME=/var/lib/hass
+      adb connect ${tvBoxHost}:5555 >/dev/null 2>&1 || true
+      exec adb -s ${tvBoxHost}:5555 "$@"
+    '';
+  };
   xgimiButton = name: icon: key: {
     type = "button";
     inherit name icon;
@@ -497,11 +506,12 @@
               }
               {
                 type = "grid";
-                columns = 2;
+                columns = 3;
                 square = false;
                 cards = [
                   (tvBoxHoldButton "Long OK" "mdi:gesture-tap-hold" "DPAD_CENTER")
                   (tvBoxHoldButton "Long Back" "mdi:keyboard-return" "BACK")
+                  (xgimiActionButton "Restart BT" "mdi:bluetooth-off" "tv_box_bluetooth_restart")
                 ];
               }
               {
@@ -748,6 +758,8 @@ in {
         xgimi_wake = pkgs.lib.getExe xgimiWake;
         xgimi_settings = "${pkgs.lib.getExe xgimiAdb} shell am startservice -n com.android.newsettings/com.xgimi.newsettings.SettingService -a com.xgimi.settings.SETTINGS";
         xgimi_input = "${pkgs.lib.getExe xgimiAdb} shell am start -n com.mstar.tvsetting/.switchinputsource.PictrueChangeActivity";
+        # clears a stuck bond that makes Pair accessory hang with createBond BUSY
+        tv_box_bluetooth_restart = "${pkgs.lib.getExe tvBoxAdb} shell 'cmd bluetooth_manager disable && sleep 3 && cmd bluetooth_manager enable'";
       };
       wake_on_lan = {};
       template = [
