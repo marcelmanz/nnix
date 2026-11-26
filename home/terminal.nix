@@ -252,6 +252,10 @@ in {
       ".config/direnv/direnv.toml".source = link "${dots}/.config/direnv/direnv.toml";
       ".config/clangd/config.yaml".source = link "${dots}/.config/clangd/config.yaml";
       ".claude/settings.json".source = link "${dots}/.claude/settings.json";
+      ".symposium/config.toml" = {
+        source = link "${dots}/.symposium/config.toml";
+        force = true;
+      };
       ".agents/skills/" = {
         source = link "${dots}/.agents/skills";
         force = true;
