@@ -85,6 +85,22 @@ in {
           ssh "$host" rad-system seed "$rid"
         '';
       })
+      (writeShellApplication {
+        name = "nix-dev";
+        runtimeInputs = [coreutils];
+        text = ''
+          src=$(realpath "''${1:-.}")
+          [ -f "$src/flake.nix" ] || { echo "no flake.nix in $src" >&2; exit 1; }
+          root="$HOME/.cache/nix-roots/$(basename "$src")-dev"
+          mkdir -p "$(dirname "$root")" "$HOME/.local/bin"
+          nix build "$src" --out-link "$root"
+          [ -d "$root/bin" ] || { echo "$src builds no bin/" >&2; exit 1; }
+          for bin in "$root"/bin/*; do
+            ln -sfn "$bin" "$HOME/.local/bin/$(basename "$bin")-dev"
+            echo "$(basename "$bin")-dev -> $(readlink -f "$bin")"
+          done
+        '';
+      })
     ]);
 
   programs.rbw = {
